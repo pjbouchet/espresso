@@ -1,2 +1,2 @@
-# espresso
-Estimating multi-species responses to Navy sonar
+# esspresso
+EStimating SPecies RESponses to Navy SOnar
