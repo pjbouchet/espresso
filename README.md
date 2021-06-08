@@ -1,2 +1,2 @@
 # espresso
-EStimating multi-SPecies RESponses to Navy SOnar
+Estimating multi-SPecies RESponses to Navy SOnar
