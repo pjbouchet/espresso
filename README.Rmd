@@ -1,0 +1,43 @@
+---
+output: github_document
+bibliography: inst/REFERENCES.bib
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# Multi-species Bayesian dose-response models <img src='man/figures/espresso-hex.jpg' align="right" height="180" class="logo"/>
+
+<!-- badges: start -->
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg?style=flat-square)](https://www.tidyverse.org/lifecycle/#maturing)
+[![status](https://img.shields.io/badge/repo%20status-active-green.svg?style=flat-square)](https://www.repostatus.org/#active)
+<!-- badges: end -->
+
+`espresso` stands for **ES**timating **P**atterns of **RES**ponsiveness to Navy **SO**nar, and was designed as a toolkit for fitting and selecting among behavioural dose-response functions in cetaceans exposed to anthropogenic sound.
+
+## Rationale
+
+This work builds upon previous research completed under the U.S. Navy-funded [MOCHA project](https://synergy.st-andrews.ac.uk/mocha/) [@Harris2016; @Harris2018], in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to individual marine mammals, whilst accounting for uncertainty and the effects of contextual covariates [@Miller2014; @Antunes2014]. The current modelling framework is implemented in the Bayesian analysis software JAGS (<https://mcmc-jags.sourceforge.io/>), and relies on Gibbs Variable Selection [@OHara2009] to identify groups of species exhibiting similar patterns of responsiveness to impulsive sound stimuli. However, this approach proves computationally intractable for more than a few species and/or covariates. `espresso` uses a bespoke "dimension-jumping" reversible-jump Markov chain Monte Carlo algorithm [rjMCMC, @Green1995; @Hastie2012] to relax these constraints and allow species groupings to be identified in an objective, data-driven way. The package also accommodates: (1) the selection of any number of explanatory covariates (e.g., sonar frequency, previous history of exposure, feeding behaviour, source-whale range), (2) the comparison of dose-response functional forms (i.e., monophasic or biphasic), and (3) the appropriate treatment of right-censored observations (i.e., animals which display no signs of behavioural response across the array of doses received).
+
+## Getting started
+
+Read the `espresso` introductory vignette.
+
+## Installation
+
+Install the GitHub development version to access the latest features and patches.
+
+```{r, eval = FALSE}
+install.packages("remotes")
+remotes::install_github("pjbouchet/espresso")
+```
+
+## References
