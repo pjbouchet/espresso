@@ -1,0 +1,33 @@
+#' Example dataset
+#'
+#' Example dataset used to illustrate the format expected by \code{espresso}.
+#' 
+#' @format A tibble, with the following columns:
+#' \tabular{ll}{
+#'   \code{Project} \tab Project name or code\cr
+#'   \code{Species} \tab Species code, as listed in `species_brs`\cr
+#'   \code{Tag_ID} \tab Unique tag identifier\cr
+#'   \code{Exp_signal} \tab Type of sonar signal (e.g., MFAS, REAL MFA, PRN, CAS)\cr
+#'   \code{Exp_order} \tab History of exposure (1 = 1st exposure, 2 = 2nd exposure, etc.)\cr
+#'   \code{Exp_duration} \tab Duration of the exposure\cr
+#'   \code{Resp_time} \tab Time at response\cr
+#'   \code{Resp_type} \tab Response type (avoidance, startle, respiration, foraging, locomotion, group, dive, orientation, resting, vocal, or any)\cr
+#'   \code{Resp_score} \tab Severity of the response (on a point scale from 0 to 7), as scored by expert elicitation\cr
+#'   \code{Resp_SPL} \tab Sound pressure level at time of response (in dB re 1μPa)\cr
+#'   \code{Resp_SELcum} \tab Cumulative sound exposure level at time of response (in dB re 1μPa)\cr
+#'   \code{Pre_feeding} \tab Behavioural mode (TRUE = feeding, FALSE = non-feeding)\cr
+#'   \code{Max_SPL} \tab Maximum sound pressure level reached during the exposure\cr
+#'   \code{Max_SELcum} \tab Maximum sound exposure level reached during the exposure\cr
+#'   \code{Resp_range} \tab Whale-source range at the time of response\cr
+#'   \code{Min_range} \tab Minimum whale-source range during the exposure\cr
+#'   \code{Censored} \tab Binary variable indicating whether an observation is right-censored (1) or not (0)\cr
+#'   \code{Inferred Resp_range} \tab Best estimate of whale-source range at the time of response\cr
+#'   \code{Inferred Min_range} \tab Best estimate of minimum whale-source range during the exposure\cr
+#' }
+#'
+#' @details Note: This is a completely manufactured dataset, which should not be used for inference. 
+#' @name example_brs
+#' @docType data
+#' @usage data(example_brs)
+#' @keywords datasets
+NULL
