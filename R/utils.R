@@ -710,6 +710,8 @@ propdens_mh <- function(rj.obj, param.name, dest, orig) {
 
 # Trace ----------------------------------------------------------------
 
+#' Print method for objects of class \code{rjtrace}
+#' @export
 print.rjtrace <- function(rj.obj){
   print(summary(rj.obj$trace))
 }
@@ -1014,12 +1016,33 @@ get_groupings <- function(species.matrix,
                  .f = ~paste(spn[which(model.index[,1]==.x)], collapse = "+"))
 }
 
-
+#' Print method for objects of class \code{gvs}
+#' @export
 print.gvs <- function(gvs.dat){
  print(summary(gvs.dat$trace))
 }
 
 # Convenience ----------------------------------------------------------------
+
+# Parallel computing with progress bar
+`%doprogress%` <- function(forExpr, bodyExpr) {
+  
+  forExpr <- substitute(forExpr)
+  bodyExpr <- substitute(bodyExpr)
+  
+  idxName <- names(forExpr)[[2]]
+  vals <- eval(forExpr[[2]])
+  
+  e <- new.env(parent = parent.frame())
+  
+  pb <- utils::txtProgressBar(min = 0, max = length(vals), style = 3)
+  
+  for (i in seq_along(vals)) {
+    e[[idxName]] <- vals[[i]]
+    eval(bodyExpr, e)
+    utils::setTxtProgressBar(pb, i)
+  }
+}
 
 # Posterior model probabilities
 prob_models <- function(input.obj, 
@@ -1163,17 +1186,17 @@ p_models <- function(input.trace,
 }
 
 #' Posterior inclusion probabilities for contextual covariates
-prob_covariates <- function(input.obj, 
-                            do.combine){
+prob_covariates <- function(obj, do.combine){
+
   if(do.combine){
-    ptrace <- do.call(rbind, input.trace) %>% coda::as.mcmc()
-    p_covariates(input.trace = ptrace)
+    ptrace <- do.call(rbind, obj$trace) %>% coda::as.mcmc()
+    p_covariates(input.trace = ptrace, ddf = obj$dat)
   } else {
-    purrr::map(.x = input.trace, .f = ~p_covariates(input.trace = .x))
+    purrr::map(.x = obj$trace, .f = ~p_covariates(input.trace = .x, ddf = obj$dat))
   }
 }
 
-p_covariates <- function(input.trace){
+p_covariates <- function(input.trace, ddf){
   
   # Identify the covariate columns
   col.indices <- which(grepl(pattern = "incl.", x = colnames(input.trace)))
@@ -1185,9 +1208,9 @@ p_covariates <- function(input.trace){
   
   # Create a duplicate tibble used to generate labels for each combination of covariates
   covtrace.labels <- covtrace
-  for(j in brs$covariates$names) covtrace.labels[, j] <- ifelse(covtrace.labels[, j] == 0, NA, j)
+  for(j in ddf$covariates$names) covtrace.labels[, j] <- ifelse(covtrace.labels[, j] == 0, NA, j)
   covtrace.labels <- covtrace.labels %>% 
-    tidyr::unite("comb", brs$covariates$names, na.rm = TRUE, remove = TRUE, sep = " + ")
+    tidyr::unite("comb", ddf$covariates$names, na.rm = TRUE, remove = TRUE, sep = " + ")
   covtrace.labels$comb <- ifelse(stringr::str_detect(pattern = "\\+", string = covtrace.labels$comb),
                                  covtrace.labels$comb, paste0(covtrace.labels$comb, " (only)"))
   covtrace.labels$comb <- ifelse(covtrace.labels$comb == " (only)", "No covariates", covtrace.labels$comb)
@@ -1198,10 +1221,10 @@ p_covariates <- function(input.trace){
   
   # Calculate overall posterior probabilities for each covariate (i.e., inclusive of all combinations
   # in which the covariate appears)
-  tab.overall <- purrr::map_dbl(.x = brs$covariates$names, 
+  tab.overall <- purrr::map_dbl(.x = ddf$covariates$names, 
                                 .f = ~{
                                   tmp <- table(covtrace[, .x]) / nrow(covtrace)
-                                  tmp[names(tmp)=="1"]}) %>% purrr::set_names(x = ., nm = brs$covariates$names) %>% 
+                                  tmp[names(tmp)=="1"]}) %>% purrr::set_names(x = ., nm = ddf$covariates$names) %>% 
     tibble::enframe(.) %>% 
     dplyr::rename(covariate = name, p = value) %>% 
     dplyr::rowwise()  %>% 
@@ -1268,10 +1291,10 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
     if (methods::is(object, "matrix")) {
       warning("Input type matrix - assuming only one chain for each parameter.")
       object1 <- coda::as.mcmc.list(coda::as.mcmc(object))
-      object2 <- MCMCchains(object1, params, excl, ISB, mcmc.list = TRUE)
+      object2 <- MCMCvis::MCMCchains(object1, params, excl, ISB, mcmc.list = TRUE)
     }
     else {
-      object2 <- MCMCchains(object, params, excl, ISB, mcmc.list = TRUE)
+      object2 <- MCMCvis::MCMCchains(object, params, excl, ISB, mcmc.list = TRUE)
     }
     np <- colnames(object2[[1]])
     n_chains <- length(object2)
@@ -2025,17 +2048,21 @@ acceptance_rate <- function(AR.obj, rj.obj, mp){
     purrr::map(.x = AR.obj$accept[1:(5 + rj.obj[[1]]$dat$covariates$n)],
                .f = ~round( .x/ mp$n.iter, 3))
   
-  if("move.0" %in% names(mp$move) & mp$move[1] > 0){
-    AR.obj$accept[["move.0"]] <- round(AR.obj$accept[["move.0"]] / mp$move[1], 3)}
+  if("move.0" %in% names(mp$move)){
+    if(mp$move["move.0"] > 0){
+      AR.obj$accept[["move.0"]] <- round(AR.obj$accept[["move.0"]] / mp$move["move.0"], 3)}}
   
-  if("move.1" %in% names(mp$move) & mp$move[2] > 0){
-    AR.obj$accept[["move.1"]] <- round(AR.obj$accept[["move.1"]] / mp$move[2], 3)}
+  if("move.1" %in% names(mp$move)){
+    if(mp$move["move.1"] > 0){
+    AR.obj$accept[["move.1"]] <- round(AR.obj$accept[["move.1"]] / mp$move["move.1"], 3)}}
   
-  if("move.2" %in% names(mp$move) & mp$move[3] > 0){
-    AR.obj$accept[["move.2"]] <- round(AR.obj$accept[["move.2"]] / mp$move[3], 3)}
+  if("move.2" %in% names(mp$move)){
+    if(mp$move["move.2"] > 0){
+    AR.obj$accept[["move.2"]] <- round(AR.obj$accept[["move.2"]] / mp$move["move.2"], 3)}}
   
-  if("move.3" %in% names(mp$move) & mp$move[4] > 0){
-    AR.obj$accept[["move.3"]] <- round(AR.obj$accept[["move.3"]] / mp$move[4], 3)}
+  if("move.3" %in% names(mp$move)){
+    if(mp$move["move.3"] > 0){
+    AR.obj$accept[["move.3"]] <- round(AR.obj$accept[["move.3"]] / mp$move["move.3"], 3)}}
   
   if ("move.covariates" %in% names(AR.obj$accept)) {
     AR.obj$accept[["move.covariates"]] <-
