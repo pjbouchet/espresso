@@ -83,7 +83,8 @@ run_rjMCMC <- function(dat,
   
   # Needed to set up the progress bar on Windows
   # See https://stackoverflow.com/questions/7349570/wrapper-to-for-loops-with-progress-bar
-  sink("/dev/null")
+  # sink("/dev/null")
+  sink(tempfile())
   pb <- utils::txtProgressBar(min = 0, max = rj.list[[1]]$mcmc$tot.iter, style = 3)
   kpb <- 0
   sink()
