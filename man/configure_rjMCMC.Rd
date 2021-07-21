@@ -17,7 +17,7 @@ configure_rjMCMC(
 \arguments{
 \item{dat}{Input BRS data. Must be an object of class \code{brsdata}.}
 
-\item{model.select}{Logical. If \code{TRUE}, between-model jumps will be allowed in the rjMCMC sampler. This argument can be set to \code{FALSE} to impose a species grouping of constrain and constrain parameter estimation accordingly.}
+\item{model.select}{Logical. If \code{TRUE}, between-model jumps will be allowed in the rjMCMC sampler. This argument can be set to \code{FALSE} to impose a species grouping and constrain parameter estimation accordingly.}
 
 \item{covariate.select}{Logical. Set to \code{TRUE} to allow contextual covariates to drop out of the model.}
 
@@ -54,6 +54,7 @@ The function performs three actions:
 }
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data, excluding species 
@@ -71,6 +72,7 @@ mydat.config <- configure_rjMCMC(dat = mydat,
                                  prior.covariates = c(0, 30),
                                  n.rep = 100)
 summary(mydat.config)
+}
 }
 \seealso{
 \code{\link{run_rjMCMC}}

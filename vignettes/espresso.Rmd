@@ -1,0 +1,410 @@
+---
+title: "Getting started with espresso"
+author:
+  affiliation: Centre for Research into Ecological & Environmental Modelling, University of St Andrews
+  name: Phil J. Bouchet, Catriona M Harris, Elizabeth E Henderson, Dina Sadykova, Len Thomas
+date: "`r Sys.Date()`"
+css: espresso.css
+csl: espresso.csl
+link-citations: yes
+rmarkdown::html_vignette:
+  fig_caption: yes
+  toc: yes
+  toc_depth: 4
+bibliography: ../inst/REFERENCES.bib
+vignette: >
+  %\VignetteIndexEntry{Getting started with espresso}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+## Preamble
+
+This vignette illustrates the use of the `espresso` R package for fitting and selecting between multi-species behavioural dose-response ("risk") functions. The package is an extension of the work previously conducted under the U.S. Navy-funded [MOCHA project](%5Bhttps://synergy.st-andrews.ac.uk/mocha/) (<https://synergy.st-andrews.ac.uk/mocha/>) [@Harris2016; @Harris2018], in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to marine mammal species, whilst accounting for uncertainty, individual heterogeneity, and the effects of contextual covariates [@Miller2014; @Antunes2014]. `espresso` builds on this framework and provides functions to identify groups of species exhibiting similar patterns of responsiveness to sound, using a Bayesian model selection approach. The underlying method relies on a dimension-jumping reversible-jump Markov chain Monte Carlo algorithm [rjMCMC, @Green1995; @Hastie2012], which accommodates: (1) the selection of any number of explanatory covariates (e.g., sonar frequency, previous history of exposure, feeding behaviour, source-whale range), (2) the comparison of dose-response functional forms (i.e., monophasic or biphasic), and (3) the appropriate treatment of both left-censored and right-censored observations (i.e., animals which display either an immediate response on first exposure, or no signs of response across the array of doses received, respectively).
+
+Here, we showcase the main features of `espresso` using a manufactured dataset available from within the package.
+
+## Installation
+
+The latest development version of `espresso` can be installed from GitHub (this requires the [remotes](https://cran.r-project.org/web/packages/remotes/index.html) package):
+
+```{r eval=FALSE, include=TRUE}
+# install.packages("remotes")
+remotes::install_github("pjbouchet/espresso", dependencies = TRUE)
+```
+
+The code below loads the package and sets some general options.
+
+```{r echo=T, results='hide', message = F}
+library(espresso)
+
+#'--------------------------------------------------------------------
+# Set tibble options
+#'--------------------------------------------------------------------
+options(tibble.width = Inf) # All tibble columns shown
+options(pillar.neg = FALSE) # No colouring negative numbers
+options(pillar.subtle = TRUE)
+options(pillar.sigfig = 4)
+
+Sys.setenv(TZ = "GMT")
+
+#'--------------------------------------------------------------------
+# Set knitr options
+#'--------------------------------------------------------------------
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This vignette covers all the steps required to set up, fit, assess, and compare Bayesian dose-response models using rjMCMC. This includes:
+
+-   Importing data using `read_data`.
+-   Grouping some species *a priori* using `create_groups`.
+-   Configuring the rjMCMC sampler using `configure_rjMCMC`.
+-   Fitting models using `run_rjMCMC`.
+-   Extracting posterior estimates using `trace_rjMCMC`.
+-   Generating model diagnostics using `summary` and `plot` methods.
+-   Drawing dose-response curves using `compile_rjMCMC`.
+
+A flowchart of a typical `espresso` workflow is shown below.
+
+![Figure 1. Schematic representation of a typical `espresso` workflow. Package functions and object classes are indicated in coloured font.](espresso_workflow.jpg)
+
+## Data
+
+For demonstration purposes, we rely on the `example_brs` dataset available from within `espresso`. This is a mock dataset manufactured based on real-world observations made during behavioural response studies (hereafter, BRS). This dataset should **not** be used for inference, however it provides a useful template for setting up input data files in a format readable by `espresso`. It is accompanied by another dataset, `species_brs`, which provides a list of cetacean species for which BRS data currently exist.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+knitr::kable(head(example_brs), format = "pandoc")
+knitr::kable(head(species_brs), format = "pandoc")
+```
+
+Here, `example_brs` contains 111 observations of 8 cetacean species (i.e., Blainville's and Cuviers' beaked whales, blue, killer, minke, sperm, and northern bottlenose whales, as well as Risso's dolphins). Of the 20 columns in the data, only five are compulsory:
+
++----------+-----------------------------------------------------------------------------+
+| Header   | Description                                                                 |
++==========+=============================================================================+
+| species  | Species code, as listed in `species_brs`                                    |
++----------+-----------------------------------------------------------------------------+
+| tag_id   | Unique tag ID number                                                        |
++----------+-----------------------------------------------------------------------------+
+| resp_spl | Sound pressure level at time of response (in dB re 1μPa)                    |
++----------+-----------------------------------------------------------------------------+
+| max_spl  | Maximum sound pressure level reached during the exposure (in dB re 1μPa)    |
++----------+-----------------------------------------------------------------------------+
+| censored | Binary indicator of whether an observation is right-censored (1) or not (0) |
++----------+-----------------------------------------------------------------------------+
+
+When contextual covariates are specified, additional fields must also be included, as relevant:
+
++---------------------+-----------------------------------------------------------------+
+| Header              | Description                                                     |
++=====================+=================================================================+
+| exp_order           | History of exposure (1 = 1st exposure, 2 = 2nd exposure, etc.)  |
++---------------------+-----------------------------------------------------------------+
+| exp_signal          | Type of sonar signal (e.g., MFAS, REAL MFA, PRN, CAS)           |
++---------------------+-----------------------------------------------------------------+
+| pre_feeding         | Behavioural mode (TRUE = feeding, FALSE = non-feeding)          |
++---------------------+-----------------------------------------------------------------+
+| min_range           | Minimum whale-source range during the exposure                  |
++---------------------+-----------------------------------------------------------------+
+| resp_range          | Whale-source range at the time of response                      |
++---------------------+-----------------------------------------------------------------+
+| inferred_resp_range | Best estimate of whale-source range at the time of response     |
++---------------------+-----------------------------------------------------------------+
+| inferred_min_range  | Best estimate of minimum whale-source range during the exposure |
++---------------------+-----------------------------------------------------------------+
+
+### Import file
+
+The first step is to read in the BRS data. This is done using the `read_data()` function, which takes a `.csv` file as input and returns an object of class `<brsdata>`.
+
+```{r eval=FALSE}
+mydat <- read_data(file = "path/to/my/data.csv")
+```
+
+The `example_brs` dataset can be loaded by setting `file` to `NULL` (the default):
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+mydat <- read_data(file = NULL)
+```
+
+`read_data()` provides several options for filtering data on import, including by species and by minimum sample size. For instance, the code below excludes Risso's dolphins as well as any other species with less than 3 individuals:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+mydat <- read_data(file = NULL, exclude.species = "Risso's dolphin", min.N = 3)
+```
+
+### Print summary
+
+We can get a detailed summary of the dataset by using the `summary()` command:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(mydat)
+```
+
+### Covariates
+
+At present, four contextual covariates can be included in the hierarchical dose-response model:
+
+1.  Previous history of exposure (`exposed`);
+
+2.  Sonar signal type (`sonar`);
+
+3.  Behavioural mode, i.e., feeding or non-feeding (`behaviour`);
+
+4.  Source-whale range (`range`).
+
+These can be specified in the call to `read_data()`:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+mydat <- read_data(file = NULL, 
+                   exclude.species = "Risso's dolphin", 
+                   min.N = 3,
+                   covariates = c("behaviour", "range"))
+```
+
+> Note that species names can be given using any combination of scientific name, common name, or unique identifier, as listed in `species_brs`.
+
+The data summary now includes an overview of available covariates:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(mydat)
+```
+
+> **Note:** The large number of sonar systems used in BRSs means that some signal types must be discarded and/or lumped together *a priori* to avoid singularities. By default, `read_data` will:
+>
+> -   **exclude** `PRN`, `CAS`, `ALARM`, `HF ALARM`, `HFAS`, `HF ALARM CAS`, and `MFAS CAS`
+>
+> -   **group** `MFAS`, `MFA`, `REAL MFA`, `MFAS_DS`, `MFA HELO`, `REAL MFA HELO`, `SOCAL_d`, `REAL MFAS`, `MF ALARM` as **MFAS**
+>
+> -   **group** all other signals as **LFAS**
+>
+> These default behaviour can be overridden using the `sonar.groups` and `exclude.sonar` arguments. See the `espresso` package documentation for details.
+
+### Species groupings
+
+The call to `summary` above indicated that sample sizes for the two beaked whales species (`Zc` and `Ha`) are still limited. As a rule, we do not believe that the model can yield useful inference with less than 5 individuals per species. We could go back and increase the value of the `min.N` argument in `read_data()`, but this would result in further data loss. An alternative is to group species *a priori* using the `create_groups()` function.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+mydat.grp <- create_groups(dat.obj = mydat, abbrev = TRUE,
+            species.groups = list(Beaked_whales = c("Ha", "Cuvier's beaked whale")))
+```
+
+> Note that the `abbrev` argument can be used to shorten group names, which is useful to avoid clutter in plots and data summaries. Here, `abbrev` is set to `TRUE` so the chosen group name, `Beaked_whales` will be abbreviated to `Bkd_w` (see below).
+
+The resulting object now has an additional class of `<brsdata.grp>` and only four species, including the new group:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+class(mydat.grp)
+summary(mydat.grp)
+```
+
+Predefined species groupings can be dissolved using the `undo_groups()` function, which returns the original dataset.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+mydat.ungrp <- undo_groups(mydat.grp)
+class(mydat.ungrp)
+summary(mydat.ungrp)
+```
+
+## rjMCMC
+
+### Overview
+
+The (monophasic) Bayesian hierarchical dose-response model is fully described in @Miller2014 and @Antunes2014, and is illustrated in Figure 2.
+
+![Figure 2. *Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.*](rjmcmc_dag_monophasic.png){width="602"}
+
+To discriminate between competing models, we treat the model **itself** as a parameter and form the joint posterior distribution over both parameters and models [@Oedekoven2014]. Every iteration of the rjMCMC algorithm therefore entails two sequential steps:
+
+1.  A **between-model** move, whereby we update the model using the rjMCMC algorithm.
+
+2.  A **within-model** move, whereby we update parameters given the current model using a Metropolis-Hastings algorithm.
+
+In `espresso`, the main mechanism for exploring the model space is by merging or splitting groups of species (i.e., a **split-merge** approach) [@Huelsenbeck2004]. A **split** move works by randomly picking a group (of at least two species) and creating two new groups from it (single split). For example, if the current model is `(Oo,Pm)+(Bm)+(Bkd_w)`, then the only possible split is to separate killer whales (`Oo`) and sperm whales (`Pm`) and assign them to their own groups. Similarly, a **merge** move works by randomly selecting two groups (of any size) and collapsing them into one.
+
+The probability of a **split** move, $P_S$, is given by the product of: (1) the probability of proposing to perform a split $P_S(prop)$, (2) the probability of choosing a group to split among all available groups, $P_S(choose)$, and (3) the probability of performing a particular split, $P_S(split)$, when multiple single splits are possible within the chosen group. Likewise, the probability of a **merge** move, $P_M$, is given by the product of: (1) the probability of proposing to perform a merge $P_M(prop)$, and (2) the probability of choosing two groups to combine, $P_M(choose)$, out of all possible pairs of existing groups.
+
+> **Note:** When the current model is the one where all species are in a single group, then $P_M(prop)$ is `0` and $P_S(prop)$ equals `1`. Conversely, when all species are assigned to their own groups in the current model, then $P_M(prop)$ is `1` and $P_S(prop)$ equals `0`.
+
+By default, both $P_M(prop)$ and $P_S(prop)$ are set to `0.5`, however these values can be adjusted by the user (see help files for details).
+
+To facilitate convergence and avoid getting stuck in local maxima, `espresso` also implements three additional types of between-model moves:
+
+-   **data-driven (Type I and Type II)** moves, in which proposals are informed by the "cues" present in the original data. These moves are defined based on the results of a cluster analysis performed on both (1) species means and (2) raw observations, using a non-parametric bootstrap approach [@Hofmans2015]. Specifically, the clustering algorithm, implemented in the `mclust` package [@Scrucca2016], provides estimates of the probability distributions of unique groupings (Type I), and numbers of groups (regardless of species identity, Type II), where the latter ranges from `n = 1` when all species belong to the same group, to `n = n.species` when each species is treated individually. Type I moves work by proposing a candidate model with a known non-zero probability, which is given by the proportion of Bootstrap replicates in which each model optimised the BIC during clustering (see `mclust` for details). In contrast, Type II moves are conducted by first proposing a number of groupings (again, with probability given *via* bootstrap clustering), and subsequently proposing an appropriate candidate model with the corresponding grouping structure.
+
+-   **random** moves, in which proposed values are drawn from a `Uniform` distribution bounded by `range.dB`(see `read_data()` or `simulate_data()`), with no dependence on current values (i.e., an independent sampler).
+
+By default, data-driven and random moves are only proposed every 100^th^ iteration, at a relative frequency of 3 (Type I) / 1 (Type II) / 1 (random), such that attempts to perform a Type I move are made at iterations 100, 200, and 300, followed by a Type II move at iteration 400, and a random move at iteration 500. Again, these default values can be modified by the user where needed.
+
+A similar strategy is in place when covariate selection is enabled. In this case, the reversible jump step also entails a proposal to either drop a covariate that is already included in the model, or add one that is not. This requires generating a value for the new covariate parameter from a predefined proposal distribution (if we propose to add a covariate) or setting it to zero (if we propose to delete it), and calculating the acceptance probability accordingly [@Oedekoven2014].
+
+Default values for many of those choices are already given in `espresso`, but can be modified by the user if necessary, as explained in the section below.
+
+### Configuration
+
+Before running any models, we need to first set up the reversible jump sampler. The `configure_rjMCMC()` function allows us to do so, by specifying whether to enable either/both model (`model.select`) and covariate (`covariate.select`) selection:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+mydat.config <- configure_rjMCMC(dat = mydat.grp,
+                                 model.select = TRUE,
+                                 covariate.select = TRUE,
+                                 n.rep = 1000)
+```
+
+> **Note:** When `model.select = FALSE`, the MCMC sampler will be constrained to the species groupings defined in the `brsdata` object, and will only estimate the parameters of the corresponding model, without allowing model selection. Likewise, `covariate.select = FALSE` will force the inclusion of all covariates defined using `read_data()` or `simulate_data()`.
+
+`configure_rjMCMC()` performs three actions:
+
+-   It returns empirical estimates of the between-whale (φ) and within-whale between-exposure (σ) variation, which are needed to generate plausible starting values for the MCMC chains.
+
+-   It defines the means and standard deviations of relevant (1) proposal distributions and (2) priors. Default values for the widths of proposal distributions were chosen through careful pilot tuning of individual parameters, but can be adjusted using the `proposal.mh` and `proposal.rj` arguments, if necessary (see help files). The Bayesian hierarchical dose-response model assumes Uniform priors for μ, σ and φ (Figure 2), and Normal priors centred on `0` and with a standard deviation of `30` for all contextual covariates, ***β***. These values can be modified using the `prior.covariates` argument.
+
+-   It conducts a model-based cluster analysis to parameterise between-model jumps using `n.rep` bootstrap replicates of the input data.
+
+The output object is one of class `<rjconfig>`. It is identical to the input `brsdata` or `brsdata.grp` object but contains additional information needed for sampler execution, which is captured in the 'MCMC' section of the data summary.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+class(mydat.config)
+summary(mydat.config, print.config = TRUE)
+```
+
+### Model fitting
+
+Now that initial setup is complete, we can proceed with model fitting. This step is designed to mirror a typical Bayesian modelling workflow in the `rjags` package [@Plummer2019]. The following call to `run_rjMCMC()` compiles the information given in `mydat.config`, creates the R data structures required to hold the MCMC samples, and runs the models:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+rj <- run_rjMCMC(dat = mydat.config, n.chains = 3, n.burn = 25000, n.iter = 100000)
+```
+
+In a first instance, we use three MCMC chains of 100,000 samples each, and a 25,000 step burn-in. These values are highly dependent on the context of each analysis -- typically, we expect that the higher the number of species (and thus the number of candidate models, when `model.selection = TRUE`), the longer the chains will need to be to achieve convergence.
+
+With four species in the dataset (namely, `Bm`, `Oo`, `Pm`, `Bkd_w`), the sampler will jump between 15 possible candidate models. Out of interest, these can be listed using the `listParts` function from the `partitions` package [@Hankin2006].
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+multicool::Bell(n = 4) # Number of candidate models
+
+# List of candidate models
+partitions::listParts(x = 4) %>%
+  purrr::map_depth(.x = ., .depth = 2, .f = ~mydat.config$species$names[.x]) %>%
+  purrr::map(.x = ., 
+             .f = ~ lapply(X = .x, FUN = function(x) paste(x, collapse = ","))) %>%
+  purrr::map(.x = ., .f = ~ paste0("(", .x, ")")) %>% 
+  purrr::map(.x = ., .f = ~paste0(.x, collapse = "+"))
+```
+
+> **Note:** `listParts` is only shown for illustrative purposes and will grind down when the number of species increases, possibly causing memory issues. Its use is not recommended when n \> 10.
+
+### Model assessment
+
+We start by extracting posterior samples from the `rjmcmc` object returned by `run_rjMCMC()`. This gives an object of class `<rjtrace>`.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+rj.posterior <- trace_rjMCMC(rj)
+class(rj.posterior)
+```
+
+Model convergence is commonly ascertained both (1) graphically, by inspecting trace plots and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package `coda` [@Plummer2006].
+
+Trace and density plots can be obtained using the `plot` method.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot(rj.posterior, param.name = "all", autocorr = FALSE, individual = TRUE)
+```
+
+> **Note:** Plots for specific parameters can be generated using the `param.name` argument. If `individual = TRUE` separate density lines will be plotted for each chain. If `autocorr = TRUE`, autocorrelation plots will also be returned.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Plot for the range covariate only
+plot(rj.posterior, param.name = "range")
+```
+
+The `summary` method also provides useful information for model checking, including:
+
+-   An overview of model run parameters (e.g., number of chains, chain lengths, burn-in, priors, move probabilities, etc.)
+
+-   Acceptance rates and effective sample sizes for each parameter
+
+-   A numerical assessment of model convergence using the Gelman-Rubin statistic (also known as the potential scale reduction factor). Scores in the **1.00--1.1** range are generally considered to indicate good convergence. `espresso` gives a breakdown of the estimated scores for each parameter, as well as an overall (multivariate) score that summarises convergence across all parameters.
+
+-   A table of posterior inclusion probabilities (PIPs) for contextual covariates, when covariate selection is enabled. Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).
+
+-   A table of posterior model probabilities and rankings, when model selection is enabled. Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+summary(rj.posterior)
+```
+
+> **Note:** A more compact version of the output summary can be obtained by hiding sections that are not of interest. This is done by setting the relevant argument to `FALSE` (see help files for details). For example, `accept.rate = FALSE` will hide summary of acceptance rates.
+
+> **Note:** By default, `summary` will assess posterior probabilities separately for each chain. If convergence has been achieved, those estimates can be combined by setting `combine.chains = TRUE`.
+
+### Model updates
+
+Updates to the Markov chain may be required if the model has failed to converge. The `update_rjMCMC()` function can be used to extend a previous model run; it "picks up where the sampler left off" by extracting the last MCMC samples for each parameter and using those as new starting values. The same model checking procedures apply to this new run, and the update process can be repeated until convergence is achieved.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+rj <- update_rjMCMC(rj, n.iter = 50000)
+```
+
+## Dose-response
+
+The `compile_rjMCMC()` function computes posterior dose-response curves for each species (or *a priori* species grouping) from the parameter estimates of a fitted rjMCMC model. The output is an object of class `<dose_response>`, which can be passed to `plot` directly:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+doseR <- compile_rjMCMC(rj.posterior)
+class(doseR)
+plot(doseR)
+```
+
+> **Note:** When model selection is enabled (`model.select = TRUE`), dose-response curves are derived irrespective of model IDs, and therefore incorporate model uncertainty. If if dose-response functions are needed for a specific model of interest, then the `by.model` argument should be set to `TRUE`.
+
+> **Note:** By default, `compile_rjMCMC()` calculates a range of posterior credible intervals, from 5 to 95%, in 5% increments. These default values can be overridden using the `credible.intervals` argument.
+
+Curves for covariates of interest can also be obtained by conditioning on a given species/species group. For example:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+doseR.beh <- compile_rjMCMC(rj.posterior, covariate = "behaviour", species = "Oo")
+plot(doseR.beh)
+```
+
+For continuous covariates, such as whale-source range, curves can be generated for any
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+doseR.rge <- compile_rjMCMC(rj.posterior, 
+                            covariate = "range", 
+                            covariate.values = c(5, 10),
+                            species = "Oo")
+plot(doseR.rge, scientific.name = TRUE)
+```
+
+Numerous additional options are available to refine plot aesthetics, including shading/colours, plot ordering, faceting layouts, and species labels. Some example visualisations are given below.
+
+[Example 1]{.ul}: Black and white colour scheme.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot(doseR, colour = "gray20", colour.median = "black")
+```
+
+[Example 2]{.ul}: Curves coloured by species/species groups and ordered from most to least sensitive.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot(doseR, colour.by = "species", order.by = "response")
+```
+
+[Example 3]{.ul}: Scientific names in plot labels, posterior medians hidden, outer credible intervals outlined.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot(doseR, scientific.name = TRUE, show.p0_5 = FALSE, outline.outer = TRUE)
+```
+
+[Example 4]{.ul}: Plot overlay.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+plot(doseR, colour.by = "species", overlay = TRUE)
+```
+
+## References

@@ -2,19 +2,15 @@
 #'
 #' Set up a list object to hold the data from the MCMC sampler, and generate starting values for all model parameters. This function is called internally by \code{\link{run_rjMCMC}}.
 #'
-#' In addition to split/merge moves, three other types of MCMC samplers are implemented in \code{espresso} to accelerate convergence and avoid getting stuck in local maxima: two data-driven samplers (type I and type II), in which proposals are informed by the “cues” present in the original data, and one independent sampler, in which proposals are drawn at random from a Uniform distribution bounded by \code{range.dB}(see \code{\link{read_data}} or \code{\link{simulate_data}}), with no dependence on current values.
+#' In addition to split/merge moves, three other types of MCMC samplers are implemented in \code{espresso} to facilitate convergence and avoid getting stuck in local maxima: two data-driven samplers (type I and type II), in which proposals are informed by the “cues” present in the original data, and one independent sampler, in which proposals are drawn at random from a Uniform distribution bounded by \code{range.dB} (see \code{\link{read_data}} or \code{\link{simulate_data}}), with no dependence on current values.
 #'
 #' @param rj.input Input dataset. Must be an object of class \code{rjconfig}.
 #' @param n.burn Number of MCMC iterations to treat as burn-in.
 #' @param n.iter Number of posterior samples.
 #' @param n.chains Number of MCMC chains. Defaults to 3.
-#' @param p.split Probability of choosing to split a group of species when initiating a split/merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}. 
-#' @param p.merge Probability of choosing to merge two groups of species when initiating a split/merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.
-#' @param move.ratio Relative proportion of calls to data-driven (type I and II) and independence samplers.
-#' @param m Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.
 #' @param do.update Logical. Whether to update an existing sampler or set up a new one.
 #' @param start.values Starting values to use when updating an existing sampler and \code{do.update = TRUE}.
-#' 
+#' @inheritParams run_rjMCMC
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @keywords brs dose-response rjmcmc 
@@ -23,13 +19,12 @@ setup_rjMCMC <- function(rj.input,
                          n.burn,
                          n.iter,
                          n.chains = 3,
-                         p.split = 0.5,
-                         p.merge = 0.5,
-                         move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
-                         m = 100,
+                         p.split,
+                         p.merge,
+                         move.ratio,
+                         m,
                          do.update = FALSE,
                          start.values = NULL) {
-  
   
   #' -----------------------------------------------
   # Perform function checks
@@ -59,12 +54,20 @@ setup_rjMCMC <- function(rj.input,
   # Type 3: Random
   
   modelmoves <- numeric(length = tot.iter)
+  
   if(m < tot.iter){
     move.iters <- seq(from = m, to = tot.iter, by = m)
   } else {
     move.iters <- rep(0, tot.iter)
   }
   modelmoves[move.iters] <- rep(rep(c(1, 2, 3), move.ratio, length.out = length(move.iters)))
+  modelmoves.tab <- table(modelmoves[(n.burn+1):tot.iter]) %>% 
+    tibble::enframe() %>% 
+    dplyr::rename(move = name, n = value) %>% 
+    dplyr::mutate(move = dplyr::case_when(move == "0" ~ "split-merge",
+                                          move == "1" ~ "data-driven (Type I)",
+                                          move == "2" ~ "data-driven (Type II)",
+                                          move == "3" ~ "random"))
   
   if(do.update){
     rj.input <- append(rj.input[[1]][["dat"]], rj.input[[1]]["config"])
@@ -75,8 +78,9 @@ setup_rjMCMC <- function(rj.input,
                          n.iter = n.iter,
                          tot.iter = tot.iter,
                          iter.rge = paste0(n.burn + 1, ":", tot.iter),
-                         move = list(prob = c(p.split, p.merge),
-                                     m = modelmoves)))
+                         move = list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
+                                     m = modelmoves,
+                                     tab = modelmoves.tab)))
   
   #' -----------------------------------------------
   # Create data matrices and vectors
@@ -128,7 +132,11 @@ setup_rjMCMC <- function(rj.input,
   
   if (rj.input$covariates$n > 0) {
     for (j in rj.input$covariates$names) {
-      colnames(rj[[j]]) <- paste0(j, "_", rj.input$covariates$fL[[j]]$Lnames)
+      if(is.null(rj.input$covariates$fL[[j]]$Lnames)){
+        colnames(rj[[j]]) <- j
+      } else{
+        colnames(rj[[j]]) <- paste0(j, "_", rj.input$covariates$fL[[j]]$Lnames)
+      }
     }
     colnames(rj$include.covariates) <- rj.input$covariates$names
   } else {

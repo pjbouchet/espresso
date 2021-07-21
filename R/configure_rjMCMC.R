@@ -10,7 +10,7 @@
 #' }
 #' @export 
 #' @param dat Input BRS data. Must be an object of class \code{brsdata}.
-#' @param model.select Logical. If \code{TRUE}, between-model jumps will be allowed in the rjMCMC sampler. This argument can be set to \code{FALSE} to impose a species grouping of constrain and constrain parameter estimation accordingly.
+#' @param model.select Logical. If \code{TRUE}, between-model jumps will be allowed in the rjMCMC sampler. This argument can be set to \code{FALSE} to impose a species grouping and constrain parameter estimation accordingly.
 #' @param covariate.select Logical. Set to \code{TRUE} to allow contextual covariates to drop out of the model.
 #' @param proposal.mh Named list specifying the standard deviations of the proposal distributions used in the Metropolis-Hastings sampler.
 #' @param proposal.rj Named list specifying the standard deviations of the proposal distributions used in the reversible jump sampler. Must contain two elements: \code{mu} for response thresholds, and \code{cov} for covariates.
@@ -32,6 +32,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data, excluding species 
@@ -49,6 +50,7 @@
 #'                                  prior.covariates = c(0, 30),
 #'                                  n.rep = 100)
 #' summary(mydat.config)
+#' }
 #' @keywords brs rjmcmc dose-response
 
 configure_rjMCMC <- function(dat, 
@@ -114,12 +116,32 @@ configure_rjMCMC <- function(dat,
     # Remove NA values to avoid numerical issues
     boot.dat <- tibble::tibble(y = dat$obs$y_ij, species = dat$species$trials) %>% 
       tidyr::drop_na()
-    
+
     # Bootstrap the data by species
-    boot.tbl <- rsample::bootstraps(data = boot.dat, 
-                                    times = n.rep, 
-                                    strata = species) %>% 
-      purrr::map(.x = .$splits, .f = ~rsample::analysis(.x))
+    # Taken from https://humanitarian-user-group.github.io/post/tidysampling/
+    # Contrary to the bootstraps function from the <rsamples> package (original implementation),
+    # this approach ensures that all species are included in all resamples.
+    
+    cat("Generating Bootstrap resamples ...\n")
+    
+    boot.tbl <- purrr::map(.x = seq_len(n.rep),
+                           .f = ~{
+                             boot.dat %>% 
+                             # Partition the data into strata (by species)
+                             dplyr::group_nest(species) %>% 
+                            # For each stratum
+                             dplyr::rowwise() %>%
+                             dplyr::mutate(
+                               # calculate the required sample size
+                               Ns = nrow(data),
+                               # then draw the sample
+                               sample = list(dplyr::sample_n(data, size = Ns, replace = TRUE))) %>% 
+                             dplyr::select(-c(data, Ns)) %>% 
+                             tidyr::unnest(sample)}) 
+    
+    # Original implementation – not reliable
+    # boot.tbl <- rsample::bootstraps(data = boot.dat, times = n.rep, strata = "species", apparent = TRUE) %>% 
+    #   purrr::map(.x = .$splits, .f = ~rsample::analysis(.x))
     
     # Compute average per species
     boot.avg <- purrr::map(.x = boot.tbl, 
@@ -128,6 +150,8 @@ configure_rjMCMC <- function(dat,
                                dplyr::group_by(species) %>% 
                                dplyr::summarise(y = mean(y, na.rm = TRUE), .groups = "keep") %>% 
                                dplyr::ungroup()})
+    
+    cat("Performing cluster analysis ...\n")
     
     # Model-based clustering (equal variance)
     datClust <- purrr::map(.x = boot.tbl,
@@ -223,6 +247,7 @@ configure_rjMCMC <- function(dat,
     dat$config$prior <- Normal.priors
   }
   
+  cat("Done!")
   class(dat) <- c("rjconfig", class(dat))
   return(dat)
   

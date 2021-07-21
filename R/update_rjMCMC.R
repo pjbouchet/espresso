@@ -8,6 +8,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data, excluding species with sample sizes < 5
@@ -34,7 +35,7 @@
 #'                  do.update = FALSE)
 #'                      
 #' rj.update <- update_rjMCMC(rjdat = rj, n.iter = 500)
-#' 
+#' }
 #' @keywords brs dose-response rjmcmc 
 
 update_rjMCMC <- function(rjdat, n.iter = 1000){

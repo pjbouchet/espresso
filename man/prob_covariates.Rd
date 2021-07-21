@@ -4,7 +4,7 @@
 \alias{prob_covariates}
 \title{Posterior inclusion probabilities for contextual covariates}
 \usage{
-prob_covariates(input.obj, do.combine)
+prob_covariates(obj, do.combine)
 }
 \description{
 Posterior inclusion probabilities for contextual covariates

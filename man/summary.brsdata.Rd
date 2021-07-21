@@ -18,6 +18,7 @@ A text-based summary of dataset properties.
 Summary method for objects of class \code{brsdata}. Print a text-based summary of the data in the R console.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Simulate data for two species
@@ -33,6 +34,7 @@ mydat <- simulate_data(n.species = 2,
                       
 summary(mydat)
 }
+}
 \seealso{
 \code{\link{read_data}} \code{\link{simulate_data}}
 }
@@ -41,4 +43,5 @@ Phil J. Bouchet
 }
 \keyword{brs}
 \keyword{dose-response}
+\keyword{gvs}
 \keyword{rjmcmc}

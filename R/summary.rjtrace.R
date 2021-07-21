@@ -7,12 +7,14 @@
 #' @param rj.obj Input rjMCMC object, as returned by \code{\link{trace_rjMCMC}}.
 #' @param covariate.prob Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).
 #' @param combine.chains Logical. If \code{TRUE}, outputs are returned for each individual MCMC chain.
+#' @inheritParams summary.gvs
 #' 
 #' @return A detailed summary, printed to the R console.
 #' 
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data, excluding species with sample sizes < 5
@@ -38,7 +40,7 @@
 #'                  n.iter = 100,
 #'                  do.update = FALSE)
 #' summary(rj)
-#' 
+#' }
 #' @keywords brs dose-response rjmcmc 
 
 summary.rjtrace <- function(rj.obj, 
@@ -52,7 +54,7 @@ summary.rjtrace <- function(rj.obj,
                             combine.chains = FALSE){
   
   cat("\n======================================================\n")
-  cat("RJ SUMMARY\n")
+  cat("SUMMARY\n")
   cat("======================================================\n\n")
   
   cat("Iterations:", format(rj.obj$mcmc$iter.rge, big.mark = ","), "\n")
@@ -63,6 +65,22 @@ summary.rjtrace <- function(rj.obj,
   cat("Total sample size:", format(rj.obj$mcmc$n.iter * rj.obj$mcmc$n.chains, big.mark = ","), "\n\n")
   cat("Run times:\n")
   print(rj.obj$mcmc$run_time)
+  
+  cat("\n--------------------")
+  cat("\nMCMC\n")
+  cat("--------------------\n")
+  
+  cat("Prior (μ): Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["mu", ], collapse = "; "), ")"), "\n")
+  cat("Prior (φ): Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["phi", ], collapse = "; "), ")"), "\n")
+  cat("Prior (σ): Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["sigma", ], collapse = "; "), ")"), "\n")
+  for(cc in rj.obj$dat$covariates$names){
+  cat("Prior", paste0("(", cc, "):"), "Normal", paste0("(", paste0(rj.obj$config$prior[[cc]], collapse = "; "), ")"), "\n")
+  }
+  cat("\n")
+  cat("p(split):", rj.obj$mcmc$move$prob[1], "\n")
+  cat("p(merge):", rj.obj$mcmc$move$prob[2], "\n")
+  cat("\n")
+  print(rj.obj$mcmc$move$tab)
   
   if(eff.n){
     cat("\n--------------------")
@@ -114,7 +132,7 @@ summary.rjtrace <- function(rj.obj,
     
     if(rj.obj$config$covariate.select){
       
-      tb <- prob_covariates(trace.allchains, do.combine = combine.chains)
+      tb <- prob_covariates(obj = rj.obj, do.combine = combine.chains)
       
       if(combine.chains){
         

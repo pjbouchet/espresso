@@ -56,7 +56,26 @@ dat$resp_spl <- purrr::map_dbl(.x = 1:nrow(dat),
                                          sd = spl.by.species[spl.by.species$species == current.species, ]$spl_sd)
                                })
 
-dat$resp_spl[dat$resp_score < 4] <- NA
+is.censored <- numeric(nrow(dat))
+for(i in seq_len(nrow(dat))){
+  df <- dat[i, ]
+  if(!df$resp_score >=4){
+    is.censored[i] <- 1
+  } else {
+    if(is.na(df$resp_spl)){
+      is.censored[i] <- 1
+    } else {
+      if(df$resp_spl < df$max_spl){
+        is.censored[i] <- 0
+      } else {
+        is.censored[i] <- 1
+      }
+    }
+  }
+}
+
+dat$censored <- is.censored
+dat$resp_spl[is.censored == 1] <- NA
 
 dat <- dat %>% 
   dplyr::mutate(pre_feeding = sample(x = dat$pre_feeding, size = nrow(dat), replace = FALSE),
@@ -72,36 +91,29 @@ dat <- dat %>%
                 max_se_lcum = max_spl + abs(rnorm(n = 1, mean = 0, sd = 10))) %>% 
   dplyr::ungroup()
 
-range.na <- sum(is.na(dat$min_range))
-dat$min_range <- rgamma(n = nrow(dat), shape = 1, rate = 0.1)
-dat$min_range[sample(x = 1:nrow(dat), size = range.na, replace = FALSE)] <- NA
-dat <- dat %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(inferred_resp_range = ifelse(is.na(min_range), rgamma(n = 1, shape = 1, rate = 0.1), NA),
-                inferred_min_range = ifelse(is.na(min_range), runif(n = 1, min = 0, max = inferred_resp_range), NA)) %>% 
-  dplyr::ungroup()
 
+# Range
 
-is.censored <- numeric(nrow(dat))
-for(i in seq_len(nrow(dat))){
-   df <- dat[i, ]
-   if(!df$resp_score >=4){
-     is.censored[i] <- 1
-   } else {
-     if(is.na(df$resp_spl)){
-       is.censored[i] <- 1
-     } else {
-       if(df$resp_spl < df$max_spl){
-         is.censored[i] <- 0
-       } else {
-         is.censored[i] <- 1
-       }
-     }
-   }
+for(i in 1:nrow(dat)){
+  if(!is.na(dat$resp_range[i])) dat$resp_range[i] <- rgamma(n = 1, shape = 1, rate = 0.1)
+  if(!is.na(dat$min_range[i])) dat$min_range[i] <- dat$resp_range[i] - rgamma(n = 1, shape = 0.01, rate = 2)
+  
+  if(dat$censored[i] == 0){ # Response range
+    if(is.na(dat$resp_range[i])){
+      dat$inferred_resp_range[i] <- rgamma(n = 1, shape = 1, rate = 0.1)
+    } else {
+      dat$inferred_resp_range[i] <- NA
+    }
+  } else {
+    if(is.na(dat$min_range[i])){
+      dat$inferred_min_range[i] <- rgamma(n = 1, shape = 1, rate = 0.1)
+    } else {
+      dat$inferred_min_range[i] <- NA
+    }
+  }
+  
 }
-
-dat$censored <- is.censored
 
 example_brs <- dat %>% dplyr::select(-scientific_name, -common_name, -new_code)
 names(example_brs) <- names(rawdat)
-# usethis::use_data(example_brs, overwrite = TRUE)
+usethis::use_data(example_brs, overwrite = TRUE)

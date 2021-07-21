@@ -8,7 +8,7 @@
 #' @importFrom Rdpack reprompt
 #' @param dat Input data. Must be an object of class \code{rjtrace} or \code{brsdata}.
 #' @param random.effects Logical. When \code{TRUE}, uses a random effect model formulation.
-#' @param include.covariates Logical. Whether to include contextual covariates. Note that covariate selection is not implemented in \code{gibbs}.
+#'@param pseudo.n Number of iterations for the pseudo-priors.
 #' @param mcmc.n Number of posterior samples.
 #' @param n.chains Number of MCMC chains.
 #' @param thin Thinning interval.
@@ -20,6 +20,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{summary.gvs}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Simulate data for two species
@@ -40,11 +41,12 @@
 #'              include.covariates = FALSE, 
 #'              mcmc.n = 1000, 
 #'              burnin = 500)
-#' @keywords gvs dose-response
+#' }
+#' @keywords brs gvs dose-response
 
 gibbs <- function(dat,
                   random.effects = FALSE,
-                  include.covariates = FALSE,
+                  pseudo.n = 10000,
                   mcmc.n = 1000,
                   burnin = 1000,
                   n.chains = 1,
@@ -61,6 +63,7 @@ gibbs <- function(dat,
   #' ---------------------------------------------
   # Perform function checks and initial setup
   #' ---------------------------------------------
+  if(dat$covariates$n > 0) include.covariates <- TRUE else include.covariates <- FALSE
   fL <- dat$covariates$fL
   if("config" %in% class(dat)) config <- dat$config else config <- NULL
   
@@ -522,7 +525,7 @@ gibbs <- function(dat,
     pseudo.beta3 <- rjags::coda.samples(
       model = m.pseudo,
       variable.names = var.monitor,
-      n.iter = mcmc.n)
+      n.iter = pseudo.n)
     
     if(random.effects){
       
@@ -831,6 +834,11 @@ gibbs <- function(dat,
   
   mcmc.params$run_time <-  run_time
   
+  for(nc in seq_len(n.chains)){
+    colnames(samples.ms[[nc]])[which(grepl(pattern = "mu", x = colnames(samples.ms[[nc]])))] <- 
+      paste0("mu.", species.names)
+  }
+       
   res <- list(trace = samples.ms,
               mcmc = mcmc.params,
               dat = dat,

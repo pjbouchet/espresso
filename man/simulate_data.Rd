@@ -64,6 +64,7 @@ A list object of class \code{brsdata}, with the following elements:
 Simulate cetacean responses to Navy sonar exposure, as in behavioural response studies (BRSs).
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Simulate data for two species
@@ -77,6 +78,7 @@ mydat <- simulate_data(n.species = 2,
                        Rc = c(210, 211), 
                        seed = 58697)
 }
+}
 \seealso{
 \code{\link{read_data}} \code{\link{summary.brsdata}}
 }
@@ -86,4 +88,5 @@ Phil J. Bouchet
 \keyword{---------------------------------------------}
 \keyword{brs}
 \keyword{dose-response}
+\keyword{gvs}
 \keyword{rjmcmc}

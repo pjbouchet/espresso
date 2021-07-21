@@ -14,12 +14,13 @@ create_groups(dat.obj, species.groups = NULL, abbrev = FALSE)
 \item{abbrev}{Logical. If \code{TRUE}, group names will be abbreviated. This is useful for plotting and data summaries.}
 }
 \value{
-A list object of class \code{brsdata.group}.
+A list object of class \code{brsdata.grp}.
 }
 \description{
 Assign species to \emph{a priori} groupings.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data, excluding Risso's dolphins and minke whales
@@ -33,7 +34,7 @@ mydat.grouped <- create_groups(mydat,
 
 Examine the resulting grouping
 summary(mydat.grouped)
-
+}
 }
 \seealso{
 \code{\link{undo_groups}} \code{\link{summary.brsdata}}

@@ -2,73 +2,98 @@
 #'
 #' Compute dose-response functions from a fitted rjMCMC model.
 #'
+#' @export
 #' @param rj.object Input rjMCMC object of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}.
-#' @param by.model Logical. If \code{TRUE}, the functions subsets posterior parameter estimates to produce separate dose-response curves for each model.
-#' @param covariate Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given in \code{species}.
+#' @param by.model Logical. If \code{TRUE}, the function subsets posterior parameter estimates to produce separate dose-response curves for each candidate model.
+#' @param covariate Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given by \code{species}.
 #' @param covariate.values A vector of values for which dose-response curves are required. Only valid for continuous covariates.
 #' @param species Species name. 
+#' @param credible.intervals Credible intervals. Must be a integer vector in \code{(0, 100]}. Defaults to 5-95% in 5% increments.
 #' 
 #' @return A list object of class \code{dose_response}.
 #'  
-#'  
 #' @author Phil J. Bouchet
-#' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}
+#' @seealso \code{\link{run_rjMCMC}} \code{\link{plot.dose_response}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
-#' # Import the example data
+#' # Import the example data, excluding species with sample sizes < 5
+#' # and considering the sonar covariate
+#' mydat <- read_data(file = NULL, min.N = 5, covariates = "sonar") 
+#' summary(mydat)
 #' 
-#' mydat <- read_data(file = NULL) 
+#' # Configure the sampler
+#' mydat.config <- configure_rjMCMC(dat = mydat,
+#'                                  model.select = TRUE,
+#'                                  covariate.select = FALSE,
+#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
+#'                                                     mu = 7, phi = 10, sigma = 10),
+#'                                  proposal.rj = list(dd = 20, cov = 7),
+#'                                  prior.covariates = c(0, 30),
+#'                                  n.rep = 100)
+#' summary(mydat.config)
 #' 
-#' # Import a real dataset with the sonar and range covariates, 
-#' # excluding sperm whales and any other species with a sample size
-#' # smaller than two
+#' # Run the reversible jump MCMC
+#' rj <- run_rjMCMC(dat = mydat.config,
+#'                  n.chains = 2,
+#'                  n.burn = 100,
+#'                  n.iter = 100,
+#'                  do.update = FALSE)
+# 
+#' # Burn and thin
+#' rj.trace <- trace_rjMCMC(rj.dat = rj)
 #' 
-#' mydat <- read_data(file = "path/to/my/data.csv", 
-#'                   exclude.species = "Sperm whale",
-#'                   min.N = 2) 
-#' 
-#' @export
-#' @keywords brs rjmcmc 
+#' # Get dose-response functions
+#' doseR <- compile_rjMCMC(rj.trace)
+#' }
+#' @keywords brs dose-response rjmcmc 
 
 compile_rjMCMC <- function(rj.object, 
                            by.model = FALSE, 
                            covariate = NULL, 
                            covariate.values = NULL,
-                           species = NULL){
+                           species = NULL,
+                           credible.intervals = seq(95, 1, by = -5)){
   
   #' ---------------------------------------------
   # Perform function checks
   #' ---------------------------------------------
   
   if(!"rjtrace" %in% class(rj.object)) stop("Input must be an object of class <rj_trace>.")
-  # if(!"rjdata" %in% class(rj.object$dat)) stop("Input must be an object of class <rj_data>.")
   if(!is.null(covariate)){ if(!covariate %in% rj.object$dat$covariates$names) stop("Unrecognised covariate.")}
   if(length(covariate) > 1) stop("<covariate> must be of length 1.")
   if(!all(species %in% rj.object$dat$species$names)) stop("Unrecognised species.")
   if(is.null(species) & !is.null(covariate)) stop("<species> cannot be set to NULL when a covariate is specified.")
-  if(length(species) > 1 & !is.null(covariate)) stop("Max of 1 species (group) allowed")
+  if(length(species) > 1 & !is.null(covariate)) stop("Max of 1 species (group) allowed.")
+  if(any(credible.intervals > 100) | any(credible.intervals <= 0)) stop("Credible intervals must lie in the interval (0, 100].")
+  if(!50 %in% credible.intervals){ # Must contain the median
+    credible.intervals <- sort(c(credible.intervals, 50), decreasing = TRUE)
+  }
   
   if(rj.object$dat$covariates$n == 0) covariate <- NULL
   
   if(!is.null(covariate)){
     
     if(is.null(covariate.values) & 
-       rj.object$dat$config$fL[[covariate]]$nL == 0) stop("Must provide covariate values")
+       rj.object$dat$covariates$fL[[covariate]]$nL == 0) stop("Must provide covariate values")
     
-    if(is.null(covariate.values) & 
-       rj.object$dat$config$fL[[covariate]]$nL > 0) stop("<covariate.values> ignored for factor covariates.")
+    if(!is.null(covariate.values) & 
+       rj.object$dat$covariates$fL[[covariate]]$nL > 0) stop("<covariate.values> ignored for factor covariates.")
     
-    if(any(covariate.values < range(rj.object$dat$covariates$values[[covariate]])[1]) | 
-       any(covariate.values > range(rj.object$dat$covariates$values[[covariate]])[2])) stop("Covariate values out of range")
+    if(!is.null(covariate.values)){
+      if(any(covariate.values < range(rj.object$dat$covariates$df[, covariate])[1]) | 
+        any(covariate.values > range(rj.object$dat$covariates$df[, covariate])[2]))
+        stop("Covariate values out of range")
+    }
   }
   
   #' ---------------------------------------------
-  # Define dose range and quantiles
+  # Define dose range and credible intervals
   #' ---------------------------------------------
 
   dose.range <- seq(rj.object$dat$param$bounds["mu", 1], rj.object$dat$param$bounds["mu", 2], length = 100)
-  quants <- seq(95, 1, by = -5)
+  credible.intervals  <- sort(credible.intervals, decreasing = TRUE)
   
   #' ---------------------------------------------
   # Extract trace
@@ -108,8 +133,7 @@ compile_rjMCMC <- function(rj.object,
                       
                       # Identify columns corresponding to species means
                       if (!is.null(species)) {
-                        mu.index <- which(colnames(mcmc.list[[mcl]]) %in%
-                                            paste0("mu.", which(rj.object$dat$species$names %in% species)))
+                        mu.index <- which(colnames(mcmc.list[[mcl]]) %in% paste0("mu.", species))
                         sp.names <- species
                       } else {
                         mu.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]), prefix = "mu"))
@@ -124,7 +148,7 @@ compile_rjMCMC <- function(rj.object,
                                            cov.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]),
                                                                          prefix = covariate))
                                            
-                                           if(rj.object$config$fL[[covariate]]$nL > 0) 
+                                           if(rj.object$dat$covariates$fL[[covariate]]$nL > 0) 
                                              cov.values <- list(rep(0, nrow(mcmc.list[[mcl]]))) else 
                                              cov.values <- list()
                                            
@@ -134,7 +158,7 @@ compile_rjMCMC <- function(rj.object,
                                            
                                            dr.mean <- purrr::map(.x = cov.values,
                                                                  .f = ~dplyr::pull(mcmc.list[[mcl]][, mu.x]) + .x) %>% 
-                                             purrr::set_names(x = ., nm = rj.object$config$fL[[covariate]]$Lnames)
+                                             purrr::set_names(x = ., nm = rj.object$dat$covariates$fL[[covariate]]$Lnames)
                                            
                                            
                                          } else {
@@ -178,7 +202,7 @@ compile_rjMCMC <- function(rj.object,
                         .depth = 2,
                         .f = ~ {
                           tmp <- .x
-                          purrr::map(.x = quants, .f = ~ apply(
+                          purrr::map(.x = credible.intervals, .f = ~ apply(
                             X = tmp, MARGIN = 2,
                             FUN = quantile, (50 - .x / 2) / 100
                           ))}) 
@@ -189,7 +213,7 @@ compile_rjMCMC <- function(rj.object,
                         .depth = 2,
                         .f = ~ {
                           tmp <- .x
-                          purrr::map(.x = quants, .f = ~ apply(
+                          purrr::map(.x = credible.intervals, .f = ~ apply(
                             X = tmp, MARGIN = 2,
                             FUN = quantile, (50 + .x / 2) / 100
                           ))}) 
@@ -233,7 +257,7 @@ compile_rjMCMC <- function(rj.object,
                                     output <- purrr::set_names(x = output, nm = "output")
   
   output$dose.range <- dose.range
-  output$quants <- quants
+  output$cred.int <- credible.intervals
   
   output <- list(dat = output, 
                  sim = rj.object$dat$param$sim,
@@ -244,6 +268,7 @@ compile_rjMCMC <- function(rj.object,
                  p.med = rj.object$p.med,
                  covariate = covariate,
                  covariate.values = covariate.values,
+                 fL = rj.object$dat$covariates$fL[[covariate]],
                  species = species)
   
   class(output) <- c("dose_response", class(output))

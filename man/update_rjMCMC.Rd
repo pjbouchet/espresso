@@ -15,6 +15,7 @@ update_rjMCMC(rjdat, n.iter = 1000)
 Update the Markov chain(s) associated with an existing rjMCMC sampler.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data, excluding species with sample sizes < 5
@@ -41,7 +42,7 @@ rj <- run_rjMCMC(dat = mydat.config,
                  do.update = FALSE)
                      
 rj.update <- update_rjMCMC(rjdat = rj, n.iter = 500)
-
+}
 }
 \seealso{
 \code{\link{run_rjMCMC}}

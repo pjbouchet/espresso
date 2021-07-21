@@ -19,6 +19,18 @@
 \arguments{
 \item{rj.obj}{Input rjMCMC object, as returned by \code{\link{trace_rjMCMC}}.}
 
+\item{eff.n}{Logical. If \code{TRUE}, returns estimates of the effective sample size for each model parameter.}
+
+\item{accept.rate}{Logical. If \code{TRUE}, returns the acceptance rate (calculated after burn-in) for each model parameter.}
+
+\item{convergence}{Logical. If \code{TRUE}, assesses convergence using the multivariate potential scale reduction factor (Gelman-Rubin statistic), as implemented in \code{\link[coda]{gelman.diag}}.}
+
+\item{gelman.rubin}{Threshold for determining convergence based on the Gelman-Rubin statistic. Defaults to \code{1.1}.}
+
+\item{model.ranks}{Logical. If \code{TRUE}, returns a summary of posterior model probabilities and associated model rankings.}
+
+\item{n.top}{Number of top-ranking models to display when \code{model.ranks = TRUE}. Defaults to \code{NULL}, which lists all models.}
+
 \item{covariate.prob}{Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).}
 
 \item{combine.chains}{Logical. If \code{TRUE}, outputs are returned for each individual MCMC chain.}
@@ -30,6 +42,7 @@ A detailed summary, printed to the R console.
 Summary method for objects of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}. Produces a text-based summary of: (1) effective sample sizes, (2) acceptance rates, (3) model convergence, (4) posterior model probabilities, and (5) posterior inclusion probabilities (PIPs) for contextual covariates (where appripriate).
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data, excluding species with sample sizes < 5
@@ -55,7 +68,7 @@ rj <- run_rjMCMC(dat = mydat.config,
                  n.iter = 100,
                  do.update = FALSE)
 summary(rj)
-
+}
 }
 \seealso{
 \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}

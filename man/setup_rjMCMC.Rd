@@ -9,10 +9,10 @@ setup_rjMCMC(
   n.burn,
   n.iter,
   n.chains = 3,
-  p.split = 0.5,
-  p.merge = 0.5,
-  move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
-  m = 100,
+  p.split,
+  p.merge,
+  move.ratio,
+  m,
   do.update = FALSE,
   start.values = NULL
 )
@@ -26,9 +26,9 @@ setup_rjMCMC(
 
 \item{n.chains}{Number of MCMC chains. Defaults to 3.}
 
-\item{p.split}{Probability of choosing to split a group of species when initiating a split/merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}.}
+\item{p.split}{Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}.}
 
-\item{p.merge}{Probability of choosing to merge two groups of species when initiating a split/merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
+\item{p.merge}{Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
 
 \item{move.ratio}{Relative proportion of calls to data-driven (type I and II) and independence samplers.}
 
@@ -42,7 +42,7 @@ setup_rjMCMC(
 Set up a list object to hold the data from the MCMC sampler, and generate starting values for all model parameters. This function is called internally by \code{\link{run_rjMCMC}}.
 }
 \details{
-In addition to split/merge moves, three other types of MCMC samplers are implemented in \code{espresso} to accelerate convergence and avoid getting stuck in local maxima: two data-driven samplers (type I and type II), in which proposals are informed by the “cues” present in the original data, and one independent sampler, in which proposals are drawn at random from a Uniform distribution bounded by \code{range.dB}(see \code{\link{read_data}} or \code{\link{simulate_data}}), with no dependence on current values.
+In addition to split/merge moves, three other types of MCMC samplers are implemented in \code{espresso} to facilitate convergence and avoid getting stuck in local maxima: two data-driven samplers (type I and type II), in which proposals are informed by the “cues” present in the original data, and one independent sampler, in which proposals are drawn at random from a Uniform distribution bounded by \code{range.dB} (see \code{\link{read_data}} or \code{\link{simulate_data}}), with no dependence on current values.
 }
 \seealso{
 \code{\link{run_rjMCMC}}

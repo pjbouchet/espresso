@@ -8,11 +8,16 @@
 #' @param n.burn Number of MCMC iterations to use as burn-in.
 #' @param n.iter Number of posterior samples.
 #' @param do.update Logical. If \code{TRUE}, updates an existing rjMCMC object.
+#' @param p.split Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}. 
+#' @param p.merge Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.
+#' @param move.ratio Relative proportion of calls to data-driven (type I and II) and independence samplers.
+#' @param m Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.
 #' @importFrom foreach `%dopar%`
 #' @return A list object of class \code{rjmcmc}.
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{configure_RJMCMC}} \code{\link{plot.rjtrace}} \code{\link{update_rjMCMC}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data, excluding species with sample sizes < 5
@@ -37,14 +42,18 @@
 #'                  n.burn = 100,
 #'                  n.iter = 100,
 #'                  do.update = FALSE)
-#' 
+#' }
 #' @keywords brs dose-response rjmcmc 
 
 run_rjMCMC <- function(dat, 
                        n.chains = 3,
                        n.burn = 1000, 
                        n.iter = 1000,
-                       do.update = FALSE) {
+                       do.update = FALSE,
+                       p.split = 0.5,
+                       p.merge = 0.5,
+                       move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
+                       m = 100) {
   
   # If this is an update, grab the last values of the chain(s) to use as starting values
   if(do.update){
@@ -60,16 +69,24 @@ run_rjMCMC <- function(dat,
   cl <- suppressMessages(parallel::makeCluster(n.chains, outfile = ""))
   doParallel::registerDoParallel(cl)
   
-  # writeLines(c(""), "inst/run_rjMCMC_log.txt")
-  
   # Setup the rjMCMC
   rj.list <- purrr::map(.x = seq_len(n.chains), 
                         .f = ~setup_rjMCMC(rj.input = dat,
-                                       n.burn = n.burn, 
-                                       n.iter = n.iter, 
-                                       n.chains = n.chains,
-                                       do.update = do.update,
-                                       start.values = last.iter[[.x]]))
+                                           n.chains = n.chains,
+                                           n.burn = n.burn, 
+                                           n.iter = n.iter,
+                                           p.split = p.split,
+                                           p.merge = p.merge,
+                                           m = m,
+                                           move.ratio = move.ratio,
+                                           start.values = last.iter[[.x]]))
+  
+  # Needed to set up the progress bar on Windows
+  # See https://stackoverflow.com/questions/7349570/wrapper-to-for-loops-with-progress-bar
+  sink("/dev/null")
+  pb <- utils::txtProgressBar(min = 0, max = rj.list[[1]]$mcmc$tot.iter, style = 3)
+  kpb <- 0
+  sink()
   
   # Launch the loop on multiple cores if needed
   rj.res <- foreach::foreach(nc = seq_len(n.chains)
@@ -77,16 +94,11 @@ run_rjMCMC <- function(dat,
                                
                                rj <- rj.list[[nc]]
                                
-                               # Set up progress bar
-                               pb <- utils::txtProgressBar(0, max = rj$mcmc$tot.iter, style = 3)
-                               
                                for (i in 2:rj$mcmc$tot.iter) {
                                  
-                                 # sink("inst/run_rjMCMC_log.txt", append = TRUE)  
-                                 # cat(paste("Starting iteration", i,"\n"))
-                                 
                                  # Print progress bar
-                                 utils::setTxtProgressBar(pb, i)
+                                 kpb <- kpb + 1
+                                 utils::setTxtProgressBar(pb, kpb)
                                  
                                  # Start timer
                                  if(i == 2) tictoc::tic()
@@ -212,16 +224,17 @@ run_rjMCMC <- function(dat,
                                                              FUN = function(w) as.matrix(rj[[w]])[i - 1, ],
                                                              simplify = FALSE, USE.NAMES = TRUE)
                                        
-                                       # Propose new values when a covariate is added
-                                       beta.params[[chosen.covariate]][rj$covariates$fL[[chosen.covariate]]$index] <- rnorm(n = rj$covariates$fL[[chosen.covariate]]$nparam, mean = 0, sd = rj$config$prop$cov)
+          # Propose new values when a covariate is added
+          beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index] <- rnorm(n = rj$dat$covariates$fL[[chosen.covariate]]$nparam, mean = 0, sd = rj$config$prop$cov)
                                        
-                                       # Prior
-                                       logprior <- normal_prior(rj.obj = rj,
-                                                                param.name = chosen.covariate, 
-                                                                param = beta.params[[chosen.covariate]][rj$covariates$fL[[chosen.covariate]]$index])
+          # Prior
+          logprior <- normal_prior(
+            rj.obj = rj,
+            param.name = chosen.covariate,
+            param = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index])
                                        
-                                       # Proposal density
-                                       logpropdens <- sum(dnorm(x = beta.params[[chosen.covariate]][rj$covariates$fL[[chosen.covariate]]$index], mean = 0, sd = rj$config$prop$cov, log = TRUE))
+          # Proposal density
+          logpropdens <- sum(dnorm(x = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index], mean = 0, sd = rj$config$prop$cov, log = TRUE))
                                        
                                        # Ratio of prior / proposal density
                                        R <- logprior - logpropdens
@@ -234,10 +247,10 @@ run_rjMCMC <- function(dat,
                                        # Prior
                                        logprior <- normal_prior(rj.obj = rj,
                                        param.name = chosen.covariate, 
-                                       param = rj[[chosen.covariate]][i - 1, rj$covariates$fL[[chosen.covariate]]$index])
+                                       param = rj[[chosen.covariate]][i - 1, rj$dat$covariates$fL[[chosen.covariate]]$index])
                                        
                                        # Proposal density
-                                       logpropdens <- sum(dnorm(x = rj[[chosen.covariate]][i - 1,                                                       rj$covariates$fL[[chosen.covariate]]$index], 
+                                       logpropdens <- sum(dnorm(x = rj[[chosen.covariate]][i - 1,                                                       rj$dat$covariates$fL[[chosen.covariate]]$index], 
                                        mean = 0, sd = rj$config$prop$cov, log = TRUE))
                                        
                                        
@@ -392,7 +405,7 @@ run_rjMCMC <- function(dat,
                                  #   for (a in rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
                                  #     # Normal proposal
                                  #     proposed.value <- proposal_mh(rj.obj = rj, param.name = a) 
-                                 #     if(rj$covariates$fL[[a]]$nL >= 2) proposed.value <- c(0, proposed.value)
+                                 #     if(rj$dat$covariates$fL[[a]]$nL >= 2) proposed.value <- c(0, proposed.value)
                                  #     prop.list <- list()
                                  #     prop.list[[a]] <- proposed.value
                                  #     loglik.proposed <- likelihood(rj.obj = rj,

@@ -14,63 +14,83 @@
   order.by = "species",
   show.p0_5 = TRUE,
   rotate.y = FALSE,
-  all.quants = FALSE,
+  all.credint = FALSE,
   scientific.name = TRUE,
   common.name = FALSE,
   overwrite.abbrev = TRUE,
-  outline.95 = FALSE
+  outline.outer = FALSE
 )
 }
 \arguments{
-\item{dr.object}{Input object of class \code{dose_response}.}
+\item{dr.object}{Input object of class \code{dose_response}, as returned by \code{\link{compile_rjMCMC}}.}
 
 \item{which.model}{Integer indicating the ID of the model for which dose-response curves are to be plotted. The \code{\link{summary.dose_response}} function can be used to list model IDs, if necessary.}
 
 \item{overlay}{Logical. If \code{TRUE}, plots will be faceted by species (or species group). If \code{FALSE}, all curves will be overlaid on the same plot.}
 
-\item{colour.by}{By default, all dose-response curves follow the same colour scheme (\code{colour.by = NULL}). However, curves can also be coloured by \code{group} or by \code{species}.}
+\item{colour.by}{Curves can be coloured by species group (\code{colour.by = "group"}) or by individual species (\code{colour.by = "species"}), or can use a single colour scheme (the default, \code{colour.by = NULL}).}
 
 \item{colour}{Used to overwrite the \code{colour.by} argument, if desired.}
 
-\item{colour.median}{Colour to use for the posterior median line. Overwrites the \code{colour.by} argument when specified.}
+\item{colour.median}{Colour to use for the posterior median. Overwrites the \code{colour.by} argument.}
 
-\item{order.by}{How should plots be ordered? When \code{order.by = "species"}, plots are ordered alphabetically. \code{order.by = "response"}, plots are ordered by response thresholds (from most to least sensitive species, as determined by posterior medians for μ. Only relevant when \code{overlay = FALSE}.}
+\item{order.by}{How should plots be arranged? Use \code{order.by = "species"} to arrange plots by species (groups) names in alphabetical order, or \code{order.by = "response"}, to arrange plots by response thresholds (from most to least sensitive species (groups), as determined by the estimated posterior medians for μ). Only relevant when \code{overlay = FALSE}.}
 
-\item{show.p0_5}{Logical. If \code{TRUE}, posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.}
+\item{show.p0_5}{Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.}
 
 \item{rotate.y}{Logical. If \code{TRUE}, y-axis labels are rotated clockwise by 90 degrees.}
 
-\item{all.quants}{}
+\item{all.credint}{Logical. If \code{TRUE}, plot all credible intervals. If \code{FALSE}, only plot the outermost interval.}
 
 \item{scientific.name}{Logical. If \code{TRUE}, use species' scientific names in plot titles.}
 
 \item{common.name}{Logical. If \code{TRUE}, use species' common names in plot titles.}
 
-\item{overwrite.abbrev}{Logical. If \code{TRUE}, overwrites abbreviated names for species grouped a priori using \code{\link{cerate_groups}}.}
+\item{overwrite.abbrev}{Logical. If \code{TRUE}, overwrites abbreviated names for species grouped \emph{a priori} using \code{\link{create_groups}}.}
 
-\item{outline.95}{Logical. If \code{TRUE}, outlines the 95\% posterior credible interval bounds.}
+\item{outline.outer}{Logical. If \code{TRUE}, outline the outermost credible interval bounds.}
 }
 \description{
-Plot method for \code{dose_response} objects produced by \code{\link{compile_rjMCMC}}.
+Plot \code{dose_response} curves. objects produced by \code{\link{compile_rjMCMC}}.
 }
 \examples{
+\dontrun{
 library(espresso)
 
-# Import the example data
+# Import the example data, excluding species with sample sizes < 5
+# and considering the sonar covariate
+mydat <- read_data(file = NULL, min.N = 5, covariates = "sonar") 
+summary(mydat)
 
-mydat <- read_data(file = NULL) 
+# Configure the sampler
+mydat.config <- configure_rjMCMC(dat = mydat,
+                                 model.select = TRUE,
+                                 covariate.select = FALSE,
+                                 proposal.mh = list(t.ij = 10, mu.i = 10, 
+                                                    mu = 7, phi = 10, sigma = 10),
+                                 proposal.rj = list(dd = 20, cov = 7),
+                                 prior.covariates = c(0, 30),
+                                 n.rep = 100)
+summary(mydat.config)
 
-# Import a real dataset with the sonar and range covariates, 
-# excluding sperm whales and any other species with a sample size
-# smaller than two
+# Run the reversible jump MCMC
+rj <- run_rjMCMC(dat = mydat.config,
+                 n.chains = 2,
+                 n.burn = 100,
+                 n.iter = 100,
+                 do.update = FALSE)
+# Burn and thin
+rj.trace <- trace_rjMCMC(rj.dat = rj)
 
-mydat <- read_data(file = "path/to/my/data.csv", 
-                  exclude.species = "Sperm whale",
-                  min.N = 2) 
+# Get dose-response functions
+doseR <- compile_rjMCMC(rj.trace)
 
+# Plot dose-response curves
+plot(dr.object = doseR, colour.by = "group")
+}
 }
 \seealso{
-\code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}
+\code{\link{compile_rjMCMC}}
 }
 \author{
 Phil J. Bouchet

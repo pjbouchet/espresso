@@ -36,6 +36,7 @@ A detailed summary, printed to the R console.
 Summary method for objects of class \code{gvs}, as returned by \code{\link{gibbs}}. Produces a text-based summary of: (1) effective sample sizes, (2) acceptance rates, (3) model convergence, and (4) posterior model probabilities. Note that \code{\link{gibbs}} does not implement covariate selection. As a result, posterior inclusion probabilities (PIPs) are not returned here, contrary to \code{\link{summary.rjtrace}}.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Simulate data for two species
@@ -58,6 +59,7 @@ gvs.model <- gibbs(dat = mydat,
              burnin = 500)
 
 summary(gvs.model)
+}
 }
 \seealso{
 \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.brsdata}}

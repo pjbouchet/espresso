@@ -1,40 +1,61 @@
 #' Dose-response curves
 #'
-#' Plot method for \code{dose_response} objects produced by \code{\link{compile_rjMCMC}}.
+#' Plot \code{dose_response} curves. objects produced by \code{\link{compile_rjMCMC}}.
 #'
-#' @param dr.object Input object of class \code{dose_response}.
+#' @export
+#' @param dr.object Input object of class \code{dose_response}, as returned by \code{\link{compile_rjMCMC}}.
 #' @param which.model Integer indicating the ID of the model for which dose-response curves are to be plotted. The \code{\link{summary.dose_response}} function can be used to list model IDs, if necessary.
 #' @param overlay Logical. If \code{TRUE}, plots will be faceted by species (or species group). If \code{FALSE}, all curves will be overlaid on the same plot.
-#' @param colour.by By default, all dose-response curves follow the same colour scheme (\code{colour.by = NULL}). However, curves can also be coloured by \code{group} or by \code{species}.
+#' @param colour.by Curves can be coloured by species group (\code{colour.by = "group"}) or by individual species (\code{colour.by = "species"}), or can use a single colour scheme (the default, \code{colour.by = NULL}).
 #' @param colour Used to overwrite the \code{colour.by} argument, if desired.
-#' @param colour.median Colour to use for the posterior median line. Overwrites the \code{colour.by} argument when specified.
-#' @param order.by How should plots be ordered? When \code{order.by = "species"}, plots are ordered alphabetically. \code{order.by = "response"}, plots are ordered by response thresholds (from most to least sensitive species, as determined by posterior medians for μ. Only relevant when \code{overlay = FALSE}.
-#' @param show.p0_5 Logical. If \code{TRUE}, posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.
+#' @param colour.median Colour to use for the posterior median. Overwrites the \code{colour.by} argument.
+#' @param order.by How should plots be arranged? Use \code{order.by = "species"} to arrange plots by species (groups) names in alphabetical order, or \code{order.by = "response"}, to arrange plots by response thresholds (from most to least sensitive species (groups), as determined by the estimated posterior medians for μ). Only relevant when \code{overlay = FALSE}.
+#' @param show.p0_5 Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.
 #' @param rotate.y Logical. If \code{TRUE}, y-axis labels are rotated clockwise by 90 degrees.
-#' @param all.quants 
+#' @param all.credint Logical. If \code{TRUE}, plot all credible intervals. If \code{FALSE}, only plot the outermost interval.
 #' @param scientific.name Logical. If \code{TRUE}, use species' scientific names in plot titles.
 #' @param common.name Logical. If \code{TRUE}, use species' common names in plot titles.
-#' @param overwrite.abbrev Logical. If \code{TRUE}, overwrites abbreviated names for species grouped a priori using \code{\link{cerate_groups}}.
-#' @param outline.95 Logical. If \code{TRUE}, outlines the 95% posterior credible interval bounds.
+#' @param overwrite.abbrev Logical. If \code{TRUE}, overwrites abbreviated names for species grouped *a priori* using \code{\link{create_groups}}.
+#' @param outline.outer Logical. If \code{TRUE}, outline the outermost credible interval bounds.
 #' 
 #' @author Phil J. Bouchet
-#' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}
+#' @seealso \code{\link{compile_rjMCMC}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
-#' # Import the example data
+#' # Import the example data, excluding species with sample sizes < 5
+#' # and considering the sonar covariate
+#' mydat <- read_data(file = NULL, min.N = 5, covariates = "sonar") 
+#' summary(mydat)
 #' 
-#' mydat <- read_data(file = NULL) 
+#' # Configure the sampler
+#' mydat.config <- configure_rjMCMC(dat = mydat,
+#'                                  model.select = TRUE,
+#'                                  covariate.select = FALSE,
+#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
+#'                                                     mu = 7, phi = 10, sigma = 10),
+#'                                  proposal.rj = list(dd = 20, cov = 7),
+#'                                  prior.covariates = c(0, 30),
+#'                                  n.rep = 100)
+#' summary(mydat.config)
 #' 
-#' # Import a real dataset with the sonar and range covariates, 
-#' # excluding sperm whales and any other species with a sample size
-#' # smaller than two
+#' # Run the reversible jump MCMC
+#' rj <- run_rjMCMC(dat = mydat.config,
+#'                  n.chains = 2,
+#'                  n.burn = 100,
+#'                  n.iter = 100,
+#'                  do.update = FALSE)
+# 
+#' # Burn and thin
+#' rj.trace <- trace_rjMCMC(rj.dat = rj)
 #' 
-#' mydat <- read_data(file = "path/to/my/data.csv", 
-#'                   exclude.species = "Sperm whale",
-#'                   min.N = 2) 
+#' # Get dose-response functions
+#' doseR <- compile_rjMCMC(rj.trace)
 #' 
-#' @export
+#' # Plot dose-response curves
+#' plot(dr.object = doseR, colour.by = "group")
+#' }
 #' @keywords brs rjmcmc 
 
 plot.dose_response <- function(dr.object,
@@ -46,18 +67,22 @@ plot.dose_response <- function(dr.object,
                                order.by = "species", # or "response"
                                show.p0_5 = TRUE,
                                rotate.y = FALSE,
-                               all.quants = FALSE,
-                               scientific.name = TRUE,
+                               all.credint = FALSE,
+                               scientific.name = FALSE,
                                common.name = FALSE,
                                overwrite.abbrev = TRUE,
-                               outline.95 = FALSE){
+                               outline.outer = FALSE){
   
   covariate <- dr.object$covariate
   covariate.values <- dr.object$covariate.values
   species <- dr.object$species
+  species.list <- species_brs %>% janitor::clean_names(.)
+  fL <- dr.object$fL
   
   word <- NULL
   if(!is.null(covariate)) if(covariate == "range") word <- "km"
+  
+  if(is.null(colour.median) & all.credint) colour.median <- "black"
   
   if(!"dose_response" %in% class(dr.object)) stop("dr.object must be of class <dose_response>")
   if(scientific.name & common.name) stop("Only one name allowed.")
@@ -69,16 +94,18 @@ plot.dose_response <- function(dr.object,
   
   if(!order.by %in% c("response", "species")) stop("Can only order by <species> or <response>")
   
-  if(!is.null(colour.by)){
+  if(colour.by == "group"){
     if(!dr.object$by.model){
       colour.by <- "species"
-      warning("No group-level information available. Dose-response curves will be coloured by species.")}}
+      warning("Curves are coloured by species when by.model = FALSE.")}}
   
   if(!is.null(colour)) warning("A colour was specified. <colour.by> argument ignored.")
   
+
   n.colours <- dr.object$dat[[which.model]]$posterior %>% 
     dplyr::filter(param == "median") %>% 
     nrow()
+
   
   if (is.null(colour)) { # No custom colour specified
     if (is.null(colour.by)) { # No colouring by group or species (all same colour)
@@ -102,13 +129,22 @@ plot.dose_response <- function(dr.object,
   
   if(is.null(colour.by)) colour.by <- "species"
   
-  if(!is.null(dr.object$sp.groups) & n.colours > 1){
-    scientific.name <- common.name <- FALSE
-  }
+  # if(!is.null(dr.object$sp.groups) & n.colours > 1){
+  #   scientific.name <- common.name <- FALSE
+  # }
   
   if(!dr.object$by.model){
     which.model <- 1
-    if(!is.null(covariate)) model.name <- paste0("Species: ", dr.object$species) else model.name <- ""
+    if(!is.null(covariate)){
+      sn <- species
+      if(scientific.name) sn <- species.list %>%
+          dplyr::filter(new_code == species) %>% dplyr::pull(scientific_name)
+      if(common.name) sn <- species.list %>%
+          dplyr::filter(new_code == species) %>% dplyr::pull(common_name)
+      model.name <- paste0("Species: ", sn) 
+      } else {
+        model.name <- ""
+      }
     model.groupings <- 1
     
   } else {
@@ -123,18 +159,19 @@ plot.dose_response <- function(dr.object,
   dr.obj <- dr.object$dat
   x.breaks <- pretty(x = dr.obj$dose.range)
   
-  if(all.quants) plot.quants <- dr.obj$quants else plot.quants <- 95
+  if(all.credint) plot.quants <- dr.obj$cred.int else plot.quants <- max(dr.obj$cred.int)
   
   if(!is.null(covariate)){
     dr.obj[[which.model]]$posterior <- 
       dr.obj[[which.model]]$posterior %>% 
       dplyr::mutate(parcov = names(value))}
   
-  
   if(!is.null(covariate.values)){
     dr.obj[[which.model]]$posterior <- 
       dr.obj[[which.model]]$posterior %>% 
-      dplyr::mutate(parcov = rep(covariate.values, length(covariate.values)))
+      dplyr::mutate(parcov = rep(covariate.values, 
+                                 ifelse(length(covariate.values) == 1, 
+                                                      nrow(dr.obj[[which.model]]$posterior), 3)))
   }
   
   median.list <- dr.obj[[which.model]]$posterior %>% 
@@ -181,19 +218,14 @@ plot.dose_response <- function(dr.object,
   if(!is.null(covariate.values)) posterior.medians <- posterior.medians %>% 
     dplyr::mutate(rank = dplyr::dense_rank(parcov))
   
-  # is.sim <- is.numeric(suppressWarnings(as.numeric(posterior.medians$grp)))
-  
   low <- dr.obj[[which.model]]$posterior %>% 
     dplyr::filter(param == "lower") %>% 
     {if (!is.null(covariate.values)) dplyr::mutate(., parcov = covariate.values) else dplyr::mutate(.)} %>% 
     tidyr::unnest(cols = c(value)) %>% 
     dplyr::group_by(species) %>% 
-    {if (!is.null(covariate.values)) dplyr::mutate(., quant = rep(dr.obj$quants, 
+    {if (!is.null(covariate.values)) dplyr::mutate(., quant = rep(dr.obj$cred.int, 
                                                                   length(covariate.values)))
-      else dplyr::mutate(., quant = rep(dr.obj$quants, 
-                                        ifelse(!is.null(covariate), 
-                                               fL[[covariate]]$nL, 1)))} %>% 
-    
+      else dplyr::mutate(., quant = rep(dr.obj$cred.int, ifelse(!is.null(covariate), fL$nL, 1)))} %>% 
     dplyr::ungroup() %>% 
     dplyr::rename(lower = value) %>% 
     dplyr::select(-param)
@@ -203,11 +235,9 @@ plot.dose_response <- function(dr.object,
     {if (!is.null(covariate.values)) dplyr::mutate(., parcov = covariate.values) else dplyr::mutate(.)} %>% 
     tidyr::unnest(cols = c(value)) %>% 
     dplyr::group_by(species) %>% 
-    {if (!is.null(covariate.values)) dplyr::mutate(., quant = rep(dr.obj$quants, 
+    {if (!is.null(covariate.values)) dplyr::mutate(., quant = rep(dr.obj$cred.int, 
                                                                   length(covariate.values)))
-      else dplyr::mutate(., quant = rep(dr.obj$quants, 
-                                        ifelse(!is.null(covariate), 
-                                               fL[[covariate]]$nL, 1)))} %>% 
+      else dplyr::mutate(., quant = rep(dr.obj$cred.int, ifelse(!is.null(covariate), fL$nL, 1)))} %>% 
     dplyr::ungroup() %>% 
     dplyr::rename(upper = value) %>% 
     dplyr::select(-param)
@@ -227,7 +257,6 @@ plot.dose_response <- function(dr.object,
   
   if(colour.by == "group") interval.list$colgrp <- as.character(model.groupings[species]) else interval.list$colgrp <- interval.list$species
   
-  
   if(!is.null(covariate)){
     median.list <- median.list %>% 
       dplyr::left_join(x = ., y = posterior.medians, by = c("parcov", "grp"))
@@ -246,7 +275,7 @@ plot.dose_response <- function(dr.object,
     
     if(length(which.name) == 0){
       
-      if(!is.null(dr.object$abbrev)){
+      if(!is.null(dr.object$abbrev[[1]])){
         
         if(overwrite.abbrev){
           
@@ -255,14 +284,16 @@ plot.dose_response <- function(dr.object,
             dplyr::select(abbrev, label) %>% 
             dplyr::left_join(x = median.list,
                              y = ., 
-                             by = c("species" = "abbrev"))
+                             by = c("species" = "abbrev")) %>% 
+            dplyr::mutate(label = ifelse(is.na(label), colgrp, label))
           
           interval.list <- dr.object$abbrev %>% 
             dplyr::rename(label = species) %>% 
             dplyr::select(abbrev, label) %>% 
             dplyr::left_join(x = interval.list,
                              y = ., 
-                             by = c("species" = "abbrev"))
+                             by = c("species" = "abbrev")) %>% 
+            dplyr::mutate(label = ifelse(is.na(label), colgrp, label))
           
         } else {
           
@@ -281,12 +312,26 @@ plot.dose_response <- function(dr.object,
       
     } else {
       
-      species.list <- espresso::species_brs %>% 
-        janitor::clean_names(.) %>% 
-        dplyr::filter(new_code %in% unique(dr.obj$output$posterior$species))
+      species.list <- species.list %>% 
+        dplyr::filter(new_code %in% unique(c(dr.obj$output$posterior$species, unlist(dr.object$sp.groups))))
       
       species.list <- species.list[, c(which.name, "new_code")]
       names(species.list)[which(names(species.list) == which.name)] <- "label"
+      
+      if(!is.null(dr.object$sp.groups)){
+        for(nn in seq_along(dr.object$sp.groups)){
+          grp.name <- names(dr.object$sp.groups)[nn]
+          grp.label <- species.list %>% 
+            dplyr::filter(new_code %in% dr.object$sp.groups[[nn]]) %>% 
+            dplyr::arrange(label) %>% 
+            dplyr::pull(label) %>% 
+            paste0(., collapse = " / ")
+        
+          species.list <- species.list %>% 
+            dplyr::filter(!new_code %in% dr.object$sp.groups[[nn]]) %>% 
+            dplyr::bind_rows(., tibble::tibble(label = grp.label, new_code = grp.name))
+        }
+      }
       
       median.list <- dplyr::left_join(x = median.list, y = species.list, by = c("species" = "new_code"))
       interval.list <- dplyr::left_join(x = interval.list, y = species.list, by = c("species" = "new_code"))
@@ -328,8 +373,15 @@ plot.dose_response <- function(dr.object,
     
   } else {
     
-    median.list <- median.list %>% dplyr::mutate(colgrp = parcov)
-    interval.list <- interval.list %>% dplyr::mutate(colgrp = parcov)
+    if(!is.null(covariate)){
+      median.list <- median.list %>% dplyr::mutate(colgrp = parcov)
+      interval.list <- interval.list %>% dplyr::mutate(colgrp = parcov)
+    } else {
+      median.list <- median.list %>% dplyr::mutate(grp = label)
+      interval.list <- interval.list %>% dplyr::mutate(grp = label)
+    }
+    
+    
   }
   
   if(order.by == "response") {
@@ -371,7 +423,8 @@ plot.dose_response <- function(dr.object,
   
   for(qq in seq_along(plot.quants)){
     
-    gdat <- interval.list %>% dplyr::filter(quant == plot.quants[qq]) %>% 
+    gdat <- interval.list %>% 
+      dplyr::filter(quant == plot.quants[qq]) %>% 
       tidyr::unnest(cols = c(value))
     
     if(!is.null(covariate)){
@@ -391,6 +444,28 @@ plot.dose_response <- function(dr.object,
                                                  aes(x = x, y = y, fill = grp),
                                                  alpha = seq(0.3, 1, length = length(plot.quants))[qq]) } 
     }
+    
+    if(outline.outer){
+      
+      if(!is.null(covariate)){
+        gplot <- gplot +
+          geom_polygon(data = gdat %>% dplyr::filter(quant == max(plot.quants)),
+                       aes(x = x, y = y, colour = colgrp), fill = "transparent", linetype = "dashed") +
+          {if(!overlay) facet_wrap(~ colgrp) }
+      } else {
+        if(all.credint){
+          gplot <- gplot +
+            geom_polygon(data = gdat %>% dplyr::filter(quant == max(plot.quants)),
+                         aes(x = x, y = y), colour = "black", fill = "transparent", linetype = "dashed")
+        }else{
+          gplot <- gplot +
+            geom_polygon(data = gdat %>% dplyr::filter(quant == max(plot.quants)),
+                         aes(x = x, y = y, colour = grp), fill = "transparent", linetype = "dashed")
+        }
+        gplot <- gplot + {if(!overlay) facet_wrap(~ grp) }
+      }
+    }
+    
   } 
   
   mdat <- median.list %>% tidyr::unnest(cols = c(value))
@@ -418,20 +493,6 @@ plot.dose_response <- function(dr.object,
     ylab("p(response)") + 
     xlab(expression(paste("Dose (dB re 1", mu, "Pa)")))
   
-  if(outline.95){
-    
-    if(!is.null(covariate)){
-      gplot <- gplot +
-        geom_polygon(data = gdat %>% dplyr::filter(quant == 95),
-                     aes(x = x, y = y, colour = colgrp), fill = "transparent", linetype = "dashed") +
-        {if(!overlay) facet_wrap(~ colgrp) }
-    } else {
-      gplot <- gplot +
-        geom_polygon(data = gdat %>% dplyr::filter(quant == 95),
-                     aes(x = x, y = y, colour = grp), fill = "transparent", linetype = "dashed") +
-        {if(!overlay) facet_wrap(~ grp) }
-    }
-  }
   
   gplot <- gplot + 
     ggtitle(ifelse(!is.null(covariate), "Dose-response model", "Multi-species dose-response model"),

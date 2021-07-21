@@ -7,7 +7,7 @@
 gibbs(
   dat,
   random.effects = FALSE,
-  include.covariates = FALSE,
+  pseudo.n = 10000,
   mcmc.n = 1000,
   burnin = 1000,
   n.chains = 1,
@@ -20,7 +20,7 @@ gibbs(
 
 \item{random.effects}{Logical. When \code{TRUE}, uses a random effect model formulation.}
 
-\item{include.covariates}{Logical. Whether to include contextual covariates. Note that covariate selection is not implemented in \code{gibbs}.}
+\item{pseudo.n}{Number of iterations for the pseudo-priors.}
 
 \item{mcmc.n}{Number of posterior samples.}
 
@@ -40,6 +40,7 @@ Fits the Bayesian hierarchical dose-response model of \insertCite{Miller2014;tex
 Adapted from original code developed by Dina Sadykova as part of the \href{https://synergy.st-andrews.ac.uk/mocha/}{Mocha} project. The function can accommodate species/species groups either as a fixed or a random effect.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Simulate data for two species
@@ -61,6 +62,7 @@ gvs <- gibbs(dat = mydat,
              mcmc.n = 1000, 
              burnin = 500)
 }
+}
 \references{
 \insertAllCited{}
 }
@@ -73,5 +75,6 @@ Phil J. Bouchet
 \keyword{---------------------------------------------}
 \keyword{-------------------------------------------------}
 \keyword{--------------------------------------------------------------------}
+\keyword{brs}
 \keyword{dose-response}
 \keyword{gvs}

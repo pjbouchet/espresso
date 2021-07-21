@@ -11,6 +11,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{read_data}} \code{\link{simulate_data}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Simulate data for two species
@@ -25,7 +26,8 @@
 #'                       seed = 58697)
 #'                       
 #' summary(mydat)
-#' @keywords brs rjmcmc dose-response
+#' }
+#' @keywords brs gvs rjmcmc dose-response
 
 summary.brsdata <- function(dat.obj, print.config = TRUE){
   

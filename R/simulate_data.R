@@ -30,6 +30,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{read_data}} \code{\link{summary.brsdata}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Simulate data for two species
@@ -42,7 +43,8 @@
 #'                        sigma = 20, 
 #'                        Rc = c(210, 211), 
 #'                        seed = 58697)
-#' @keywords brs rjmcmc dose-response                      
+#' }
+#' @keywords brs gvs rjmcmc dose-response                      
 
 simulate_data <- function(n.species = 2, 
                           n.whales = 20, 

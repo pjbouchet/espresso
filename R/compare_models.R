@@ -2,6 +2,7 @@
 #'
 #' Evaluate outputs from models implemented using a (1) rjMCMC and (2) Gibbs Variable Selection approach. Returns comparative plots of posterior model rankings and posterior parameter estimates.
 #'
+#' @export
 #' @param rj.dat Input rjMCMC object, as returned by \code{\link{trace_rjMCMC}}.
 #' @param gvs.fixed Input Gibbs object, as returned by \code{\link{gibbs}} using a fixed effect implementation of the dose-response model.
 #' @param gvs.random Input Gibbs object, as returned by \code{\link{gibbs}} using a random effect implementation of the dose-response model.
@@ -11,35 +12,54 @@
 #' @param density Logical. If \code{TRUE}, compares density plots for each model parameter.
 #' @param prob Logical. If \code{TRUE}, compares posterior rankings for candidate models.
 #' 
-#'  
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
-#' # Import the example data
+#' # Simulate data for two species
+#' mydat <- simulate_data(n.species = 2, 
+#'                        n.whales = 16, 
+#'                        max.trials = 3, 
+#'                        covariates = list(exposed = c(0, 5), range = 0.5),
+#'                        mu = c(101, 158), 
+#'                        phi = 20, 
+#'                        sigma = 20, 
+#'                        Rc = c(210, 211), 
+#'                        seed = 58697)
+#' summary(mydat)
+#'      
+#' # Model selection by GVS                        
+#' gvs <- gibbs(dat = mydat, 
+#'              random.effects = FALSE, 
+#'              include.covariates = FALSE, 
+#'              mcmc.n = 1000, 
+#'              burnin = 500)
 #' 
-#' mydat <- read_data(file = NULL) 
+#' # Run the reversible jump MCMC
+#' rj <- run_rjMCMC(dat = mydat.config,
+#'                  n.chains = 2,
+#'                  n.burn = 100,
+#'                  n.iter = 100,
+#'                  do.update = FALSE)
+#'                  
+#' # Burn and thin
+#' rj.trace <- trace_rjMCMC(rj.dat = rj)
 #' 
-#' # Import a real dataset with the sonar and range covariates, 
-#' # excluding sperm whales and any other species with a sample size
-#' # smaller than two
-#' 
-#' mydat <- read_data(file = "path/to/my/data.csv", 
-#'                   exclude.species = "Sperm whale",
-#'                   min.N = 2) 
-#' 
-#' @export
-#' @keywords brs rjmcmc 
+#' # Compare outputs
+#' compare_models(rj.dat = rj.trace, gvs.fixed = gvs)
+#' }
+#' @keywords brs rjmcmc gvs dose-response
 
-compare_MCMC <- function(rj.dat = NULL,
-                         gvs.fixed = NULL,
-                         gvs.random = NULL,
-                         by.model = FALSE,
-                         kernel.adj = 2,
-                         viridis.col = FALSE,
-                         density = TRUE,
-                         prob = TRUE
+compare_models <- function(rj.dat = NULL,
+                           gvs.fixed = NULL,
+                           gvs.random = NULL,
+                           by.model = FALSE,
+                           kernel.adj = 2,
+                           viridis.col = FALSE,
+                           density = TRUE,
+                           prob = TRUE
 ){
   
   if(!"rjtrace" %in% class(rj.dat)) stop("Input data must be of class <rjtrace>.")
@@ -142,7 +162,6 @@ compare_MCMC <- function(rj.dat = NULL,
         gsub(pattern = "\\]", replacement = "", x =.)
       
     }
-    
     
     nn <- purrr::map(.x = master.trace, .f = ~colnames(as.data.frame(.x)))
     nn.check <- purrr::map(.x = nn, .f = ~paste0(sort(.x), collapse = "+")) %>% unlist(.) %>% unique(.)

@@ -6,10 +6,10 @@
 \usage{
 \method{plot}{rjtrace}(
   rj.obj,
-  param.name = "all",
+  param.name = NULL,
   covariates.incl = TRUE,
   autocorr = FALSE,
-  individual = TRUE
+  individual = FALSE
 )
 }
 \arguments{
@@ -27,23 +27,41 @@
 Generate trace, density, and autocorrelation plots from an \code{rjtrace} object.
 }
 \details{
-Adapted from Casey Youngflesh's \code{\link[MCMCvis]{MCMCtrace}}.
+Adapted from Casey Youngflesh's function \code{\link[MCMCvis]{MCMCtrace}}.
 }
 \examples{
+\dontrun{
 library(espresso)
 
-# Import the example data
+# Import the example data, excluding species with sample sizes < 5
+# and considering the sonar covariate
+mydat <- read_data(file = NULL, min.N = 5, covariates = "sonar") 
+summary(mydat)
 
-mydat <- read_data(file = NULL) 
+# Configure the sampler
+mydat.config <- configure_rjMCMC(dat = mydat,
+                                 model.select = TRUE,
+                                 covariate.select = FALSE,
+                                 proposal.mh = list(t.ij = 10, mu.i = 10, 
+                                                    mu = 7, phi = 10, sigma = 10),
+                                 proposal.rj = list(dd = 20, cov = 7),
+                                 prior.covariates = c(0, 30),
+                                 n.rep = 100)
+summary(mydat.config)
 
-# Import a real dataset with the sonar and range covariates, 
-# excluding sperm whales and any other species with a sample size
-# smaller than two
+# Run the reversible jump MCMC
+rj <- run_rjMCMC(dat = mydat.config,
+                 n.chains = 2,
+                 n.burn = 100,
+                 n.iter = 100,
+                 do.update = FALSE)
 
-mydat <- read_data(file = "path/to/my/data.csv", 
-                  exclude.species = "Sperm whale",
-                  min.N = 2) 
+# Burn and thin
+rj.trace <- trace_rjMCMC(rj.dat = rj)
 
+# Get density and trace plots
+plot(rj.trace)
+}
 }
 \seealso{
 \code{\link{run_rjMCMC}} \code{\link{trace_rjMCMC}}
@@ -53,4 +71,5 @@ Phil J. Bouchet
 }
 \keyword{---------------------------------------------}
 \keyword{brs}
+\keyword{dose-response}
 \keyword{rjmcmc}

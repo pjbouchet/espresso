@@ -84,12 +84,12 @@ When covariates are specified, the below fields must also be included, as releva
 An example data file is included in the package. See \code{\link{example_brs}} for details.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data
 mydat <- read_data(file = NULL) 
 
-\dontrun{
 # Import a real dataset with the sonar and range covariates, 
 # whilst excluding sperm whales and any other species with a sample size
 # smaller than two observations.
@@ -107,4 +107,5 @@ Phil J. Bouchet
 \keyword{---------------------------------------------}
 \keyword{brs}
 \keyword{dose-response}
+\keyword{gvs}
 \keyword{rjmcmc}

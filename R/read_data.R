@@ -54,12 +54,12 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.brsdata}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data
 #' mydat <- read_data(file = NULL) 
 #' 
-#' \dontrun{
 #' # Import a real dataset with the sonar and range covariates, 
 #' # whilst excluding sperm whales and any other species with a sample size
 #' # smaller than two observations.
@@ -67,7 +67,7 @@
 #'                   exclude.species = "Sperm whale",
 #'                   min.N = 2)
 #' }
-#' @keywords brs rjmcmc dose-response             
+#' @keywords brs gvs rjmcmc dose-response             
 
 read_data <- function(file = NULL,
                       include.species = NULL, 
@@ -271,9 +271,14 @@ read_data <- function(file = NULL,
     if("range" %in% covariate.names) brsdat <- brsdat %>% 
         dplyr::mutate(
           range = dplyr::case_when(
+            # Not censored (whale did respond) and response range known
             censored == 0 & !is.na(resp_range) ~ resp_range,
-            censored == 1 & !is.na(min_range) ~ min_range,
+            # Not censored (whale did respond) and response range unknown but estimate available
             censored == 0 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
+            # Not censored (whale did respond) and response range unknown but estimate available
+            censored == 0 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
+            censored == 1 & !is.na(min_range) ~ min_range,
+
             censored == 1 & is.na(min_range) & !is.na(inferred_min_range) ~ inferred_min_range,
             TRUE ~ NA_real_
           ))

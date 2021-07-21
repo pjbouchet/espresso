@@ -7,11 +7,12 @@
 #' @param species.groups List indicating which species should be grouped. These can be given using any combination of scientific name, common name, or unique identifier, as defined in \code{\link{species_brs}}. If \code{species.groups} is given as a named list, the names of each list element will be used as group names. If \code{species.groups} is unnamed, the function will combine species codes from \code{\link{species_brs}} to generate appropriate group names.
 #' @param abbrev Logical. If \code{TRUE}, group names will be abbreviated. This is useful for plotting and data summaries. 
 #' 
-#' @return A list object of class \code{brsdata.group}.
+#' @return A list object of class \code{brsdata.grp}.
 #' 
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{undo_groups}} \code{\link{summary.brsdata}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data, excluding Risso's dolphins and minke whales
@@ -25,7 +26,7 @@
 #' 
 #' Examine the resulting grouping
 #' summary(mydat.grouped)
-#' 
+#' }
 #' @keywords brs rjmcmc dose-response
 
 create_groups <- function(dat.obj, 

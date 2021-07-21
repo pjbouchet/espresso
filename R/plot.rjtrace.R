@@ -2,38 +2,55 @@
 #'
 #' Generate trace, density, and autocorrelation plots from an \code{rjtrace} object.
 #'
+#' @export
 #' @param rj.obj rjMCMC trace object of class \code{rjtrace}.
-#' @param param.name Parameter name(s). Defaults to \code{all}, which returns plots for all parameters in the model.
 #' @param covariates.incl Logical. If \code{TRUE}, the trace is filtered to only retain posterior estimates obtained when the contextual covariates were included in the model. Only relevant when \code{covariate.select = TRUE} in \code{\link{configure_rjMCMC}}.
-#' @param autocorr Logical. Whether to output chain autocorrelation plots.
-#' @param individual Logical. If \code{TRUE}, separate density lines will be plotted for each chain. If \code{FALSE}, one density line will be plotted for all chains.
+#' @inheritParams plot.gvs
 #' 
-#' @details Adapted from Casey Youngflesh's \code{\link[MCMCvis]{MCMCtrace}}.
+#' @details Adapted from Casey Youngflesh's function \code{\link[MCMCvis]{MCMCtrace}}.
 #' 
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}} \code{\link{trace_rjMCMC}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
-#' # Import the example data
+#' # Import the example data, excluding species with sample sizes < 5
+#' # and considering the sonar covariate
+#' mydat <- read_data(file = NULL, min.N = 5, covariates = "sonar") 
+#' summary(mydat)
 #' 
-#' mydat <- read_data(file = NULL) 
+#' # Configure the sampler
+#' mydat.config <- configure_rjMCMC(dat = mydat,
+#'                                  model.select = TRUE,
+#'                                  covariate.select = FALSE,
+#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
+#'                                                     mu = 7, phi = 10, sigma = 10),
+#'                                  proposal.rj = list(dd = 20, cov = 7),
+#'                                  prior.covariates = c(0, 30),
+#'                                  n.rep = 100)
+#' summary(mydat.config)
 #' 
-#' # Import a real dataset with the sonar and range covariates, 
-#' # excluding sperm whales and any other species with a sample size
-#' # smaller than two
+#' # Run the reversible jump MCMC
+#' rj <- run_rjMCMC(dat = mydat.config,
+#'                  n.chains = 2,
+#'                  n.burn = 100,
+#'                  n.iter = 100,
+#'                  do.update = FALSE)
 #' 
-#' mydat <- read_data(file = "path/to/my/data.csv", 
-#'                   exclude.species = "Sperm whale",
-#'                   min.N = 2) 
+#' # Burn and thin
+#' rj.trace <- trace_rjMCMC(rj.dat = rj)
 #' 
-#' @keywords brs rjmcmc 
+#' # Get density and trace plots
+#' plot(rj.trace)
+#' }
+#' @keywords brs dose-response rjmcmc 
 
 plot.rjtrace <- function(rj.obj, 
-                         param.name = "all", 
+                         param.name = NULL, 
                          covariates.incl = TRUE,
                          autocorr = FALSE, 
-                         individual = TRUE){
+                         individual = FALSE){
   
   #' ---------------------------------------------
   # Extract the trace
@@ -61,9 +78,10 @@ plot.rjtrace <- function(rj.obj,
         
         cov.trace <- mcmc.trace[, cov.cols]
         cov.trace <- purrr::map(.x = cov.trace, 
-                                .f = ~tibble::as_tibble(.x) %>% 
-                                  dplyr::filter(.[[2]] == 1) %>% 
-                                  dplyr::select_at(vars(-contains("incl."))))
+                                .f = ~
+                                  tibble::as_tibble(.x) %>% 
+                                  dplyr::filter(.[[ncol(.)]] == 1) %>% 
+                                  dplyr::select_at(dplyr::vars(-contains("incl."))))
         
         cov.n <- purrr::map(.x = cov.trace, .f = ~nrow(.x)) %>% 
           unlist(.) %>% min(.)
@@ -72,7 +90,7 @@ plot.rjtrace <- function(rj.obj,
           cov.trace[[j]] <- cov.trace[[j]][(nrow(cov.trace[[j]]) - cov.n + 1):nrow(cov.trace[[j]]), ] %>% 
             coda::as.mcmc(.)}
         
-        cov.trace <- as.mcmc.list(cov.trace)
+        cov.trace <- coda::as.mcmc.list(cov.trace)
         
         MCMC_trace(cov.trace, 
                    iter = cov.n, 
@@ -92,7 +110,9 @@ plot.rjtrace <- function(rj.obj,
                    ind = individual,
                    params = ifelse(is.null(param.name), "all", param.name))
         
-        if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace, pars = param.name)
+        if(autocorr){
+          if(is.null(param.name)) bpars <- character() else bpars <- param.name
+          bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)}
         
       }
       
@@ -102,9 +122,11 @@ plot.rjtrace <- function(rj.obj,
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
-                 params = ifelse(is.null(param.name), "all", param.name))
+                 params = param.name)
       
-      if(autocorr) bayesplot::mcmc_acf(x = cov.trace, pars = param.name)
+      if(autocorr){
+        if(is.null(param.name)) bpars <- character() else bpars <- param.name
+        bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)}
       
     }
     
@@ -166,7 +188,8 @@ plot.rjtrace <- function(rj.obj,
                  ind = individual,
                  params = ifelse(is.null(param.name), "all", param.name))
       
-      if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace, pars = ifelse(is.null(param.name), character(), param.name))
+      if(is.null(param.name)) bpars <- character() else bpars <- param.name
+      if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
       
     }
     

@@ -65,13 +65,13 @@ trace_rjMCMC <- function(rj.dat,
   # If this is not the first run of the sampler, update the relevant details
   if(is.update){
     if(is.null(burn)) burn <- 0 else mcmc.params$n.burn <- burn
+    if(burn > rj.dat[[1]]$mcmc$n.iter) stop("Burn-in cannot exceed number of iterations.")
   } else {
     if(is.null(burn)) burn <- mcmc.params$n.burn else mcmc.params$n.burn <- burn
     mcmc.params$n.iter <- mcmc.params$tot.iter - burn
     mcmc.params$iter.rge <- paste0(mcmc.params$n.burn + thin, ":", mcmc.params$tot.iter)
   }
-  
-  if(burn > rj.dat[[1]]$mcmc$n.iter) stop("Burn-in cannot exceed number of iterations.")
+
   mcmc.params$thin <- thin
   
   # Define model parameters
@@ -107,8 +107,12 @@ trace_rjMCMC <- function(rj.dat,
     rj.dat[[j]]$model_size <- sapply(X = rj.dat[[j]]$model, 
                                      FUN = function(b) n_groups(rj.dat[[j]]$mlist[[b]]),
                                      USE.NAMES = FALSE)
+    
+    if(rj.dat[[j]]$dat$covariates$n > 0){
+    colnames(rj.dat[[j]]$include.covariates) <- paste0("incl.", colnames(rj.dat[[j]]$include.covariates))
+    }
+    
   }
-  
   
   #' ---------------------------------------------
   # Extract parameters and burn / thin
@@ -128,22 +132,7 @@ trace_rjMCMC <- function(rj.dat,
       colnames(mcmc.trace[[nc]])[mu.indices] <- paste0("mu.", rj.dat[[1]]$dat$species$names)
     }
   }
-  
-  #' ---------------------------------------------
-  # Covariates
-  #' ---------------------------------------------
-  
-  # if(rj.dat[[1]]$dat$covariates$n > 0){
-  #   
-  #   for(nc in seq_len(length(mcmc.trace))){
-  #     
-  #     colnames(mcmc.trace[[nc]])[rj.dat[[1]]$dat$species$n + 2 + 1:sum(purrr::map_dbl(.x = rj.dat[[1]]$config$fL, .f = ~max(.x$index)))] <- Reduce("c", purrr::map(.x = rj.dat[[1]]$dat$covariates$dummy, .f = ~colnames(.x)))
-  #     
-  #     colnames(mcmc.trace[[nc]])[(ncol(mcmc.trace[[nc]]) - rj.dat[[1]]$dat$covariates$n + 1):ncol(mcmc.trace[[nc]])] <- paste0("incl.", rj.dat[[1]]$dat$covariates$names)
-  #     
-  #   }}
-  
-  
+
   #' ---------------------------------------------
   # Posterior medians
   #' ---------------------------------------------
@@ -187,9 +176,9 @@ trace_rjMCMC <- function(rj.dat,
   
   # Acceptance rates
   AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), .f = ~rj.dat[[.x]]["accept"])
-  mcmc.params$move <- mcmc.params$move$m[burn:mcmc.params$tot.iter]
-  mcmc.params$move <- table(mcmc.params$move)
-  names(mcmc.params$move) <- paste0("move.", names(mcmc.params$move))
+  mcmc.params$move$m <- mcmc.params$move$m[burn:mcmc.params$tot.iter]
+  mcmc.params$move$m <- table(mcmc.params$move$m)
+  # names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
   
   AR <- purrr::map(.x = AR, .f = ~acceptance_rate(AR.obj = .x, rj.obj = rj.dat, mp = mcmc.params)) %>% 
     tibble::enframe(.) %>% 

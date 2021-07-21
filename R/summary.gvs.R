@@ -16,6 +16,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.brsdata}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Simulate data for two species
@@ -38,6 +39,7 @@
 #'              burnin = 500)
 #' 
 #' summary(gvs.model)
+#' }
 #' @keywords gvs dose-response
 
 summary.gvs <- function(gvs.obj, 

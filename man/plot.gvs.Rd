@@ -4,12 +4,14 @@
 \alias{plot.gvs}
 \title{Diagnostic plots}
 \usage{
-\method{plot}{gvs}(gvs.dat, param.name = "all", individual = TRUE)
+\method{plot}{gvs}(gvs.dat, param.name = NULL, autocorr = FALSE, individual = FALSE)
 }
 \arguments{
 \item{gvs.dat}{Gibbs Variable Selection object, as returned by \code{\link{gibbs}}.}
 
 \item{param.name}{Parameter name(s). Defaults to \code{all}, which returns plots for all parameters in the model.}
+
+\item{autocorr}{Logical. Whether to output chain autocorrelation plots.}
 
 \item{individual}{Logical. If \code{TRUE}, separate density lines will be plotted for each chain. If \code{FALSE}, one density line will be plotted for all chains.}
 }
@@ -17,9 +19,10 @@
 Generate trace, density, and autocorrelation plots from a \code{gvs} object.
 }
 \details{
-Adapted from Casey Youngflesh's \code{\link[MCMCvis]{MCMCtrace}}.
+Adapted from Casey Youngflesh's function \code{\link[MCMCvis]{MCMCtrace}}.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data
@@ -33,7 +36,7 @@ mydat <- read_data(file = NULL)
 mydat <- read_data(file = "path/to/my/data.csv", 
                   exclude.species = "Sperm whale",
                   min.N = 2) 
-
+}
 }
 \seealso{
 \code{\link{run_rjMCMC}} \code{\link{trace_rjMCMC}}
@@ -42,4 +45,5 @@ mydat <- read_data(file = "path/to/my/data.csv",
 Phil J. Bouchet
 }
 \keyword{brs}
-\keyword{rjmcmc}
+\keyword{dose-response}
+\keyword{gvs}
