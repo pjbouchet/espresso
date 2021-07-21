@@ -28,20 +28,24 @@ and relies on Gibbs Variable Selection (O’Hara and Sillanpää 2009) to
 identify groups of species exhibiting similar patterns of responsiveness
 to impulsive sound stimuli. However, this approach proves
 computationally intractable for more than a few species and/or
-covariates. `espresso` uses a bespoke “dimension-jumping”
-reversible-jump Markov chain Monte Carlo algorithm (rjMCMC, Green 1995;
-Hastie and Green 2012) to relax these constraints and allow species
-groupings to be identified in an objective, data-driven way. The package
-also accommodates: (1) the selection of any number of explanatory
-covariates (e.g., sonar frequency, previous history of exposure, feeding
-behaviour, source-whale range), (2) the comparison of dose-response
-functional forms (i.e., monophasic or biphasic), and (3) the appropriate
-treatment of right-censored observations (i.e., animals which display no
-signs of behavioural response across the array of doses received).
+covariates. `espresso` uses a bespoke dimension-jumping reversible-jump
+Markov chain Monte Carlo algorithm (rjMCMC, Green 1995; Hastie and Green
+2012) to relax these constraints and allow species groupings to be
+identified in an objective, data-driven way. The package also
+accommodates: (1) the selection of any number of explanatory covariates
+(e.g., sonar frequency, previous history of exposure, feeding behaviour,
+source-whale range), (2) the comparison of dose-response functional
+forms (i.e., monophasic or biphasic), and (3) the appropriate treatment
+of both left- and right-censored observations (i.e., animals which
+display either an immediate response on first exposure, or no signs of
+response across the array of doses received, respectively).
 
 ## Getting started
 
-Read the `espresso` introductory vignette.
+If you are just getting started with `espresso`, we recommend reading
+the [tutorial
+vignette](https://pjbouchet.github.io/espresso/articles/espresso.html),
+which provides a quick introduction to the package.
 
 ## Installation
 
@@ -49,7 +53,7 @@ Install the GitHub development version to access the latest features and
 patches.
 
 ``` r
-install.packages("remotes")
+# install.packages("remotes")
 remotes::install_github("pjbouchet/espresso")
 ```
 
