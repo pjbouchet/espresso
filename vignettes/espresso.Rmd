@@ -83,19 +83,19 @@ knitr::kable(head(species_brs), format = "pandoc")
 
 Here, `example_brs` contains 111 observations of 8 cetacean species (i.e., Blainville's and Cuviers' beaked whales, blue, killer, minke, sperm, and northern bottlenose whales, as well as Risso's dolphins). Of the 20 columns in the data, only five are compulsory:
 
-+----------+-----------------------------------------------------------------------------+
-| Header   | Description                                                                 |
-+==========+=============================================================================+
-| species  | Species code, as listed in `species_brs`                                    |
-+----------+-----------------------------------------------------------------------------+
-| tag_id   | Unique tag ID number                                                        |
-+----------+-----------------------------------------------------------------------------+
-| resp_spl | Sound pressure level at time of response (in dB re 1μPa)                    |
-+----------+-----------------------------------------------------------------------------+
-| max_spl  | Maximum sound pressure level reached during the exposure (in dB re 1μPa)    |
-+----------+-----------------------------------------------------------------------------+
-| censored | Binary indicator of whether an observation is right-censored (1) or not (0) |
-+----------+-----------------------------------------------------------------------------+
++----------+-------------------------------------------------------------------------------------------------------------------+
+| Header   | Description                                                                                                       |
++==========+===================================================================================================================+
+| species  | Species code, as listed in `species_brs`                                                                          |
++----------+-------------------------------------------------------------------------------------------------------------------+
+| tag_id   | Unique tag ID number                                                                                              |
++----------+-------------------------------------------------------------------------------------------------------------------+
+| resp_spl | Sound pressure level at time of response (in dB re 1μPa)                                                          |
++----------+-------------------------------------------------------------------------------------------------------------------+
+| max_spl  | Maximum sound pressure level reached during the exposure (in dB re 1μPa)                                          |
++----------+-------------------------------------------------------------------------------------------------------------------+
+| censored | Integer variable indicating whether an observation is left-censored (-1), right-censored (1), or not censored (0) |
++----------+-------------------------------------------------------------------------------------------------------------------+
 
 When contextual covariates are specified, additional fields must also be included, as relevant:
 
@@ -276,7 +276,7 @@ summary(mydat.config, print.config = TRUE)
 
 Now that initial setup is complete, we can proceed with model fitting. This step is designed to mirror a typical Bayesian modelling workflow in the `rjags` package [@Plummer2019]. The following call to `run_rjMCMC()` compiles the information given in `mydat.config`, creates the R data structures required to hold the MCMC samples, and runs the models:
 
-```{r echo=TRUE, message=FALSE, warning=FALSE}
+```{r echo=TRUE, eval = FALSE, message=FALSE, warning=FALSE}
 rj <- run_rjMCMC(dat = mydat.config, n.chains = 3, n.burn = 25000, n.iter = 100000)
 ```
 
@@ -300,26 +300,39 @@ partitions::listParts(x = 4) %>%
 
 ### Model assessment
 
+We need to make sure that the MCMC sampler produces a Markov chain that "converges" to the appropriate density (the posterior density) and that explores the parameter space ("mixes") efficiently, i.e., that doesn't reject or accept too many proposals. If too many proposals are rejected, we need many simulations to generate a sufficient number of parameter samples. If too many proposals are accepted, we don't gain much information about the underlying distribution.
+
 We start by extracting posterior samples from the `rjmcmc` object returned by `run_rjMCMC()`. This gives an object of class `<rjtrace>`.
 
-```{r echo=TRUE, message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
+rj.posterior <- espresso:::rj.posterior
+```
+
+```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
 rj.posterior <- trace_rjMCMC(rj)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 class(rj.posterior)
 ```
 
-Model convergence is commonly ascertained both (1) graphically, by inspecting trace plots and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package `coda` [@Plummer2006].
+Model convergence and mixing are commonly ascertained both (1) graphically, by inspecting trace plots and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package `coda` [@Plummer2006].
 
-Trace and density plots can be obtained using the `plot` method.
+Trace and density plots can be obtained using the `plot` method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy [caterpillar](http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg).
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-plot(rj.posterior, param.name = "all", autocorr = FALSE, individual = TRUE)
+plot(rj.posterior, individual = TRUE)
 ```
 
-> **Note:** Plots for specific parameters can be generated using the `param.name` argument. If `individual = TRUE` separate density lines will be plotted for each chain. If `autocorr = TRUE`, autocorrelation plots will also be returned.
+> **Note:** Plots for specific parameters of interest can be generated using the `param.name` argument. If `individual = TRUE` separate density lines will be plotted for each chain.
+
+Another way to check for convergence is to look at the serial autocorrelation between MCMC samples. The lag-$k$ autocorrelation is the correlation between every sample and the sample $k$ steps before it. This autocorrelation should become smaller as $k$ increases, i.e., samples can be considered as independent. If, on the other hand, autocorrelation remains high for higher values of $k$, this indicates a high degree of correlation between our samples and slow mixing.
+
+> **Note:** Autocorrelation plots an be obtained with `autocorr = TRUE`.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Plot for the range covariate only
-plot(rj.posterior, param.name = "range")
+plot(rj.posterior, param.name = "range", autocorr = TRUE)
 ```
 
 The `summary` method also provides useful information for model checking, including:
@@ -328,7 +341,7 @@ The `summary` method also provides useful information for model checking, includ
 
 -   Acceptance rates and effective sample sizes for each parameter
 
--   A numerical assessment of model convergence using the Gelman-Rubin statistic (also known as the potential scale reduction factor). Scores in the **1.00--1.1** range are generally considered to indicate good convergence. `espresso` gives a breakdown of the estimated scores for each parameter, as well as an overall (multivariate) score that summarises convergence across all parameters.
+-   A numerical assessment of model convergence using the Gelman-Rubin statistic (also known as the potential scale reduction factor). **Scores in the 1.00--1.1 range** are generally considered to indicate good convergence. `espresso` gives a breakdown of the estimated scores for each parameter, as well as an overall (multivariate) score that summarises convergence across all parameters.
 
 -   A table of posterior inclusion probabilities (PIPs) for contextual covariates, when covariate selection is enabled. Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).
 
@@ -346,7 +359,7 @@ summary(rj.posterior)
 
 Updates to the Markov chain may be required if the model has failed to converge. The `update_rjMCMC()` function can be used to extend a previous model run; it "picks up where the sampler left off" by extracting the last MCMC samples for each parameter and using those as new starting values. The same model checking procedures apply to this new run, and the update process can be repeated until convergence is achieved.
 
-```{r echo=TRUE, message=FALSE, warning=FALSE}
+```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
 rj <- update_rjMCMC(rj, n.iter = 50000)
 ```
 
@@ -360,9 +373,9 @@ class(doseR)
 plot(doseR)
 ```
 
-> **Note:** When model selection is enabled (`model.select = TRUE`), dose-response curves are derived irrespective of model IDs, and therefore incorporate model uncertainty. If if dose-response functions are needed for a specific model of interest, then the `by.model` argument should be set to `TRUE`.
+> **Note:** When model selection is enabled (`model.select = TRUE`), dose-response curves are derived irrespective of model IDs, and therefore reflect model uncertainty. If dose-response functions are needed for a specific model of interest, then the `by.model` argument should be set to `TRUE`.
 
-> **Note:** By default, `compile_rjMCMC()` calculates a range of posterior credible intervals, from 5 to 95%, in 5% increments. These default values can be overridden using the `credible.intervals` argument.
+> **Note:** By default, `compile_rjMCMC()` calculates a range of posterior credible intervals, from 5% to 95%, in 5% increments. These default values can be overridden using the `credible.intervals` argument.
 
 Curves for covariates of interest can also be obtained by conditioning on a given species/species group. For example:
 

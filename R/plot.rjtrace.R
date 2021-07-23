@@ -145,7 +145,7 @@ plot.rjtrace <- function(rj.obj,
         cov.trace <- purrr::map_depth(.x = cov.trace, .depth = 2, 
                                       .f = ~tibble::as_tibble(.x) %>% 
                                         dplyr::filter(.[[2]] == 1) %>% 
-                                        dplyr::select_at(vars(-contains("incl."))))
+                                        dplyr::select_at(dplyr::vars(-contains("incl."))))
         
         cov.n <- purrr::map_depth(.x = cov.trace, .depth = 2, .f = ~nrow(.x)) %>% 
           purrr::map_dbl(.x = ., .f = ~min(unlist(.x)))
