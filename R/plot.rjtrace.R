@@ -155,7 +155,7 @@ plot.rjtrace <- function(rj.obj,
             cov.trace[[u]][[j]] <- cov.trace[[u]][[j]][(nrow(cov.trace[[u]][[j]]) - cov.n[u] + 1):nrow(cov.trace[[u]][[j]]), ] %>% 
               coda::as.mcmc(.)}}
         
-        cov.trace <- purrr::map(.x = cov.trace, .f = ~as.mcmc.list(.x))
+        cov.trace <- purrr::map(.x = cov.trace, .f = ~coda::as.mcmc.list(.x))
         
         mcmc.trace <- mcmc.trace[, -unlist(cov.cols)]
         

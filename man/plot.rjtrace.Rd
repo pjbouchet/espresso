@@ -9,7 +9,7 @@
   param.name = NULL,
   covariates.incl = TRUE,
   autocorr = FALSE,
-  individual = FALSE
+  individual = TRUE
 )
 }
 \arguments{
