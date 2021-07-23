@@ -35,11 +35,7 @@ setup_rjMCMC <- function(rj.input,
   
   if(is.null(start.values) & do.update) stop("Missing starting values.")
   if(!"integer" %in% class(move.ratio) & !"list" %in% class(move.ratio)) stop("<move.ratio> must be either an integer vector or a list.")
-  
-  if(!length(move.ratio) == 3) stop("Length mismatch for <move.ratio>.")
-  if(!sum(p.split, p.merge) == 1) stop("Move probabilities do not sum to 1.")
-  if(sum(c(p.split, p.merge) < 0) > 0) stop("Move probabilities cannot be negative.")
-  
+
   if(is.list(move.ratio)) move.ratio <- unlist(move.ratio)
   
   if(do.update) tot.iter <- n.iter else tot.iter <- n.iter + n.burn # Total chain length
@@ -154,7 +150,6 @@ setup_rjMCMC <- function(rj.input,
   names(rj$accept) <- unlist(list("t.ij", "mu.i", "mu", "phi", "sigma", 
                                   rj.input$covariates$names, 
                                   paste0("move.", c(0, 1, 2, 3)),
-                                  # paste0("move.", unique(names(table(rj$mcmc$move$m)))),
                                   ifelse(rj.input$config$covariate.select, "move.covariates", list(NULL))))
   
   

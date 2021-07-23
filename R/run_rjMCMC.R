@@ -8,10 +8,6 @@
 #' @param n.burn Number of MCMC iterations to use as burn-in.
 #' @param n.iter Number of posterior samples.
 #' @param do.update Logical. If \code{TRUE}, updates an existing rjMCMC object.
-#' @param p.split Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}. 
-#' @param p.merge Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.
-#' @param move.ratio Relative proportion of calls to data-driven (type I and II) and independence samplers.
-#' @param m Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.
 #' @importFrom foreach `%dopar%`
 #' @return A list object of class \code{rjmcmc}.
 #' @author Phil J. Bouchet
@@ -49,11 +45,7 @@ run_rjMCMC <- function(dat,
                        n.chains = 3,
                        n.burn = 1000, 
                        n.iter = 1000,
-                       do.update = FALSE,
-                       p.split = 0.5,
-                       p.merge = 0.5,
-                       move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
-                       m = 100) {
+                       do.update = FALSE) {
   
   # If this is an update, grab the last values of the chain(s) to use as starting values
   if(do.update){
@@ -75,10 +67,10 @@ run_rjMCMC <- function(dat,
                                            n.chains = n.chains,
                                            n.burn = n.burn, 
                                            n.iter = n.iter,
-                                           p.split = p.split,
-                                           p.merge = p.merge,
-                                           m = m,
-                                           move.ratio = move.ratio,
+                                           p.split = dat$config$move$prob[1],
+                                           p.merge = dat$config$move$prob[2],
+                                           m = dat$config$move$freq,
+                                           move.ratio = dat$config$move$ratio,
                                            start.values = last.iter[[.x]]))
   
   # Needed to set up the progress bar on Windows
@@ -102,11 +94,12 @@ run_rjMCMC <- function(dat,
                                  utils::setTxtProgressBar(pb, kpb)
                                  
                                  # Start timer
-                                 if(i == 2) tictoc::tic()
+                                 if(i == 2) start.time <- Sys.time()
                                  if(i == rj$mcmc$tot.iter){
-                                   exec.time <- tictoc::toc(quiet = TRUE)
-                                   run_time <- hms::as_hms(as.numeric(round(exec.time$toc - exec.time$tic, 0)))
-                                   rj$run_time <- run_time}
+                                   end.time <- Sys.time()
+                                   rj$run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, 
+                                                                       time2 = start.time,
+                                                                       units = "auto")), 1)}
                                  
                                  #' ---------------------------------------------------------------------
                                  # || Right-censored observations ----

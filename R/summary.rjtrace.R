@@ -53,6 +53,11 @@ summary.rjtrace <- function(rj.obj,
                             covariate.prob = TRUE,
                             combine.chains = FALSE){
   
+  options(tibble.width = Inf) 
+  options(pillar.neg = FALSE) 
+  options(pillar.subtle = TRUE)
+  options(pillar.sigfig = 4)
+  
   cat("\n======================================================\n")
   cat("SUMMARY\n")
   cat("======================================================\n\n")
@@ -70,11 +75,12 @@ summary.rjtrace <- function(rj.obj,
   cat("\nMCMC\n")
   cat("--------------------\n")
   
-  cat("Prior (μ): Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["mu", ], collapse = "; "), ")"), "\n")
-  cat("Prior (φ): Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["phi", ], collapse = "; "), ")"), "\n")
-  cat("Prior (σ): Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["sigma", ], collapse = "; "), ")"), "\n")
+  cat("Priors:\n\n")
+  cat("μ: Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["mu", ], collapse = "; "), ")"), "\n")
+  cat("φ: Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["phi", ], collapse = "; "), ")"), "\n")
+  cat("σ: Uniform", paste0("(", paste0(rj.obj$dat$param$bounds["sigma", ], collapse = "; "), ")"), "\n")
   for(cc in rj.obj$dat$covariates$names){
-  cat("Prior", paste0("(", cc, "):"), "Normal", paste0("(", paste0(rj.obj$config$prior[[cc]], collapse = "; "), ")"), "\n")
+  cat(paste0(cc, ":"), "Normal", paste0("(", paste0(rj.obj$config$prior[[cc]], collapse = "; "), ")"), "\n")
   }
   cat("\n")
   cat("p(split):", rj.obj$mcmc$move$prob[1], "\n")
@@ -87,8 +93,9 @@ summary.rjtrace <- function(rj.obj,
     cat("\nEFFECTIVE SAMPLE SIZES\n")
     cat("--------------------\n")
     
+    print(rj.obj$ess)
     # print(coda::effectiveSize(rj.obj$trace))
-    print(mcmcse::ess(rj.obj$trace))
+    # print(mcmcse::ess(rj.obj$trace))
   }
   
   if(accept.rate){

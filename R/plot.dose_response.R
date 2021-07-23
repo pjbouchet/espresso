@@ -94,10 +94,11 @@ plot.dose_response <- function(dr.object,
   
   if(!order.by %in% c("response", "species")) stop("Can only order by <species> or <response>")
   
-  if(colour.by == "group"){
+  if(!is.null(colour.by)){
+    if(colour.by == "group"){
     if(!dr.object$by.model){
       colour.by <- "species"
-      warning("Curves are coloured by species when by.model = FALSE.")}}
+      warning("Curves are coloured by species when by.model = FALSE.")}}}
   
   if(!is.null(colour)) warning("A colour was specified. <colour.by> argument ignored.")
   

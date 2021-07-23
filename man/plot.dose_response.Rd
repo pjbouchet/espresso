@@ -15,7 +15,7 @@
   show.p0_5 = TRUE,
   rotate.y = FALSE,
   all.credint = FALSE,
-  scientific.name = TRUE,
+  scientific.name = FALSE,
   common.name = FALSE,
   overwrite.abbrev = TRUE,
   outline.outer = FALSE

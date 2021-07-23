@@ -15,7 +15,7 @@
 \arguments{
 \item{rj.obj}{rjMCMC trace object of class \code{rjtrace}.}
 
-\item{param.name}{Parameter name(s). Defaults to \code{all}, which returns plots for all parameters in the model.}
+\item{param.name}{Parameter name(s). Defaults to \code{NULL}, which returns plots for all parameters in the model.}
 
 \item{covariates.incl}{Logical. If \code{TRUE}, the trace is filtered to only retain posterior estimates obtained when the contextual covariates were included in the model. Only relevant when \code{covariate.select = TRUE} in \code{\link{configure_rjMCMC}}.}
 

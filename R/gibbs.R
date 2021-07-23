@@ -58,7 +58,7 @@ gibbs <- function(dat,
   #' ---------------------------------------------
   # Start timer
   #' ---------------------------------------------
-  tictoc::tic()
+  start.time <- Sys.time()
   
   #' ---------------------------------------------
   # Perform function checks and initial setup
@@ -825,8 +825,10 @@ gibbs <- function(dat,
   
   ## || Results ----
   
-  exec.time <- tictoc::toc(quiet = TRUE)
-  run_time <- hms::as_hms(as.numeric(round(exec.time$toc - exec.time$tic, 0)))
+  end.time <- Sys.time()
+  run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, 
+                                      time2 = start.time,
+                                      units = "auto")), 1)
   
   run_time <- tibble::enframe(run_time) %>% 
     dplyr::rename(Chains = name, Time = value) %>% 

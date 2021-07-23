@@ -11,6 +11,11 @@ configure_rjMCMC(
   proposal.mh = list(t.ij = 10, mu.i = 10, mu = 7, phi = 10, sigma = 10),
   proposal.rj = list(dd = 20, cov = 7),
   prior.covariates = c(0, 30),
+  p.split = 0.5,
+  p.merge = 0.5,
+  move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
+  m = 100,
+  bootstrap = TRUE,
   n.rep = 1000
 )
 }
@@ -26,6 +31,16 @@ configure_rjMCMC(
 \item{proposal.rj}{Named list specifying the standard deviations of the proposal distributions used in the reversible jump sampler. Must contain two elements: \code{mu} for response thresholds, and \code{cov} for covariates.}
 
 \item{prior.covariates}{Mean and standard deviation of the Normal prior placed on covariates. At present, the same prior is applied to all covariates.}
+
+\item{p.split}{Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}.}
+
+\item{p.merge}{Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
+
+\item{move.ratio}{Relative proportion of calls to data-driven (type I and II) and independence samplers.}
+
+\item{m}{Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.}
+
+\item{bootstrap}{Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increase efficiency when reconfiguring the sampler.}
 
 \item{n.rep}{Number of replicate bootstrap datasets used for clustering (see \code{Details}).}
 }

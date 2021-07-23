@@ -4,7 +4,7 @@
 #'
 #' @export
 #' @param gvs.dat Gibbs Variable Selection object, as returned by \code{\link{gibbs}}.
-#' @param param.name Parameter name(s). Defaults to \code{all}, which returns plots for all parameters in the model.
+#' @param param.name Parameter name(s). Defaults to \code{NULL}, which returns plots for all parameters in the model.
 #' @param autocorr Logical. Whether to output chain autocorrelation plots.
 #' @param individual Logical. If \code{TRUE}, separate density lines will be plotted for each chain. If \code{FALSE}, one density line will be plotted for all chains.
 #' 

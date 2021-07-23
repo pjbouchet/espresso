@@ -268,8 +268,9 @@ compile_rjMCMC <- function(rj.object,
                  p.med = rj.object$p.med,
                  covariate = covariate,
                  covariate.values = covariate.values,
-                 fL = rj.object$dat$covariates$fL[[covariate]],
                  species = species)
+  
+  if(!is.null(covariate)) output$fL <- rj.object$dat$covariates$fL[[covariate]] else output$fL <- rj.object$dat$covariates$fL
   
   class(output) <- c("dose_response", class(output))
   return(output)

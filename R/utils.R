@@ -2048,25 +2048,25 @@ acceptance_rate <- function(AR.obj, rj.obj, mp){
     purrr::map(.x = AR.obj$accept[1:(5 + rj.obj[[1]]$dat$covariates$n)],
                .f = ~round( .x/ mp$n.iter, 3))
   
-  if("move.0" %in% names(mp$move)){
-    if(mp$move["move.0"] > 0){
-      AR.obj$accept[["move.0"]] <- round(AR.obj$accept[["move.0"]] / mp$move["move.0"], 3)}}
+  if("move.0" %in% names(mp$move$m)){
+    if(mp$move$m["move.0"] > 0){
+      AR.obj$accept[["move.0"]] <- round(AR.obj$accept[["move.0"]] / mp$move$m["move.0"], 3)}}
   
-  if("move.1" %in% names(mp$move)){
-    if(mp$move["move.1"] > 0){
-    AR.obj$accept[["move.1"]] <- round(AR.obj$accept[["move.1"]] / mp$move["move.1"], 3)}}
+  if("move.1" %in% names(mp$move$m)){
+    if(mp$move$m["move.1"] > 0){
+    AR.obj$accept[["move.1"]] <- round(AR.obj$accept[["move.1"]] / mp$move$m["move.1"], 3)}}
   
-  if("move.2" %in% names(mp$move)){
-    if(mp$move["move.2"] > 0){
-    AR.obj$accept[["move.2"]] <- round(AR.obj$accept[["move.2"]] / mp$move["move.2"], 3)}}
+  if("move.2" %in% names(mp$move$m)){
+    if(mp$move$m["move.2"] > 0){
+    AR.obj$accept[["move.2"]] <- round(AR.obj$accept[["move.2"]] / mp$move$m["move.2"], 3)}}
   
-  if("move.3" %in% names(mp$move)){
-    if(mp$move["move.3"] > 0){
-    AR.obj$accept[["move.3"]] <- round(AR.obj$accept[["move.3"]] / mp$move["move.3"], 3)}}
+  if("move.3" %in% names(mp$move$m)){
+    if(mp$move$m["move.3"] > 0){
+    AR.obj$accept[["move.3"]] <- round(AR.obj$accept[["move.3"]] / mp$move$m["move.3"], 3)}}
   
   if ("move.covariates" %in% names(AR.obj$accept)) {
     AR.obj$accept[["move.covariates"]] <-
-      round(AR.obj$accept[["move.covariates"]] / rj.obj[[1]]$dat$covariates$n, 3)
+      round(AR.obj$accept[["move.covariates"]] / mp$n.iter, 3)
   }
   
   return(AR.obj)

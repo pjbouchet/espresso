@@ -67,7 +67,7 @@ The input data file must contain the following fields:
 \code{tag_id} \tab Unique tag identifier\cr
 \code{resp_SPL} \tab Sound pressure level at time of response (in dB re 1μPa) \cr
 \code{max_SPL} \tab Maximum sound pressure level reached during the exposure\cr
-\code{censored} \tab Binary variable indicating whether an observation is right-censored (1) or not (0) \cr
+\code{censored} \tab Integer variable indicating whether an observation is left-censored (-1), right-censored (1), or not censored (0) \cr
 }
 
 When covariates are specified, the below fields must also be included, as relevant:

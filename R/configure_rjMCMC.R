@@ -15,6 +15,11 @@
 #' @param proposal.mh Named list specifying the standard deviations of the proposal distributions used in the Metropolis-Hastings sampler.
 #' @param proposal.rj Named list specifying the standard deviations of the proposal distributions used in the reversible jump sampler. Must contain two elements: \code{mu} for response thresholds, and \code{cov} for covariates.
 #' @param prior.covariates Mean and standard deviation of the Normal prior placed on covariates. At present, the same prior is applied to all covariates.
+#' @param p.split Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}. 
+#' @param p.merge Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.
+#' @param move.ratio Relative proportion of calls to data-driven (type I and II) and independence samplers.
+#' @param m Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.
+#' @param bootstrap Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increase efficiency when reconfiguring the sampler. 
 #' @param n.rep Number of replicate bootstrap datasets used for clustering (see \code{Details}).
 #' 
 #' @return A list object of class \code{rjconfig} identical to the input \code{brsdata} object, with an additional \code{config} element composed of:
@@ -59,13 +64,26 @@ configure_rjMCMC <- function(dat,
                              proposal.mh = list(t.ij = 10, mu.i = 10, mu = 7, phi = 10, sigma = 10),
                              proposal.rj = list(dd = 20, cov = 7),
                              prior.covariates = c(0, 30),
+                             p.split = 0.5,
+                             p.merge = 0.5,
+                             move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
+                             m = 100,
+                             bootstrap = TRUE,
                              n.rep = 1000){
   
   #' -----------------------------------------------
   # Perform function checks
   #' -----------------------------------------------
   
-  if(!"brsdata" %in% class(dat)) stop("Input data must be of class <brsdata>.")
+  if(!"brsdata" %in% class(dat)){
+    if(!"rjconfig" %in% class(dat)) stop("Input data must be of class <brsdata> or <rjconfig>.")}
+  
+  if(!bootstrap & !"rjconfig" %in% class(dat)) stop("<rjconfig> object required when bootstrap = FALSE.")
+  
+  if(!length(move.ratio) == 3) stop("Length mismatch for <move.ratio>.")
+  if(!sum(p.split, p.merge) == 1) stop("Move probabilities do not sum to 1.")
+  if(sum(c(p.split, p.merge) < 0) > 0) stop("Move probabilities cannot be negative.")
+  
   if(dat$covariates$n == 0) covariate.select <- FALSE
   if(dat$species$n == 1) model.select <- FALSE
   
@@ -111,6 +129,8 @@ configure_rjMCMC <- function(dat,
   # whilst the former assigns probabilities to specific numbers of clusters (species groups).
   # This is useful for parameterising alternative types of model jumps.
   
+  if(bootstrap){
+    
   if(model.select){
     
     # Remove NA values to avoid numerical issues
@@ -233,14 +253,30 @@ configure_rjMCMC <- function(dat,
     p.Clust$cluster <- ifelse(is.null(dat$species$groups), dat$species$n, length(dat$species$groups))
     
   }
+    
+  }
   
-  dat$config <- list(var = setNames(c(dat.sigma, dat.phi), c("sigma", "phi")),
-                    prop = list(dd = proposal.rj$dd, mh = proposal.mh),
-                    clust = list(p.ClustModels, p.Clust),
-                    boot = datGroups,
-                    mlist = mlist,
-                    model.select = model.select,
-                    covariate.select = covariate.select)
+  if(bootstrap){
+    
+    dat$config <- list(var = setNames(c(dat.sigma, dat.phi), c("sigma", "phi")),
+                       prop = list(dd = proposal.rj$dd, mh = proposal.mh),
+                       move = list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
+                                   ratio = move.ratio, freq = m),
+                       model.select = model.select,
+                       boot = datGroups,
+                       mlist = mlist,
+                       clust = list(p.ClustModels, p.Clust),
+                       covariate.select = covariate.select)
+
+  } else {
+    
+    dat$config$var <-  setNames(c(dat.sigma, dat.phi), c("sigma", "phi"))
+    dat$config$prop <- list(dd = proposal.rj$dd, mh = proposal.mh)
+    dat$config$move <- list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
+                                   ratio = move.ratio, freq = m)
+    dat$config$model.select <-  model.select
+    dat$config$covariate.select <- covariate.select
+  } 
   
   if(dat$covariates$n > 0){
     dat$config$prop$cov <- proposal.rj$cov

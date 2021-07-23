@@ -174,11 +174,13 @@ trace_rjMCMC <- function(rj.dat,
   
   mcmc.params <- append(mcmc.params, list(thin = thin, run_time = run_times))
   
+  #' ---------------------------------------------
   # Acceptance rates
+  #' ---------------------------------------------
   AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), .f = ~rj.dat[[.x]]["accept"])
   mcmc.params$move$m <- mcmc.params$move$m[burn:mcmc.params$tot.iter]
   mcmc.params$move$m <- table(mcmc.params$move$m)
-  # names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
+  names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
   
   AR <- purrr::map(.x = AR, .f = ~acceptance_rate(AR.obj = .x, rj.obj = rj.dat, mp = mcmc.params)) %>% 
     tibble::enframe(.) %>% 
@@ -189,12 +191,27 @@ trace_rjMCMC <- function(rj.dat,
     dplyr::mutate(t.ij = mean(t.ij), mu.i = mean(mu.i)) %>% 
     dplyr::ungroup()
   
+  if("move.0" %in% names(AR)) names(AR)[which(names(AR) == "move.0")] <- "split.merge"
+  if("move.1" %in% names(AR)) names(AR)[which(names(AR) == "move.1")] <- "datadriven.I"
+  if("move.2" %in% names(AR)) names(AR)[which(names(AR) == "move.2")] <- "datadriven.II"
+  if("move.3" %in% names(AR)) names(AR)[which(names(AR) == "move.3")] <- "random"
+  if("move.covariates" %in% names(AR)) names(AR)[which(names(AR) == "move.covariates")] <- "cov.select"
+  
+  #' ---------------------------------------------
+  # Effective sample sizes
+  #' ---------------------------------------------
+  ESS <- mcmcse::ess(mcmc.trace) %>% 
+    tibble::enframe(.) %>% 
+    dplyr::rename(parameter = name, ESS = value)
+  
+  
   # Return output as a named list
   res <- list(dat = rj.dat[[1]]$dat,
               config = rj.dat[[1]]$config,
               trace = mcmc.trace, 
               mcmc = mcmc.params, 
               accept = AR, 
+              ess = ESS,
               mlist = model.list,
               p.med = posterior.medians,
               abbrev = rj.dat[[1]]$abbrev)

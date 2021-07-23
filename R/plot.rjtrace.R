@@ -50,7 +50,7 @@ plot.rjtrace <- function(rj.obj,
                          param.name = NULL, 
                          covariates.incl = TRUE,
                          autocorr = FALSE, 
-                         individual = FALSE){
+                         individual = TRUE){
   
   #' ---------------------------------------------
   # Extract the trace
@@ -118,14 +118,16 @@ plot.rjtrace <- function(rj.obj,
       
     } else {
       
+      plot.pm <- colnames(mcmc.trace[[1]])[grepl(pattern = param.name, x = colnames(mcmc.trace[[1]]))]
+      
       MCMC_trace(mcmc.trace, 
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
-                 params = param.name)
+                 params = plot.pm)
       
       if(autocorr){
-        if(is.null(param.name)) bpars <- character() else bpars <- param.name
+        if(is.null(param.name)) bpars <- character() else bpars <- plot.pm
         bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)}
       
     }

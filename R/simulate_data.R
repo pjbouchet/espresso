@@ -10,7 +10,8 @@
 #' @param mu Mean response threshold(s) for each species.
 #' @param phi Between-whale variance in response thresholds.
 #' @param sigma Within-whale between-exposure variance in response thresholds.
-#' @param Rc Right-censoring interval. Values of the maximum realised dose for each exposure are generated as random draws from a Uniform distribution within these bounds, such that \code{max.dose <- runif(n = n.trials, min = Rc[1], max = Rc[2])}.
+#' @param Lc Left-censoring interval. Values of the minimum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Lc}.
+#' @param Rc Right-censoring interval. Values of the maximum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Rc}.
 #' @param seed Random seed (for reproducible results). 
 #' 
 #' @inheritParams read_data
@@ -55,6 +56,7 @@ simulate_data <- function(n.species = 2,
                           sigma = NULL,
                           range.dB = c(60, 215),
                           range.var = c(0, 45),
+                          Lc = c(100, 105),
                           Rc = c(190, 195),
                           obs.sd = 2.5,
                           verbose = TRUE,
@@ -249,12 +251,19 @@ simulate_data <- function(n.species = 2,
   y_ij <- rnorm(n = n.trials, mean = t.ij, sd = obs.sd)
   
   #' ---------------------------------------------
-  # Right-censoring
+  # Left- and right-censoring
   #' ---------------------------------------------
   
+  min.dose <- runif(n = n.trials, min = Lc[1], Lc[2])
   max.dose <- runif(n = n.trials, min = Rc[1], Rc[2])
-  is.censored <- ifelse(y_ij > max.dose, 1, 0)
-  y_ij[is.censored == 1] <- NA
+
+  is.lcensored <- ifelse(y_ij < min.dose, -1, 0)
+  is.rcensored <- ifelse(y_ij > max.dose, 1, 0)
+  is.censored <- is.lcensored + is.rcensored
+  
+  y_ij[!is.censored == 0] <- NA
+  
+  min.dose[is.censored == 0] <- upper.bound$mu
   max.dose[is.censored == 0] <- lower.bound$mu
 
   #' ---------------------------------------------
@@ -306,6 +315,8 @@ simulate_data <- function(n.species = 2,
     # Observations
     obs = list(y_ij = y_ij,
                censored = is.censored,
+               Lc = min.dose,
+               Lc.range = Lc,
                Rc = max.dose,
                Rc.range = Rc,
                prec = measurement.precision,

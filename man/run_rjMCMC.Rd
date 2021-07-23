@@ -4,17 +4,7 @@
 \alias{run_rjMCMC}
 \title{Reversible jump MCMC}
 \usage{
-run_rjMCMC(
-  dat,
-  n.chains = 3,
-  n.burn = 1000,
-  n.iter = 1000,
-  do.update = FALSE,
-  p.split = 0.5,
-  p.merge = 0.5,
-  move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
-  m = 100
-)
+run_rjMCMC(dat, n.chains = 3, n.burn = 1000, n.iter = 1000, do.update = FALSE)
 }
 \arguments{
 \item{dat}{A configured rjMCMC object of class \code{rjconfig}, as returned by \code{\link{configure_rjMCMC}}.}
@@ -26,14 +16,6 @@ run_rjMCMC(
 \item{n.iter}{Number of posterior samples.}
 
 \item{do.update}{Logical. If \code{TRUE}, updates an existing rjMCMC object.}
-
-\item{p.split}{Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}.}
-
-\item{p.merge}{Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
-
-\item{move.ratio}{Relative proportion of calls to data-driven (type I and II) and independence samplers.}
-
-\item{m}{Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.}
 }
 \value{
 A list object of class \code{rjmcmc}.

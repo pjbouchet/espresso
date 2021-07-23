@@ -14,6 +14,7 @@ simulate_data(
   sigma = NULL,
   range.dB = c(60, 215),
   range.var = c(0, 45),
+  Lc = c(100, 105),
   Rc = c(190, 195),
   obs.sd = 2.5,
   verbose = TRUE,
@@ -39,7 +40,9 @@ simulate_data(
 
 \item{range.var}{Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2.}
 
-\item{Rc}{Right-censoring interval. Values of the maximum realised dose for each exposure are generated as random draws from a Uniform distribution within these bounds, such that \code{max.dose <- runif(n = n.trials, min = Rc[1], max = Rc[2])}.}
+\item{Lc}{Left-censoring interval. Values of the minimum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Lc}.}
+
+\item{Rc}{Right-censoring interval. Values of the maximum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Rc}.}
 
 \item{obs.sd}{Measurement uncertainty (expressed as a standard deviation in received levels), in dB re 1μPa.}
 

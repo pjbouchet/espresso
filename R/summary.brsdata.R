@@ -44,8 +44,9 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   cat("\nOBSERVATIONS\n")
   cat("--------------------\n")
   
-  cat("Right-censoring:", any(dat.obj$obs$censored > 0), "\n")
-  cat("Total:", sum(dat.obj$obs$censored), "\n")
+  cat("Left-censoring:", sum(dat.obj$obs$censored < 0), "\n")
+  cat("Right-censoring:", sum(dat.obj$obs$censored > 0), "\n")
+  cat("Total:", sum(!dat.obj$obs$censored == 0), "\n")
   
   cat("\n--------------------")
   cat("\nSPECIES\n")
@@ -154,6 +155,21 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
                                          SD = dat.obj$config$prop$dd, 
                                          step = "RJ"))
     print(prop.df)
+    
+    cat("\n")
+    cat("Priors:\n\n")
+    cat("μ: Uniform", paste0("(", paste0(dat.obj$param$bounds["mu", ], collapse = "; "), ")"), "\n")
+    cat("φ: Uniform", paste0("(", paste0(dat.obj$param$bounds["phi", ], collapse = "; "), ")"), "\n")
+    cat("σ: Uniform", paste0("(", paste0(dat.obj$param$bounds["sigma", ], collapse = "; "), ")"), "\n")
+    
+    for(cc in dat.obj$dat$covariates$names){
+      cat(paste0(cc, ":"), "Normal", paste0("(", paste0(dat.obj$config$prior[[cc]], collapse = "; "), ")"), "\n")
+    }
+    
+    cat("\n")
+    cat("p(split):", dat.obj$config$move$prob[1], "\n")
+    cat("p(merge):", dat.obj$config$move$prob[2], "\n")
+    cat("\n")
     
     cat("\nClustering:\n\n")
     print(dat.obj$config$clust)

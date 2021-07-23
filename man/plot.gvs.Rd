@@ -9,7 +9,7 @@
 \arguments{
 \item{gvs.dat}{Gibbs Variable Selection object, as returned by \code{\link{gibbs}}.}
 
-\item{param.name}{Parameter name(s). Defaults to \code{all}, which returns plots for all parameters in the model.}
+\item{param.name}{Parameter name(s). Defaults to \code{NULL}, which returns plots for all parameters in the model.}
 
 \item{autocorr}{Logical. Whether to output chain autocorrelation plots.}
 
