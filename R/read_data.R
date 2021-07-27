@@ -147,8 +147,10 @@ read_data <- function(file = NULL,
         ))
       ))
       
-      species.list$new_code[which(unlist(species.list[, index]) == n |
-                                    tolower(unlist(species.list[, index])) == n)]
+      if(length(index) > 1) index <- max(index)
+      
+      species.list$new_code[sum(which(unlist(species.list[, index]) == n),
+                                which(tolower(unlist(species.list[, index])) == n))]
     }))
     
     exclude.species <- unname(sapply(X = exclude.species, FUN = function(n) {
@@ -160,8 +162,10 @@ read_data <- function(file = NULL,
         ))
       ))
       
-      species.list$new_code[which(unlist(species.list[, index]) == n |
-                                    tolower(unlist(species.list[, index])) == n)]
+      if(length(index) > 1) index <- max(index)
+      
+      species.list$new_code[sum(which(unlist(species.list[, index]) == n),
+                                which(tolower(unlist(species.list[, index])) == n))]
     }))
   }
   
@@ -179,7 +183,7 @@ read_data <- function(file = NULL,
     rawdat <- espresso::example_brs
     file <- "example_brs"
   } else {
-    rawdat <- readr::read_csv(file = file, na = c(" ", "NA"), col_types = cols())
+    rawdat <- readr::read_csv(file = file, na = c(" ", "NA"), col_types = readr::cols())
   }
   
   rawdat <- rawdat %>% janitor::clean_names()
@@ -277,9 +281,9 @@ read_data <- function(file = NULL,
             censored == 0 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
             # Not censored (whale did respond) and response range unknown but estimate available
             censored == 0 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
-            censored == 1 & !is.na(min_range) ~ min_range,
-
-            censored == 1 & is.na(min_range) & !is.na(inferred_min_range) ~ inferred_min_range,
+            # Right and left-censored
+            !censored == 0 & !is.na(min_range) ~ min_range,
+            !censored == 0 & is.na(min_range) & !is.na(inferred_min_range) ~ inferred_min_range,
             TRUE ~ NA_real_
           ))
     

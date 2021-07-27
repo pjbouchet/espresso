@@ -52,11 +52,12 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   cat("\nSPECIES\n")
   cat("--------------------\n")
   
-  cat("N = ", dat.obj$species$n, "\n")
+  cat("N =", dat.obj$species$n, "\n")
   if(is.null(dat.obj$species$exclude) | length(dat.obj$species$exclude) == 0){
     cat("Excluded: None \n")
   } else {
-    cat("Excluded:", paste0(unlist(dat.obj$species$exclude)), "\n")
+    ex.sp <- unlist(dat.obj$species$exclude)
+    cat(paste0("Excluded (N = ", length(ex.sp), "):"), ex.sp, "\n")
   }
   
   if(is.null(dat.obj$species$groups)){

@@ -23,6 +23,9 @@ A list object of class \code{rjmcmc}.
 \description{
 Run the rjMCMC algorithm on dose-response data.
 }
+\note{
+A progress bar is used to monitor code execution on Mac and Linux operating systems. This feature does not currently work on Windows.
+}
 \examples{
 \dontrun{
 library(espresso)

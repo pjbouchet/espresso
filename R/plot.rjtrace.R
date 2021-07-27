@@ -52,6 +52,8 @@ plot.rjtrace <- function(rj.obj,
                          autocorr = FALSE, 
                          individual = TRUE){
   
+  if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
+  
   #' ---------------------------------------------
   # Extract the trace
   #' ---------------------------------------------

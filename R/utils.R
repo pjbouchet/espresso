@@ -155,7 +155,7 @@ likelihood <- function(rj.obj,
   
   
   if(all(par.name %in% c("mu.i", "mu", "phi")) | RJ){
-    
+
     LL.3 <- sapply(X = 1:n_groups(model), 
                    FUN = function(p){
                      dtnorm(
@@ -687,8 +687,9 @@ propdens_rj <- function(rj.obj, param, jump, iter) {
 #' @param orig Current value(s) 
 
 propdens_mh <- function(rj.obj, param.name, dest, orig) {
-  
-  if(param.name == "t.ij") lower.limit <- rj.obj$dat$obs$Rc else lower.limit <- rj.obj$dat$param$bounds[param.name, 1]
+
+  if(param.name == "t.ij") lower.limit <- rj.obj$dat$obs$Rc else 
+    lower.limit <- rj.obj$dat$param$bounds[param.name, 1]
   
   if(param.name %in% c("t.ij", "mu.i")) {
     
@@ -703,6 +704,7 @@ propdens_mh <- function(rj.obj, param.name, dest, orig) {
     loglik <- dnorm(x = dest, mean = orig, sd = rj.obj$config$prop$mh[[param.name]], log = TRUE) 
     
   }
+  # print(loglik)
   
   if (any(abs(loglik) == Inf)) loglik <- -100000
   if(param.name %in% c("t.ij", "mu.i")) return(loglik) else return(sum(loglik))
@@ -1037,11 +1039,14 @@ print.gvs <- function(gvs.dat){
   
   pb <- utils::txtProgressBar(min = 0, max = length(vals), style = 3)
   
+  print(vals)
+  
   for (i in seq_along(vals)) {
     e[[idxName]] <- vals[[i]]
     eval(bodyExpr, e)
     utils::setTxtProgressBar(pb, i)
   }
+  return(e)
 }
 
 # Posterior model probabilities

@@ -9,6 +9,7 @@
 #' @param n.iter Number of posterior samples.
 #' @param do.update Logical. If \code{TRUE}, updates an existing rjMCMC object.
 #' @importFrom foreach `%dopar%`
+#' @note  A progress bar is used to monitor code execution on Mac and Linux operating systems. This feature does not currently work on Windows.
 #' @return A list object of class \code{rjmcmc}.
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{configure_RJMCMC}} \code{\link{plot.rjtrace}} \code{\link{update_rjMCMC}}
@@ -78,20 +79,17 @@ run_rjMCMC <- function(dat,
   # sink("/dev/null")
   sink(tempfile())
   pb <- utils::txtProgressBar(min = 0, max = rj.list[[1]]$mcmc$tot.iter, style = 3)
-  kpb <- 0
   sink()
   
   # Launch the loop on multiple cores if needed
-  rj.res <- foreach::foreach(nc = seq_len(n.chains)
-                             ) %dopar% {
+  rj.res <- foreach::foreach(nc = seq_len(n.chains)) %dopar% {
                                
                                rj <- rj.list[[nc]]
                                
                                for (i in 2:rj$mcmc$tot.iter) {
                                  
                                  # Print progress bar
-                                 kpb <- kpb + 1
-                                 utils::setTxtProgressBar(pb, kpb)
+                                 utils::setTxtProgressBar(pb, i)
                                  
                                  # Start timer
                                  if(i == 2) start.time <- Sys.time()
