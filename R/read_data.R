@@ -267,18 +267,26 @@ read_data <- function(file = NULL,
     if("range" %in% covariate.names) brsdat <- brsdat %>% 
         dplyr::mutate(
           range = dplyr::case_when(
+            
             # Not censored (whale did respond) and response range known
             censored == 0 & !is.na(resp_range) ~ resp_range,
-            # Not censored (whale did respond) and response range unknown but estimate available
+            # Not censored (whale did respond), response range unknown, estimate available
             censored == 0 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
-            # Not censored (whale did respond) and response range unknown but estimate available
-            censored == 0 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
-            # Right and left-censored
-            !censored == 0 & !is.na(min_range) ~ min_range,
-            !censored == 0 & is.na(min_range) & !is.na(inferred_min_range) ~ inferred_min_range,
+            # Not censored (whale did respond), response range unknown, estimate not available
+            censored == 0 & is.na(resp_range) & is.na(inferred_resp_range) ~ min_range,
+            censored == 0 & is.na(resp_range) & is.na(inferred_resp_range) & is.na(min_range) ~ inferred_min_range,
+            
+            # Left-censored
+            censored == -1 & !is.na(resp_range) ~ resp_range,
+            censored == -1 & is.na(resp_range) & !is.na(inferred_resp_range) ~ inferred_resp_range,
+            censored == -1 & is.na(resp_range) & is.na(inferred_resp_range) ~ min_range,
+            censored == -1 & is.na(resp_range) & is.na(inferred_resp_range) & is.na(min_range) ~ inferred_min_range,
+            
+            # Right -censored
+            censored == 1 & !is.na(min_range) ~ min_range,
+            censored == 1 & is.na(min_range) & !is.na(inferred_min_range) ~ inferred_min_range,
             TRUE ~ NA_real_
           ))
-    
     
   }
   
@@ -286,7 +294,7 @@ read_data <- function(file = NULL,
                        "common_name", "tag_id", covariate.names, "spl", "Lc", "Rc", "censored")
   
   brsdat <- brsdat %>% 
-    dplyr::rename(spl = resp_spl, Lc = min_spl, Rc = max_spl)%>% 
+    dplyr::rename(spl = resp_spl, Lc = resp_spl, Rc = max_spl)%>% 
     dplyr::select_at(., tidyselect::all_of(cols.to.extract)) %>% 
     dplyr::arrange(species, tag_id)
   
