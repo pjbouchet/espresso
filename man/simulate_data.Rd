@@ -14,7 +14,7 @@ simulate_data(
   sigma = NULL,
   range.dB = c(60, 215),
   range.var = c(0, 45),
-  Lc = c(100, 105),
+  Lc = c(65, 75),
   Rc = c(190, 195),
   obs.sd = 2.5,
   verbose = TRUE,
@@ -59,7 +59,7 @@ A list object of class \code{brsdata}, with the following elements:
 \code{whales} \tab Individual data, including animal IDs.  \cr
 \code{trials} \tab Exposure data, including exposure IDs. \cr
 \code{covariates} \tab Covariate data, including dummy coding, sonar groupings, factor levels etc. \cr
-\code{obs} \tab Observations, including right-censoring cutoffs.  \cr
+\code{obs} \tab Observations, including left- and right-censoring cutoffs.  \cr
 \code{param} \tab General parameters. \cr
 }
 }
@@ -70,15 +70,16 @@ Simulate cetacean responses to Navy sonar exposure, as in behavioural response s
 \dontrun{
 library(espresso)
 
-# Simulate data for two species
-mydat <- simulate_data(n.species = 2, 
-                       n.whales = 16, 
-                       max.trials = 3, 
+# Simulate data for two species (no censoring)
+mydat <- simulate_data(n.species = 2,
+                       n.whales = 16,
+                       max.trials = 3,
                        covariates = list(exposed = c(0, 5), range = 0.5),
-                       mu = c(125, 158), 
-                       phi = 20, 
-                       sigma = 20, 
-                       Rc = c(210, 211), 
+                       mu = c(125, 142),
+                       phi = 20,
+                       sigma = 20,
+                       Lc = c(60, 65),
+                       Rc = c(214, 215),
                        seed = 58697)
 }
 }

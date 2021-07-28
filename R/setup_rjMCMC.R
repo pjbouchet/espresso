@@ -222,22 +222,47 @@ setup_rjMCMC <- function(rj.input,
     # The scale needs to be large here to prevent numerical issues (returning Inf)
     rj$t.ij[1, ] <- rtnorm(n = rj.input$trials$n, 
                            location = mu.ij.config, 
-                           scale = 30, 
-                           L = rj.input$obs$Rc, 
+                           scale = rj$sigma[1],
+                           L = rj.input$param$bounds["t.ij", 1], 
                            U = rj.input$param$bounds["t.ij", 2])
+    
+    # Censoring
+    if (sum(!rj.input$obs$censored == 0) > 0) {
+      
+      # Right-censored
+      rj$t.ij[1, rj.input$obs$censored == 1] <-
+        rtnorm(n = sum(rj.input$obs$censored == 1),
+              location = mu.ij.config[rj.input$obs$censored == 1],
+              scale = rj$sigma[1],
+              L = rj.input$obs$Rc[rj.input$obs$censored == 1], 
+              U = rj.input$param$bounds["t.ij", 2])
+      
+      # Left-censored
+      rj$t.ij[1, rj.input$obs$censored == -1] <-
+        rtnorm(n = sum(rj.input$obs$censored == -1),
+               location = mu.ij.config[rj.input$obs$censored == -1],
+               scale = rj$sigma[1],
+               L = rj.input$param$bounds["t.ij", 1],
+               U = rj.input$obs$Lc[rj.input$obs$censored == -1])
+      
+      
+    }
     
     if(any(is.infinite(rj$t.ij[1, ]))) warning("Inf returned as initial values for t.ij")
     
     rj$y.ij[1, ] <- rj.input$obs$y_ij
     
-    if (sum(rj.input$obs$censored) > 0) {
-      rj$y.ij[1, rj.input$obs$censored == 1] <-
-        rnorm(
-          n = sum(rj.input$obs$censored),
-          mean = rj$t.ij[1, rj.input$obs$censored == 1],
-          sd = rj.input$obs$sd
-        )
+    if (sum(!rj.input$obs$censored == 0) > 0) {
+      
+      # Censored
+      rj$y.ij[1, !rj.input$obs$censored == 0] <-
+        rnorm(n = sum(!rj.input$obs$censored == 0),
+              mean = rj$t.ij[1, !rj.input$obs$censored == 0],
+              sd = rj.input$obs$sd)
     }
+    
+    if(any(is.na(rj$y.ij[1, ]))) warning("NAs returned as initial values for y.ij")
+    
   } # End if do.update
   
   # Finally, store the data

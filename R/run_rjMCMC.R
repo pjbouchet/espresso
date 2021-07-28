@@ -100,16 +100,32 @@ run_rjMCMC <- function(dat,
                                                                        units = "auto")), 1)}
                                  
                                  #' ---------------------------------------------------------------------
-                                 # || Right-censored observations ----
+                                 # || Censoring ----
                                  #' ---------------------------------------------------------------------
                                  
                                  rj$y.ij[i, ] <- rj$y.ij[i - 1, ]
                                  
-                                 if (sum(rj$dat$obs$censored) > 0) {
-                                   rj$y.ij[i, rj$dat$obs$censored == 1] <- rnorm(
-                                     n = sum(rj$dat$obs$censored),
-                                     mean = rj$t.ij[i - 1, rj$dat$obs$censored == 1],
-                                     sd = rj$dat$obs$sd)}
+                                 if (sum(!rj$dat$obs$censored == 0) > 0) {
+                                   
+                                   # Censored data
+                                   rj$y.ij[i, !rj$dat$obs$censored == 0] <- 
+                                     rnorm(n = sum(!rj$dat$obs$censored == 0),
+                                           mean = rj$t.ij[i - 1, !rj$dat$obs$censored == 0],
+                                           sd = rj$dat$obs$sd)
+                                   # 
+                                   # # Right-censored
+                                   # rj$y.ij[i, rj$dat$obs$censored == 1] <- 
+                                   #   rnorm(n = sum(rj$dat$obs$censored == 1),
+                                   #         mean = rj$t.ij[i - 1, rj$dat$obs$censored == 1],
+                                   #         sd = rj$dat$obs$sd)
+                                   # 
+                                   # # Left-censored
+                                   # rj$y.ij[i, rj$dat$obs$censored == -1] <- 
+                                   #   rnorm(n = sum(rj$dat$obs$censored == -1),
+                                   #         mean = rj$t.ij[i - 1, rj$dat$obs$censored == -1],
+                                   #         sd = rj$dat$obs$sd)
+                                   # 
+                                   }
                                  
                                  if(rj$config$model.select & rj$dat$species$n > 1){ 
 
@@ -316,7 +332,6 @@ run_rjMCMC <- function(dat,
                                  # distributions, one with lower exposure values than the other. This gives
                                  # a 'biphasic' function with a context-dependent part and a dose-dependent part.
                                  
-                                 
                                  #' ---------------------------------------------------------------------
                                  # || Step 4: Update parameters ----
                                  #' ---------------------------------------------------------------------
@@ -324,8 +339,24 @@ run_rjMCMC <- function(dat,
                                  #'------------------------------
                                  # // t.ij ----
                                  #'------------------------------
-                                 proposed.t.ij <- proposal_mh(rj.obj = rj, param.name = "t.ij", iter = i)
+                                 # lower.limit <- rep(rj$dat$param$bounds["t.ij", 1], 29)
+                                 # upper.limit <- rep(rj$dat$param$bounds["t.ij", 2], 29)
+                                 # 
+                                 # # Generate proposal(s)
+                                 #   lower.limit[rj$dat$obs$censored == 1] <- 
+                                 #     rj$dat$obs$Rc[rj$dat$obs$censored == 1]
+                                 #   upper.limit[rj$dat$obs$censored == -1] <- 
+                                 #     rj$dat$obs$Lc[rj$dat$obs$censored == -1]
+                                 #   
+                                 #  test <- rtnorm(n = 29, 
+                                 #                  location = rj$t.ij[i - 1, ] ,
+                                 #                  scale = rj$config$prop$mh[["t.ij"]], 
+                                 #                  L = lower.limit,
+                                 #                  U = upper.limit)
+                                 # 
                                  
+                                 proposed.t.ij <- proposal_mh(rj.obj = rj, param.name = "t.ij", iter = i)
+
                                  loglik.proposed <- likelihood(rj.obj = rj,
                                                                iter = i,
                                                                model = rj$mlist[[rj$current.model]], 
@@ -335,7 +366,8 @@ run_rjMCMC <- function(dat,
                                  loglik.current <- likelihood(rj.obj = rj,
                                                               iter = i,
                                                               model = rj$mlist[[rj$current.model]], 
-                                                              param.name = "t.ij", lprod = FALSE)
+                                                              param.name = "t.ij",
+                                                              lprod = FALSE)
                                  
                                  prop.forward <- propdens_mh(rj.obj = rj,
                                                              param.name = "t.ij", 

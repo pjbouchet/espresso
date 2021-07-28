@@ -573,7 +573,7 @@ proposal_mh <- function(rj.obj, param.name, iter, seed = NULL) {
   # Species groups
   ng <- unique(rj.obj$mlist[[rj.obj$current.model]])
   
-  # # Number of proposal values
+  # Number of proposal values
   if(param.name == "t.ij") N <- rj.obj$dat$trials$n else 
     if(param.name == "mu.i") N <- rj.obj$dat$whales$n else 
       if(param.name == "mu") N <- length(ng) else 
@@ -586,11 +586,16 @@ proposal_mh <- function(rj.obj, param.name, iter, seed = NULL) {
   if (param.name %in% c("sigma", "phi")) m <- rj.obj[[param.name]][iter - 1]
   if (param.name %in% rj.obj$dat$covariates$names) m <- rj.obj[[param.name]][iter, rj.obj$dat$covariates$fL[[param.name]]$index]
   
-  # Generate proposal(s)
+  lower.limit <- rep(rj.obj$dat$param$bounds[param.name, 1], N)
+  upper.limit <- rep(rj.obj$dat$param$bounds[param.name, 2], N)
   
-  if(param.name == "t.ij") 
-    lower.limit <- rj.obj$dat$obs$Rc else 
-      lower.limit <- rj.obj$dat$param$bounds[param.name, 1]
+  # Generate proposal(s)
+  if(param.name == "t.ij"){
+    
+    lower.limit[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
+    upper.limit[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
+   
+  }
   
   if(param.name %in% c("t.ij", "mu.i")){
     
@@ -598,10 +603,13 @@ proposal_mh <- function(rj.obj, param.name, iter, seed = NULL) {
                    location = m, 
                    scale = rj.obj$config$prop$mh[[param.name]], 
                    L = lower.limit,
-                   U = rj.obj$dat$param$bounds[param.name, 2])
+                   U = upper.limit)
+    
   } else {
     
-    pval <- rnorm(n = N, mean = unique(m), sd = rj.obj$config$prop$mh[[param.name]])}
+    pval <- rnorm(n = N, mean = unique(m), sd = rj.obj$config$prop$mh[[param.name]])
+    
+    }
   
   # Additions
   index <- cbind(ng, ord = 1:length(ng))
@@ -612,6 +620,7 @@ proposal_mh <- function(rj.obj, param.name, iter, seed = NULL) {
       FUN = function(x) index[ng == x, 2]
     )]
   }
+  if(any(is.infinite(pval))) stop("Infinite values generated")
   return(pval)
 }
 
@@ -688,8 +697,15 @@ propdens_rj <- function(rj.obj, param, jump, iter) {
 
 propdens_mh <- function(rj.obj, param.name, dest, orig) {
 
-  if(param.name == "t.ij") lower.limit <- rj.obj$dat$obs$Rc else 
-    lower.limit <- rj.obj$dat$param$bounds[param.name, 1]
+  lower.limit <- rep(rj.obj$dat$param$bounds[param.name, 1], length(dest))
+  upper.limit <- rep(rj.obj$dat$param$bounds[param.name, 2], length(dest))
+  
+  if(param.name == "t.ij") {
+    
+    lower.limit[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
+    upper.limit[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
+
+    }
   
   if(param.name %in% c("t.ij", "mu.i")) {
     
@@ -697,14 +713,13 @@ propdens_mh <- function(rj.obj, param.name, dest, orig) {
                      location = orig, 
                      scale = rj.obj$config$prop$mh[[param.name]], 
                      L = lower.limit,
-                     U = rj.obj$dat$param$bounds[param.name, 2],
+                     U = upper.limit,
                      log = TRUE)
   } else {
     
     loglik <- dnorm(x = dest, mean = orig, sd = rj.obj$config$prop$mh[[param.name]], log = TRUE) 
     
   }
-  # print(loglik)
   
   if (any(abs(loglik) == Inf)) loglik <- -100000
   if(param.name %in% c("t.ij", "mu.i")) return(loglik) else return(sum(loglik))
@@ -1025,29 +1040,6 @@ print.gvs <- function(gvs.dat){
 }
 
 # Convenience ----------------------------------------------------------------
-
-# Parallel computing with progress bar
-`%doprogress%` <- function(forExpr, bodyExpr) {
-  
-  forExpr <- substitute(forExpr)
-  bodyExpr <- substitute(bodyExpr)
-  
-  idxName <- names(forExpr)[[2]]
-  vals <- eval(forExpr[[2]])
-  
-  e <- new.env(parent = parent.frame())
-  
-  pb <- utils::txtProgressBar(min = 0, max = length(vals), style = 3)
-  
-  print(vals)
-  
-  for (i in seq_along(vals)) {
-    e[[idxName]] <- vals[[i]]
-    eval(bodyExpr, e)
-    utils::setTxtProgressBar(pb, i)
-  }
-  return(e)
-}
 
 # Posterior model probabilities
 prob_models <- function(input.obj, 

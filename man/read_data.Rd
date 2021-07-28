@@ -52,7 +52,7 @@ A list object of class \code{brsdata}, with the following elements:
 \code{whales} \tab Individual data, including animal IDs.  \cr
 \code{trials} \tab Exposure data, including exposure IDs. \cr
 \code{covariates} \tab Covariate data, including dummy coding, sonar groupings, factor levels etc. \cr
-\code{obs} \tab Observations, including right-censoring cutoffs.  \cr
+\code{obs} \tab Observations, including left- and right-censoring cutoffs.  \cr
 \code{param} \tab General parameters. \cr
 }
 }

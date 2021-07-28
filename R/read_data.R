@@ -47,7 +47,7 @@
 #'   \code{whales} \tab Individual data, including animal IDs.  \cr
 #'   \code{trials} \tab Exposure data, including exposure IDs. \cr
 #'   \code{covariates} \tab Covariate data, including dummy coding, sonar groupings, factor levels etc. \cr
-#'   \code{obs} \tab Observations, including right-censoring cutoffs.  \cr  
+#'   \code{obs} \tab Observations, including left- and right-censoring cutoffs.  \cr  
 #'   \code{param} \tab General parameters. \cr
 #'  }
 #' @import magrittr
@@ -189,14 +189,6 @@ read_data <- function(file = NULL,
   rawdat <- rawdat %>% janitor::clean_names()
   
   #' ---------------------------------------------
-  # Determine whether observations are right-censored
-  #' ---------------------------------------------
-  # severity.score <- 4
-  # rawdat <- rawdat %>% dplyr::mutate(rc = ifelse(is.na(resp_score),
-  #                                                ifelse(!is.na(resp_spl), 0, 1), 
-  #                                                ifelse(resp_score < severity.score, 1, 0)))
-  
-  #' ---------------------------------------------
   # Extract relevant columns
   #' ---------------------------------------------
   
@@ -291,10 +283,10 @@ read_data <- function(file = NULL,
   }
   
   cols.to.extract <- c("project", "species", "scientific_name", 
-                       "common_name", "tag_id", covariate.names, "spl", "Rc", "censored")
+                       "common_name", "tag_id", covariate.names, "spl", "Lc", "Rc", "censored")
   
   brsdat <- brsdat %>% 
-    dplyr::rename(spl = resp_spl, Rc = max_spl)%>% 
+    dplyr::rename(spl = resp_spl, Lc = min_spl, Rc = max_spl)%>% 
     dplyr::select_at(., tidyselect::all_of(cols.to.extract)) %>% 
     dplyr::arrange(species, tag_id)
   
@@ -457,6 +449,11 @@ read_data <- function(file = NULL,
   y_ij[is.censored == 1] <- NA
   max.dose[is.censored == 1] <- brsdat[is.censored == 1, ]$Rc
   
+  # Left-censoring
+  min.dose <- rep(upper.bound$mu, n.trials)
+  y_ij[is.censored == -1] <- NA
+  min.dose[is.censored == -1] <- brsdat[is.censored == -1, ]$Lc
+  
   #' ---------------------------------------------
   # Create a species summary
   #' ---------------------------------------------
@@ -516,6 +513,7 @@ read_data <- function(file = NULL,
     # Observations
     obs = list(y_ij = y_ij,
                censored = is.censored,
+               Lc = min.dose,
                Rc = max.dose,
                prec = measurement.precision,
                sd = obs.sd),
