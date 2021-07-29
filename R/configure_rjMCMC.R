@@ -133,9 +133,23 @@ configure_rjMCMC <- function(dat,
     
   if(model.select){
     
-    # Remove NA values to avoid numerical issues
-    boot.dat <- tibble::tibble(y = dat$obs$y_ij, species = dat$species$trials) %>% 
-      tidyr::drop_na()
+    # NA values cause numerical issues so need to be dealt with,
+    # Cannot simply be removed as that would be problematic for species that only have censored data
+    
+    boot.dat <- tibble::tibble(y = dat$obs$y_ij, 
+                               species = dat$species$trials, 
+                               censored = dat$obs$censored,
+                               Lc = dat$obs$Lc,
+                               Rc = dat$obs$Rc) 
+
+    boot.dat <- boot.dat %>% 
+      dplyr::rowwise() %>% 
+      dplyr::mutate(y = ifelse(is.na(y), 
+                               ifelse(censored == -1,
+                                      runif(n = 1, min = dat$param$bounds["y.ij", 1], max = Lc),
+                                      runif(n = 1, min = Rc, max = dat$param$bounds["y.ij", 2])), y)) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::select(-Rc, -Lc, -censored)
 
     # Bootstrap the data by species
     # Taken from https://humanitarian-user-group.github.io/post/tidysampling/
