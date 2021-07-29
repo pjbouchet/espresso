@@ -105,26 +105,13 @@ run_rjMCMC <- function(dat,
                                  
                                  rj$y.ij[i, ] <- rj$y.ij[i - 1, ]
                                  
-                                 if (sum(!rj$dat$obs$censored == 0) > 0) {
-                                   
-                                   # Censored data
+                                 if (!all(rj$dat$obs$censored == 0)) {
+     
                                    rj$y.ij[i, !rj$dat$obs$censored == 0] <- 
                                      rnorm(n = sum(!rj$dat$obs$censored == 0),
                                            mean = rj$t.ij[i - 1, !rj$dat$obs$censored == 0],
                                            sd = rj$dat$obs$sd)
-                                   # 
-                                   # # Right-censored
-                                   # rj$y.ij[i, rj$dat$obs$censored == 1] <- 
-                                   #   rnorm(n = sum(rj$dat$obs$censored == 1),
-                                   #         mean = rj$t.ij[i - 1, rj$dat$obs$censored == 1],
-                                   #         sd = rj$dat$obs$sd)
-                                   # 
-                                   # # Left-censored
-                                   # rj$y.ij[i, rj$dat$obs$censored == -1] <- 
-                                   #   rnorm(n = sum(rj$dat$obs$censored == -1),
-                                   #         mean = rj$t.ij[i - 1, rj$dat$obs$censored == -1],
-                                   #         sd = rj$dat$obs$sd)
-                                   # 
+                                   
                                    }
                                  
                                  if(rj$config$model.select & rj$dat$species$n > 1){ 
@@ -339,22 +326,6 @@ run_rjMCMC <- function(dat,
                                  #'------------------------------
                                  # // t.ij ----
                                  #'------------------------------
-                                 # lower.limit <- rep(rj$dat$param$bounds["t.ij", 1], 29)
-                                 # upper.limit <- rep(rj$dat$param$bounds["t.ij", 2], 29)
-                                 # 
-                                 # # Generate proposal(s)
-                                 #   lower.limit[rj$dat$obs$censored == 1] <- 
-                                 #     rj$dat$obs$Rc[rj$dat$obs$censored == 1]
-                                 #   upper.limit[rj$dat$obs$censored == -1] <- 
-                                 #     rj$dat$obs$Lc[rj$dat$obs$censored == -1]
-                                 #   
-                                 #  test <- rtnorm(n = 29, 
-                                 #                  location = rj$t.ij[i - 1, ] ,
-                                 #                  scale = rj$config$prop$mh[["t.ij"]], 
-                                 #                  L = lower.limit,
-                                 #                  U = upper.limit)
-                                 # 
-                                 
                                  proposed.t.ij <- proposal_mh(rj.obj = rj, param.name = "t.ij", iter = i)
 
                                  loglik.proposed <- likelihood(rj.obj = rj,
