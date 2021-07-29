@@ -189,11 +189,30 @@ setup_rjMCMC <- function(rj.input,
              L = rj.input$param$bounds["sigma", 1] - rj.input$config$var[1],
              U = rj.input$param$bounds["sigma", 2] - rj.input$config$var[1])
     
+    input.data <- tibble::tibble(species = rj.input$species$trials,
+                   y = rj.input$obs$y_ij,
+                   censored = rj.input$obs$censored,
+                   rc = rj.input$obs$Rc,
+                   lc = rj.input$obs$Lc)
     
     mu.start <- purrr::map_dbl(
       .x = rj.input$config$boot[[rj$current.model]],
-      .f = ~ mean(rj.input$obs$y_ij[rj.input$species$trials %in%
-                                      seq_len(rj.input$species$n)[which(rj.input$config$boot[[rj$current.model]] %in% .x)]], na.rm = TRUE))
+      .f = ~ {
+        
+        sp.data <- input.data %>% dplyr::filter(species == .x)
+        
+        if(all(is.na(sp.data$y))){
+          sp.data %>% 
+            dplyr::rowwise() %>% 
+            dplyr::mutate(y = ifelse(censored == 1,
+                                     runif(n = 1, min = rc, max = rj.input$param$bounds["mu", 2]),
+                                     runif(n = 1, min = rj.input$param$bounds["mu", 1], max = lc))) %>% 
+            dplyr::ungroup() %>% 
+            dplyr::pull(y) %>% 
+            mean(., na.rm = TRUE)
+        } else {
+          mean(sp.data$y, na.rm = TRUE)
+        }})
     
     rj$mu[1, ] <- mu.start + sapply(X = seq_len(n_groups(vec = mu.start)), FUN = function(x){
       rtnorm(n = 1, location = 0, scale = 5, 
@@ -227,7 +246,7 @@ setup_rjMCMC <- function(rj.input,
                            U = rj.input$param$bounds["t.ij", 2])
     
     # Censoring
-    if (sum(!rj.input$obs$censored == 0) > 0) {
+    if (!all(rj.input$obs$censored == 0)) {
       
       # Right-censored
       rj$t.ij[1, rj.input$obs$censored == 1] <-
