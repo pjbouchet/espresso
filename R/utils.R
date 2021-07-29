@@ -1950,7 +1950,30 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
 
 mean_data <- function(rj.obj, model.id){
   purrr::map_dbl(.x = model.id, 
-                 .f = ~mean(rj.obj$dat$obs$y_ij[rj.obj$dat$species$trials %in% .x], na.rm = TRUE))
+                 .f = ~{
+                   
+                   input.data <- tibble::tibble(species = rj.obj$dat$species$trials,
+                                                y = rj.obj$dat$obs$y_ij,
+                                                censored = rj.obj$dat$obs$censored,
+                                                rc = rj.obj$dat$obs$Rc,
+                                                lc = rj.obj$dat$obs$Lc)
+                   
+                   sp.data <- input.data %>% dplyr::filter(species == .x)
+                   
+                   if(all(is.na(sp.data$y))){
+                     
+                     sp.data %>% 
+                       dplyr::rowwise() %>% 
+                       dplyr::mutate(y = ifelse(censored == 1,
+                                     runif(n = 1, min = rc, max = rj.input$param$bounds["mu", 2]),
+                                     runif(n = 1, min = rj.input$param$bounds["mu", 1], max = lc))) %>% 
+                       dplyr::ungroup() %>% 
+                       dplyr::pull(y) %>% 
+                       mean(., na.rm = TRUE)
+                   
+                   } else {
+                   
+                     mean(sp.data$y, na.rm = TRUE) }})
 }
 
 relabel <- function(vec){
