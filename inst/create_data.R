@@ -113,7 +113,12 @@ for(j in 1:nrow(ddf)){
   ddf$min_range[j] <- ddf$min_range[j] + amount
   ddf$inferred_resp_range[j] <- ddf$inferred_resp_range[j] + amount
   ddf$inferred_min_range[j] <- ddf$inferred_min_range[j] + amount
+  
+  if(ddf$censored[j] == 1 & is.na(ddf$min_range[j])) ddf$min_range[j] <- ddf$resp_range[j]
+  
 }
+
+
 
 example_brs <- ddf %>% 
   dplyr::select(project, species, tag_id, start_time, resp_time, resp_type, resp_score, resp_spl, resp_se_lcum, max_spl, max_se_lcum, censored, exp_order, exp_duration, exp_signal, pre_feeding, resp_range, min_range, inferred_resp_range, inferred_min_range)
