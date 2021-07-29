@@ -38,7 +38,6 @@
 #' # Model selection by GVS                        
 #' gvs <- gibbs(dat = mydat, 
 #'              random.effects = FALSE, 
-#'              include.covariates = FALSE, 
 #'              mcmc.n = 1000, 
 #'              burnin = 500)
 #' }
@@ -106,11 +105,14 @@ gibbs <- function(dat,
   upperbound <- dat$param$bounds["mu", 2]
   phi.upper <- dat$param$bounds["phi", 2]
   sigma.upper <- dat$param$bounds["sigma", 2]
-  I.censored <- dat$obs$censored
-  Rc <- dat$obs$Rc
   simulation <- dat$param$sim
   
-  Rc[I.censored == 0] <- upperbound
+  # Censoring
+  I.censored <- dat$obs$censored
+  censor.pt <- dat$obs$Rc
+  censor.pt[I.censored == 0] <- upperbound
+  censor.pt[I.censored == -1] <- dat$obs$Lc[I.censored == -1]
+  I.censored[I.censored == -1] <- 0
   
   if(include.covariates){
     
@@ -424,10 +426,10 @@ gibbs <- function(dat,
     
   }
   
-  if(sum(I.censored) > 0)
+  if(!all(dat$obs$censored == 0)) {
     jags.pseudo <- gsub(pattern = "}\n}",
-                        replacement = " I.censored[k] ~ dinterval(t[k], Rc[k]) \n }\n}",
-                        x = jags.pseudo)
+                        replacement = " I.censored[k] ~ dinterval(t[k], censor.pt[k]) \n }\n}",
+                        x = jags.pseudo)}
   
   
   cat("\n--------------------------------------------------\n")
@@ -473,9 +475,9 @@ gibbs <- function(dat,
         pseudo.data[[paste0(nc, ".prior.sd")]] <- 30
         pseudo.data[[paste0("I.", nc)]] <- I.covariates[[nc]]}}
     
-    if(sum(I.censored) > 0) {
+    if(!all(dat$obs$censored == 0)) {
       pseudo.data$I.censored <- I.censored
-      pseudo.data$Rc <- Rc}
+      pseudo.data$censor.pt <- censor.pt}
     
     #'-------------------------------------------------
     # Set up initial values
@@ -491,13 +493,15 @@ gibbs <- function(dat,
     if(random.effects) { pseudo.inits <- append(pseudo.inits, list(epsilon = 5)) 
     } else { pseudo.inits <- append(pseudo.inits, list(beta_3 = rep(0, N.beta_3))) }
     
-    # if(sum(I.censored) > 0){
-    #   t.inits <- numeric(N.trials)
-    #   t.inits[I.censored == 0] <- runif(n = sum(I.censored == 0), min = lowerbound, upperbound)
-    #   t.inits[I.censored == 1] <- runif(n = sum(I.censored == 1), min = Rc[I.censored == 1], upperbound)
-    #   pseudo.inits$t <- t.inits}
+    if(!all(dat$obs$censored == 0)){
+      t.inits <- numeric(N.trials)
+      t.inits[I.censored == 0] <- runif(n = sum(I.censored == 0), min = lowerbound, upperbound)
+      t.inits[I.censored == 1] <- runif(n = sum(I.censored == 1), min = censor.pt[I.censored == 1], upperbound)
+      t.inits[dat$obs$censored == -1] <- runif(n = sum(dat$obs$censored == -1), min = lowerbound, 
+                                               max = censor.pt[dat$obs$censored == -1])
+      pseudo.inits$t <- t.inits}
     
-    pseudo.inits$t <- runif(n = N.trials, min = Rc, max = upperbound)
+    # pseudo.inits$t <- runif(n = N.trials, min = censor.pt, max = upperbound)
     
     #'-------------------------------------------------
     # Run the model in JAGS
@@ -720,10 +724,10 @@ gibbs <- function(dat,
     
   }
   
-  if(sum(I.censored) > 0)
+  if(!all(dat$obs$censored == 0)){
     jags.main <- gsub(pattern = "}\n}",
-                      replacement = " I.censored[k] ~ dinterval(t[k], Rc[k]) \n }\n}",
-                      x = jags.main)
+                      replacement = " I.censored[k] ~ dinterval(t[k], censor.pt[k]) \n }\n}",
+                      x = jags.main)}
   
   #'-------------------------------------------------
   # Set up initial values for the model
@@ -741,14 +745,7 @@ gibbs <- function(dat,
     main.inits <- append(main.inits, list(beta_prior_3 = rep(0, N.beta_3),
                                           beta_pseudoprior_3 = results.species[, 1])) }
   
-  main.inits$t <- runif(n = N.trials, min = Rc, max = upperbound)
-  
-  # if(sum(I.censored) > 0){
-  #   t.inits <- numeric(N.trials)
-  #   t.inits[I.censored == 0] <- runif(n = sum(I.censored == 0), min = lowerbound, Rc[I.censored == 0])
-  #   t.inits[I.censored == 1] <- runif(n = sum(I.censored == 1), min = Rc[I.censored == 1], upperbound)
-  #   main.inits$t <- t.inits
-  # }
+  if(!all(dat$obs$censored == 0)){main.inits$t <- t.inits}
   
   #'-------------------------------------------------
   # Data for the model
@@ -786,9 +783,9 @@ gibbs <- function(dat,
       main.data[[paste0(nc, ".prior.sd")]] <- 30
       main.data[[paste0("I.", nc)]] <- I.covariates[[nc]]}}
   
-  if(sum(I.censored) > 0) {
+  if(!all(dat$obs$censored == 0)) {
     main.data$I.censored <- I.censored
-    main.data$Rc <- Rc}
+    main.data$censor.pt <- censor.pt}
   
   #'-------------------------------------------------
   # Run the model in JAGS
