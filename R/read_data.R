@@ -213,7 +213,8 @@ read_data <- function(file = NULL,
   rawdat$censored <- as.integer(rawdat$censored)
   
   # Recode species and covariates
-  brsdat <- rawdat %>% dplyr::mutate(species = tools::toTitleCase(species)) %>% 
+  brsdat <- rawdat %>% 
+    dplyr::mutate(species = tools::toTitleCase(species)) %>% 
     dplyr::left_join(x = ., y = species.list, by = c("species" = "code")) %>% 
     dplyr::select(-species) %>% 
     dplyr::rename(species = new_code) 
@@ -294,7 +295,8 @@ read_data <- function(file = NULL,
                        "common_name", "tag_id", covariate.names, "spl", "Lc", "Rc", "censored")
   
   brsdat <- brsdat %>% 
-    dplyr::rename(spl = resp_spl, Lc = resp_spl, Rc = max_spl)%>% 
+    dplyr::mutate(Lc = ifelse(censored == -1, resp_spl, NA)) %>% 
+    dplyr::rename(spl = resp_spl, Rc = max_spl) %>% 
     dplyr::select_at(., tidyselect::all_of(cols.to.extract)) %>% 
     dplyr::arrange(species, tag_id)
   
@@ -357,8 +359,7 @@ read_data <- function(file = NULL,
   # Species IDs
   species.id <- purrr::map_dbl(.x = unique(brsdat$tag_id),
                                .f = ~{
-                                 tmp <- brsdat %>% 
-                                   dplyr::filter(tag_id == .x)
+                                 tmp <- brsdat %>% dplyr::filter(tag_id == .x)
                                  which(sp.names == unique(tmp$species))})
   
   # Number of individuals per species
