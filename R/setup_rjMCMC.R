@@ -56,7 +56,12 @@ setup_rjMCMC <- function(rj.input,
   } else {
     move.iters <- rep(0, tot.iter)
   }
-  modelmoves[move.iters] <- rep(rep(c(1, 2, 3), move.ratio, length.out = length(move.iters)))
+  
+  move.ratio <- unlist(move.ratio)
+  modelmoves[move.iters] <- rep(unlist(sapply(X = which(move.ratio > 0), 
+                                       FUN = function(a) rep(a, each = move.ratio[a]))),
+                                    length.out = length(move.iters))
+  
   modelmoves.tab <- table(modelmoves[(n.burn+1):tot.iter]) %>% 
     tibble::enframe() %>% 
     dplyr::rename(move = name, n = value) %>% 
