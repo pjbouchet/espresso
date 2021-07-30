@@ -258,34 +258,34 @@ propose_jump <- function(rj.obj, move.type) {
     if (move.type == 1) {
       
       # Rescale the probability values so that none are zero
-      if(any(rj.obj$config$clust[[1]]$p == 0)){
-        
-        zero.ind <- which(rj.obj$config$clust[[1]]$p == 0)
-        positive.ind <- which(rj.obj$config$clust[[1]]$p > 0)
-        
-        # Use half of the minimum value
-        scale.value <- min(rj.obj$config$clust[[1]]$p[positive.ind]) / 2
-        
-        rj.obj$config$clust[[1]]$p_scale[zero.ind] <- scale.value / length(zero.ind)
-        
-        rj.obj$config$clust[[1]]$p_scale[positive.ind] <- 
-          rj.obj$config$clust[[1]]$p[positive.ind] - (scale.value * rj.obj$config$clust[[1]]$p[positive.ind])
-      }
+      # if(any(rj.obj$config$clust[[1]]$p == 0)){
+      #   
+      #   zero.ind <- which(rj.obj$config$clust[[1]]$p == 0)
+      #   positive.ind <- which(rj.obj$config$clust[[1]]$p > 0)
+      #   
+      #   # Use half of the minimum value
+      #   scale.value <- min(rj.obj$config$clust[[1]]$p[positive.ind]) / 2
+      #   
+      #   rj.obj$config$clust[[1]]$p_scale[zero.ind] <- scale.value / length(zero.ind)
+      #   
+      #   rj.obj$config$clust[[1]]$p_scale[positive.ind] <- 
+      #     rj.obj$config$clust[[1]]$p[positive.ind] - (scale.value * rj.obj$config$clust[[1]]$p[positive.ind])
+      # }
       
       # Rescale probabilities so they sum to 1
-      p1 <- rj.obj$config$clust[[1]] %>% 
-        dplyr::filter(!model == rj.obj$current.model) %>% 
-        dplyr::mutate(p_scale = p_scale/sum(p_scale))
+      p1 <- rj.obj$config$clust[[1]]
+      if(nrow(p1) >  1) p1 <- p1 %>% dplyr::filter(!model == rj.obj$current.model)
+      p1 <- p1 %>% dplyr::mutate(p_scale = rescale_p(p))
       
       # Select new model
       new.model <- ifelse(nrow(p1) == 1, 1, sample(x = seq_len(nrow(p1)), size = 1, prob = p1$p)) 
       new.model <- rj.obj$mlist[[p1[new.model, ]$model]]
-      
+
       # Rescale probabilities for reverse move so they sum to 1
-      p2 <- rj.obj$config$clust[[1]] %>% 
-        dplyr::filter(!model == vec_to_model(input.vector = new.model, 
-                                             sp.names = rj.obj$dat$species$names)) %>% 
-        dplyr::mutate(p_scale = p_scale/sum(p_scale))
+      p2 <- rj.obj$config$clust[[1]]
+      if(nrow(p2) > 1) p2 <- p2 %>% dplyr::filter(!model == vec_to_model(input.vector = new.model, 
+                                             sp.names = rj.obj$dat$species$names))
+      p2 <- p2 %>% dplyr::mutate(p_scale = rescale_p(p))
       
       p.jump <- c(p1$p_scale[which(p1$model == vec_to_model(input.vector = new.model, sp.names = rj.obj$dat$species$names))], p2$p_scale[which(p2$model == rj.obj$current.model)])
       
@@ -1046,10 +1046,15 @@ print.gvs <- function(gvs.dat){
 
 # Rescale probability vector
 rescale_p <- function(p, default.value = 0.05){
+  if(length(p) == 1 & p == 0){
+    p.out <- 1
+  } else {
   min.p <- min(p[p > 0])
   if(min.p == 1) min.p <- default.value
   if(length(p) > 1) p[p == 0] <- min.p
-  p / sum(p)
+  p.out <- p / sum(p)
+  }
+  return(p.out)
 }
 
 # Posterior model probabilities

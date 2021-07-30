@@ -151,6 +151,7 @@ run_rjMCMC <- function(dat,
                                                               jump = proposed.jump,
                                                               iter = i)
 
+                                
                                    # Posterior ratio
                                    lognum <- loglik.new + 
                                      logprior.new + 
