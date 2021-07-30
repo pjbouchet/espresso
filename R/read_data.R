@@ -228,11 +228,8 @@ read_data <- function(file = NULL,
     
     if("sonar" %in% covariate.names){
       
-      if(!any(exclude.sonar %in% unique(brsdat$exp_signal))) 
-        stop("Unrecognised sonar type(s) in <exclude.signals>")
-      
-      if(!any(unlist(sonar.groups) %in% unique(brsdat$exp_signal))) 
-        stop("Unrecognised sonar type(s) in <exclude.signals>")
+      if(!any(unique(brsdat$exp_signal) %in% c(exclude.sonar, unlist(sonar.groups))))
+        stop("Unrecognised sonar type(s).")
       
       brsdat <- brsdat %>% 
         dplyr::filter(!exp_signal %in% exclude.sonar) 

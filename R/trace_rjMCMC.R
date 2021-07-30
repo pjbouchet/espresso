@@ -14,6 +14,7 @@
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @examples
+#' \dontrun{
 #' library(espresso)
 #' 
 #' # Import the example data, excluding species with sample sizes < 5
@@ -41,7 +42,7 @@
 #' 
 #' # Burn and thin
 #' rj.trace <- trace_rjMCMC(rj.dat = rj)
-#' 
+#' }
 #' @keywords brs dose-response rjmcmc 
 
 trace_rjMCMC <- function(rj.dat, 
@@ -178,11 +179,9 @@ trace_rjMCMC <- function(rj.dat,
   # Acceptance rates
   #' ---------------------------------------------
   AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), .f = ~rj.dat[[.x]]["accept"])
-  mcmc.params$move$m <- mcmc.params$move$tab$n
-  names(mcmc.params$move$m) <- paste0("move.", 0:3)
   # mcmc.params$move$m <- mcmc.params$move$m[burn:mcmc.params$tot.iter]
-  # mcmc.params$move$m <- table(mcmc.params$move$m)
-  # names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
+  mcmc.params$move$m <- table(mcmc.params$move$m[burn:mcmc.params$tot.iter])
+  names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
   
   AR <- purrr::map(.x = AR, .f = ~acceptance_rate(AR.obj = .x, rj.obj = rj.dat, mp = mcmc.params)) %>% 
     tibble::enframe(.) %>% 

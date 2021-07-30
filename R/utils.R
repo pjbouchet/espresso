@@ -46,6 +46,7 @@ rtnorm <- function(n, location, scale, L, U){
 #' Calculate log-likelihoods required by the rjMCMC sampler.
 #' 
 #' @param rj.obj rjMCMC object.
+#' @param iter Current iteration.
 #' @param model Model ID number.
 #' @param values List of proposed values, if available.
 #' @param include.cov Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.
@@ -1345,8 +1346,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
       }
     }
     if (PPO_out == TRUE) {
-      PPO_df <- data.frame(param = rep(NA, length(np)), percent_PPO = rep(NA, 
-                                                                          length(np)))
+      PPO_df <- data.frame(param = rep(NA, length(np)), percent_PPO = rep(NA, length(np)))
     }
     if (plot == TRUE) {
       if (pdf == TRUE) {

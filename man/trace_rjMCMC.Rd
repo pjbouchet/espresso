@@ -23,6 +23,7 @@ Burn and thin the MCMC chain(s).
 Adapted from the \code{fitR} package \url{https://github.com/sbfnk/fitR}.
 }
 \examples{
+\dontrun{
 library(espresso)
 
 # Import the example data, excluding species with sample sizes < 5
@@ -50,7 +51,7 @@ rj <- run_rjMCMC(dat = mydat.config,
 
 # Burn and thin
 rj.trace <- trace_rjMCMC(rj.dat = rj)
-
+}
 }
 \seealso{
 \code{\link{run_rjMCMC}}

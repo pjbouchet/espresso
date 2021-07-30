@@ -7,7 +7,7 @@
 \method{plot}{rjtrace}(
   rj.obj,
   param.name = NULL,
-  covariates.incl = TRUE,
+  covariates.incl = FALSE,
   autocorr = FALSE,
   individual = TRUE
 )

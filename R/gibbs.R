@@ -8,8 +8,9 @@
 #' @importFrom Rdpack reprompt
 #' @param dat Input data. Must be an object of class \code{rjtrace} or \code{brsdata}.
 #' @param random.effects Logical. When \code{TRUE}, uses a random effect model formulation.
-#'@param pseudo.n Number of iterations for the pseudo-priors.
+#' @param pseudo.n Number of iterations for the pseudo-priors.
 #' @param mcmc.n Number of posterior samples.
+#' @param burnin Number of iterations to discard as burn-in.
 #' @param n.chains Number of MCMC chains.
 #' @param thin Thinning interval.
 #' @param epsilon.upper Upper bound on the ε parameter used in the random effect model formulation.

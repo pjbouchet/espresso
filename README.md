@@ -35,10 +35,11 @@ identified in an objective, data-driven way. The package also
 accommodates: (1) the selection of any number of explanatory covariates
 (e.g., sonar frequency, previous history of exposure, feeding behaviour,
 source-whale range), (2) the comparison of dose-response functional
-forms (i.e., monophasic or biphasic), and (3) the appropriate treatment
-of both left- and right-censored observations (i.e., animals which
-display either an immediate response on first exposure, or no signs of
-response across the array of doses received, respectively).
+forms (i.e., monophasic or biphasic \[soon to be released\]), and (3)
+the appropriate treatment of both left- and right-censored observations
+(i.e., animals which display either an immediate response on first
+exposure, or no signs of response across the array of doses received,
+respectively).
 
 ## Getting started
 
@@ -54,7 +55,10 @@ patches.
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("pjbouchet/espresso")
+remotes::install_github("pjbouchet/espresso") # OR
+
+# install.packages("devtools")
+devtools::install_github("pjbouchet/espresso")
 ```
 
 ## References

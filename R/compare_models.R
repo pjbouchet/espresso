@@ -113,7 +113,7 @@ compare_models <- function(rj.dat = NULL,
       tidyr::unnest(cols = c(value))
     
     
-    gg.opts <- theme(axis.text = element_text(size = 10, colour = "black"),
+    gg.opts <- ggplot2::theme(axis.text = element_text(size = 10, colour = "black"),
                      axis.title = element_text(size = 12),
                      legend.text = element_text(size = 10),
                      legend.position = "top")

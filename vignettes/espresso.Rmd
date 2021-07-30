@@ -22,9 +22,11 @@ editor_options:
 
 ## Preamble
 
-This vignette illustrates the use of the `espresso` R package for fitting and selecting between multi-species behavioural dose-response ("risk") functions. The package is an extension of the work previously conducted under the U.S. Navy-funded [MOCHA project](%5Bhttps://synergy.st-andrews.ac.uk/mocha/) (<https://synergy.st-andrews.ac.uk/mocha/>) [@Harris2016; @Harris2018], in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to marine mammal species, whilst accounting for uncertainty, individual heterogeneity, and the effects of contextual covariates [@Miller2014; @Antunes2014]. `espresso` builds on this framework and provides functions to identify groups of species exhibiting similar patterns of responsiveness to sound, using a Bayesian model selection approach. The underlying method relies on a dimension-jumping reversible-jump Markov chain Monte Carlo algorithm [rjMCMC, @Green1995; @Hastie2012], which accommodates: (1) the selection of any number of explanatory covariates (e.g., sonar frequency, previous history of exposure, feeding behaviour, source-whale range), (2) the comparison of dose-response functional forms (i.e., monophasic or biphasic), and (3) the appropriate treatment of both left-censored and right-censored observations (i.e., animals which display either an immediate response on first exposure, or no signs of response across the array of doses received, respectively).
+This vignette illustrates the use of the `espresso` R package for fitting and selecting between multi-species behavioural dose-response ("risk") functions. The package is an extension of the work previously conducted under the U.S. Navy-funded [MOCHA project](%5Bhttps://synergy.st-andrews.ac.uk/mocha/) (<https://synergy.st-andrews.ac.uk/mocha/>) [@Harris2016; @Harris2018], in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to marine mammal species, whilst accounting for uncertainty, individual heterogeneity, and the effects of contextual covariates [@Miller2014; @Antunes2014]. `espresso` builds on this framework and provides functions to identify groups of species exhibiting similar patterns of responsiveness to sound, using a Bayesian model selection approach. The underlying method relies on a dimension-jumping reversible-jump Markov chain Monte Carlo algorithm [rjMCMC, @Green1995; @Hastie2012], which accommodates: (1) the selection of explanatory covariates (sonar frequency, previous history of exposure, feeding behaviour, and source-whale range), (2) the comparison of dose-response functional forms^[1]^ (i.e., monophasic or biphasic), and (3) the appropriate treatment of both left-censored and right-censored observations (i.e., animals which display either an immediate response on first exposure, or no signs of response across the array of doses received, respectively).
 
-Here, we showcase the main features of `espresso` using a manufactured dataset available from within the package.
+^[1]^ Soon to be released.
+
+Here, we showcase the main features of `espresso` using a simulated dataset available from within the package.
 
 ## Installation
 
@@ -39,6 +41,8 @@ The code below loads the package and sets some general options.
 
 ```{r echo=T, results='hide', message = F}
 library(espresso)
+library(tidyverse)
+library(magrittr)
 
 #'--------------------------------------------------------------------
 # Set tibble options
@@ -81,7 +85,7 @@ knitr::kable(head(example_brs), format = "pandoc")
 knitr::kable(head(species_brs), format = "pandoc")
 ```
 
-Here, `example_brs` contains 111 observations of 8 cetacean species (i.e., Blainville's and Cuviers' beaked whales, blue, killer, minke, sperm, and northern bottlenose whales, as well as Risso's dolphins). Of the 20 columns in the data, only five are compulsory:
+Here, `example_brs` contains 174 observations of 8 cetacean species (i.e., blue whale, killer whale, Cuvier's beaked whale, long-finned pilot whale, sperm whale, northern bottlenose whale, Risso's dolphin, bottlenose dolphin). Of the 20 columns in the data, only five are compulsory:
 
 +----------+-------------------------------------------------------------------------------------------------------------------+
 | Header   | Description                                                                                                       |
@@ -127,7 +131,7 @@ mydat <- read_data(file = "path/to/my/data.csv")
 
 The `example_brs` dataset can be loaded by setting `file` to `NULL` (the default):
 
-```{r echo=TRUE, message=FALSE, warning=FALSE}
+```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
 mydat <- read_data(file = NULL)
 ```
 
@@ -153,7 +157,7 @@ At present, four contextual covariates can be included in the hierarchical dose-
 
 2.  Sonar signal type (`sonar`);
 
-3.  Behavioural mode, i.e., feeding or non-feeding (`behaviour`);
+3.  Behavioural mode, i.e., feeding vs. non-feeding (`behaviour`);
 
 4.  Source-whale range (`range`).
 
@@ -161,8 +165,8 @@ These can be specified in the call to `read_data()`:
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 mydat <- read_data(file = NULL, 
-                   exclude.species = "Risso's dolphin", 
-                   min.N = 3,
+                   exclude.species = c("Risso's dolphin", "Tursiops truncatus"),
+                   min.N = 2,
                    covariates = c("behaviour", "range"))
 ```
 
@@ -182,7 +186,7 @@ summary(mydat)
 >
 > -   **group** all other signals as **LFAS**
 >
-> These default behaviour can be overridden using the `sonar.groups` and `exclude.sonar` arguments. See the `espresso` package documentation for details.
+> This default behaviour can be overridden using the `sonar.groups` and `exclude.sonar` arguments. See the `espresso` package documentation for details.
 
 ### Species groupings
 
@@ -252,10 +256,10 @@ Before running any models, we need to first set up the reversible jump sampler. 
 mydat.config <- configure_rjMCMC(dat = mydat.grp,
                                  model.select = TRUE,
                                  covariate.select = TRUE,
-                                 n.rep = 1000)
+                                 n.rep = 100)
 ```
 
-> **Note:** When `model.select = FALSE`, the MCMC sampler will be constrained to the species groupings defined in the `brsdata` object, and will only estimate the parameters of the corresponding model, without allowing model selection. Likewise, `covariate.select = FALSE` will force the inclusion of all covariates defined using `read_data()` or `simulate_data()`.
+> **Note:** When `model.select = FALSE`, the MCMC sampler will be constrained to the species groupings defined in the `brsdata` or `brsdata.grp` object, and will only estimate the parameters of the corresponding model, without allowing model selection. Likewise, `covariate.select = FALSE` will force the inclusion of all covariates defined using `read_data()` or `simulate_data()`.
 
 `configure_rjMCMC()` performs three actions:
 
@@ -276,24 +280,26 @@ summary(mydat.config, print.config = TRUE)
 
 Now that initial setup is complete, we can proceed with model fitting. This step is designed to mirror a typical Bayesian modelling workflow in the `rjags` package [@Plummer2019]. The following call to `run_rjMCMC()` compiles the information given in `mydat.config`, creates the R data structures required to hold the MCMC samples, and runs the models:
 
-```{r echo=TRUE, eval = FALSE, message=FALSE, warning=FALSE}
+```{r modelfit, eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
 rj <- run_rjMCMC(dat = mydat.config, n.chains = 3, n.burn = 25000, n.iter = 100000)
 ```
 
-In a first instance, we use three MCMC chains of 100,000 samples each, and a 25,000 step burn-in. These values are highly dependent on the context of each analysis -- typically, we expect that the higher the number of species (and thus the number of candidate models, when `model.selection = TRUE`), the longer the chains will need to be to achieve convergence.
+For illustration purposes (and speed), we use three MCMC chains of 10,000 samples each, and a 1,000 step burn-in. These values are dependent on the context of each analysis, but should generally be much higher than this -- typically, the higher the number of species (and thus the number of candidate models, when `model.selection = TRUE`), the longer the chains will need to be to achieve convergence.
 
-With four species in the dataset (namely, `Bm`, `Oo`, `Pm`, `Bkd_w`), the sampler will jump between 15 possible candidate models. Out of interest, these can be listed using the `listParts` function from the `partitions` package [@Hankin2006].
+With five species in the dataset (namely, `Bm`, `Oo`, `Pm`, `Gm`, `Bkd_w`), the sampler will jump between 52 possible candidate models. Out of interest, these can be listed using the `listParts` function from the `partitions` package [@Hankin2006].
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-multicool::Bell(n = 4) # Number of candidate models
+multicool::Bell(n = 5) # Number of candidate models
 
 # List of candidate models
-partitions::listParts(x = 4) %>%
+partitions::listParts(x = 5) %>%
   purrr::map_depth(.x = ., .depth = 2, .f = ~mydat.config$species$names[.x]) %>%
   purrr::map(.x = ., 
              .f = ~ lapply(X = .x, FUN = function(x) paste(x, collapse = ","))) %>%
   purrr::map(.x = ., .f = ~ paste0("(", .x, ")")) %>% 
-  purrr::map(.x = ., .f = ~paste0(.x, collapse = "+"))
+  purrr::map(.x = ., .f = ~paste0(.x, collapse = "+")) %>% 
+  tibble::enframe() %>% dplyr::select(-name) %>% 
+  dplyr::rename(model = value) %>% data.frame()
 ```
 
 > **Note:** `listParts` is only shown for illustrative purposes and will grind down when the number of species increases, possibly causing memory issues. Its use is not recommended when n \> 10.
@@ -309,7 +315,7 @@ rj.posterior <- espresso:::rj.posterior
 ```
 
 ```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
-rj.posterior <- trace_rjMCMC(rj)
+rj.posterior <- trace_rjMCMC(rj, thin = 10)
 ```
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
@@ -358,10 +364,6 @@ summary(rj.posterior)
 ### Model updates
 
 Updates to the Markov chain may be required if the model has failed to converge. The `update_rjMCMC()` function can be used to extend a previous model run; it "picks up where the sampler left off" by extracting the last MCMC samples for each parameter and using those as new starting values. The same model checking procedures apply to this new run, and the update process can be repeated until convergence is achieved.
-
-```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
-rj <- update_rjMCMC(rj, n.iter = 50000)
-```
 
 ## Dose-response
 

@@ -45,6 +45,8 @@
 
 
 
+
+
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -56,9 +58,15 @@
 
 
 
+  
+
+  
+
   </head>
 
   <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -79,10 +87,7 @@
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
+  <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
   <a href="../reference/index.html">Reference</a>
@@ -112,7 +117,7 @@
     <p>Burn and thin the MCMC chain(s).</p>
     </div>
 
-    <pre class="usage"><span class='fu'>trace_rjMCMC</span>(<span class='no'>rj.dat</span>, <span class='kw'>burn</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>thin</span> <span class='kw'>=</span> <span class='fl'>1</span>)</pre>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>trace_rjMCMC</span><span class='op'>(</span><span class='va'>rj.dat</span>, burn <span class='op'>=</span> <span class='cn'>NULL</span>, thin <span class='op'>=</span> <span class='fl'>1</span><span class='op'>)</span></code></pre></div>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -140,173 +145,41 @@
     <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
 
     <div class='dont-index'><p><code><a href='run_rjMCMC.html'>run_rjMCMC</a></code></p></div>
+    <h2 class="hasAnchor" id="author"><a class="anchor" href="#author"></a>Author</h2>
+
+    <p>Phil J. Bouchet</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>espresso</span>)
-
-<span class='co'># Import the example data, excluding species with sample sizes &lt; 5</span>
-<span class='co'># and considering the sonar covariate</span>
-<span class='no'>mydat</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='read_data.html'>read_data</a></span>(<span class='kw'>file</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>min.N</span> <span class='kw'>=</span> <span class='fl'>5</span>, <span class='kw'>covariates</span> <span class='kw'>=</span> <span class='st'>"sonar"</span>)
-<span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span>(<span class='no'>mydat</span>)</div><div class='output co'>#&gt; 
-#&gt; ======================================================
-#&gt; DATA SUMMARY
-#&gt; ======================================================
-#&gt; 
-#&gt; Simulation: FALSE
-#&gt; Data file: example_brs
-#&gt; 
-#&gt; --------------------
-#&gt; OBSERVATIONS
-#&gt; --------------------
-#&gt; Right-censoring: TRUE 
-#&gt; Total: 46 
-#&gt; 
-#&gt; --------------------
-#&gt; SPECIES
-#&gt; --------------------
-#&gt; N =  2 
-#&gt; Excluded: Ba Ha Md Oo Zc 
-#&gt; Species groupings: FALSE
-#&gt; 
-#&gt; <span style='color: #949494;'># A tibble: 2 x 8</span><span>
-#&gt;   species common_name N_ind N_trials censored  mean   min   max
-#&gt;   </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>   </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>       </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span>    </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span>    </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>
-#&gt; </span><span style='color: #BCBCBC;'>1</span><span> Bm      Blue whale     31       33       14  133.  80.7  177.
-#&gt; </span><span style='color: #BCBCBC;'>2</span><span> Pm      Sperm whale    18       38       23  139. 123.   159.
-#&gt; 
-#&gt; --------------------
-#&gt; COVARIATES
-#&gt; --------------------
-#&gt; --  sonar  --
-#&gt; Levels: 2 
-#&gt; [LFAS]: n = 35
-#&gt; [MFAS]: n = 36
-#&gt; [NA]: n = 0
-#&gt; 
-#&gt; 
-#&gt; --------------------
-#&gt; SONAR GROUPINGS
-#&gt; --------------------
-#&gt; $MFAS
-#&gt; [1] "MFAS"          "MFA"           "REAL MFA"      "MFAS_DS"      
-#&gt; [5] "MFA HELO"      "REAL MFA HELO" "SOCAL_d"       "REAL MFAS"    
-#&gt; [9] "MF ALARM"     
-#&gt; 
-#&gt; $LFAS
-#&gt; [1] "LFAS_LO"  "LFAS"     "LFAS_DS"  "LFAS_122" "LFAS_185"
-#&gt; 
-#&gt; $exclude
-#&gt; [1] "PRN"          "CAS"          "ALARM"        "HF ALARM"     "HFAS"        
-#&gt; [6] "HF ALARM CAS" "MFAS CAS"    
-#&gt; </div><div class='input'>
-<span class='co'># Configure the sampler</span>
-<span class='no'>mydat.config</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='configure_rjMCMC.html'>configure_rjMCMC</a></span>(<span class='kw'>dat</span> <span class='kw'>=</span> <span class='no'>mydat</span>,
-                                 <span class='kw'>model.select</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-                                 <span class='kw'>covariate.select</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-                                 <span class='kw'>proposal.mh</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>t.ij</span> <span class='kw'>=</span> <span class='fl'>10</span>, <span class='kw'>mu.i</span> <span class='kw'>=</span> <span class='fl'>10</span>,
-                                                    <span class='kw'>mu</span> <span class='kw'>=</span> <span class='fl'>7</span>, <span class='kw'>phi</span> <span class='kw'>=</span> <span class='fl'>10</span>, <span class='kw'>sigma</span> <span class='kw'>=</span> <span class='fl'>10</span>),
-                                 <span class='kw'>proposal.rj</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>dd</span> <span class='kw'>=</span> <span class='fl'>20</span>, <span class='kw'>cov</span> <span class='kw'>=</span> <span class='fl'>7</span>),
-                                 <span class='kw'>prior.covariates</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>30</span>),
-                                 <span class='kw'>n.rep</span> <span class='kw'>=</span> <span class='fl'>100</span>)
-<span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span>(<span class='no'>mydat.config</span>)</div><div class='output co'>#&gt; 
-#&gt; ======================================================
-#&gt; DATA SUMMARY
-#&gt; ======================================================
-#&gt; 
-#&gt; Simulation: FALSE
-#&gt; Data file: example_brs
-#&gt; 
-#&gt; --------------------
-#&gt; OBSERVATIONS
-#&gt; --------------------
-#&gt; Right-censoring: TRUE 
-#&gt; Total: 46 
-#&gt; 
-#&gt; --------------------
-#&gt; SPECIES
-#&gt; --------------------
-#&gt; N =  2 
-#&gt; Excluded: Ba Ha Md Oo Zc 
-#&gt; Species groupings: FALSE
-#&gt; 
-#&gt; </span><span style='color: #949494;'># A tibble: 2 x 8</span><span>
-#&gt;   species common_name N_ind N_trials censored  mean   min   max
-#&gt;   </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>   </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>       </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span>    </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span>    </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>
-#&gt; </span><span style='color: #BCBCBC;'>1</span><span> Bm      Blue whale     31       33       14  133.  80.7  177.
-#&gt; </span><span style='color: #BCBCBC;'>2</span><span> Pm      Sperm whale    18       38       23  139. 123.   159.
-#&gt; 
-#&gt; --------------------
-#&gt; COVARIATES
-#&gt; --------------------
-#&gt; --  sonar  --
-#&gt; Levels: 2 
-#&gt; [LFAS]: n = 35
-#&gt; [MFAS]: n = 36
-#&gt; [NA]: n = 0
-#&gt; 
-#&gt; 
-#&gt; --------------------
-#&gt; SONAR GROUPINGS
-#&gt; --------------------
-#&gt; $MFAS
-#&gt; [1] "MFAS"          "MFA"           "REAL MFA"      "MFAS_DS"      
-#&gt; [5] "MFA HELO"      "REAL MFA HELO" "SOCAL_d"       "REAL MFAS"    
-#&gt; [9] "MF ALARM"     
-#&gt; 
-#&gt; $LFAS
-#&gt; [1] "LFAS_LO"  "LFAS"     "LFAS_DS"  "LFAS_122" "LFAS_185"
-#&gt; 
-#&gt; $exclude
-#&gt; [1] "PRN"          "CAS"          "ALARM"        "HF ALARM"     "HFAS"        
-#&gt; [6] "HF ALARM CAS" "MFAS CAS"    
-#&gt; 
-#&gt; 
-#&gt; --------------------
-#&gt; MCMC
-#&gt; --------------------
-#&gt; 
-#&gt; Model selection: TRUE 
-#&gt; Covariate selection: FALSE 
-#&gt; 
-#&gt; Variance estimates: 2.4 (sigma); 14.1 (phi) 
-#&gt; 
-#&gt; Proposal standard deviations:
-#&gt; 
-#&gt; </span><span style='color: #949494;'># A tibble: 7 x 3</span><span>
-#&gt;   param          SD step 
-#&gt;   </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>       </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>
-#&gt; </span><span style='color: #BCBCBC;'>1</span><span> t.ij           10 MH   
-#&gt; </span><span style='color: #BCBCBC;'>2</span><span> mu.i           10 MH   
-#&gt; </span><span style='color: #BCBCBC;'>3</span><span> mu              7 MH   
-#&gt; </span><span style='color: #BCBCBC;'>4</span><span> phi            10 MH   
-#&gt; </span><span style='color: #BCBCBC;'>5</span><span> sigma          10 MH   
-#&gt; </span><span style='color: #BCBCBC;'>6</span><span> sonar          10 MH   
-#&gt; </span><span style='color: #BCBCBC;'>7</span><span> data-driven    20 RJ   
-#&gt; 
-#&gt; Clustering:
-#&gt; 
-#&gt; [[1]]
-#&gt; </span><span style='color: #949494;'># A tibble: 1 x 3</span><span>
-#&gt;   model       p p_scale
-#&gt;   </span><span style='color: #949494;font-style: italic;'>&lt;chr&gt;</span><span>   </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>   </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>
-#&gt; </span><span style='color: #BCBCBC;'>1</span><span> (Bm,Pm)     1       1
-#&gt; 
-#&gt; [[2]]
-#&gt; </span><span style='color: #949494;'># A tibble: 2 x 2</span><span>
-#&gt;   cluster     p
-#&gt;     </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>
-#&gt; </span><span style='color: #BCBCBC;'>1</span><span>       1  0.37
-#&gt; </span><span style='color: #BCBCBC;'>2</span><span>       2  0.63
-#&gt; </div><div class='input'>
-<span class='co'># Run the reversible jump MCMC</span>
-<span class='no'>rj</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='run_rjMCMC.html'>run_rjMCMC</a></span>(<span class='kw'>dat</span> <span class='kw'>=</span> <span class='no'>mydat.config</span>,
-                 <span class='kw'>n.chains</span> <span class='kw'>=</span> <span class='fl'>2</span>,
-                 <span class='kw'>n.burn</span> <span class='kw'>=</span> <span class='fl'>100</span>,
-                 <span class='kw'>n.iter</span> <span class='kw'>=</span> <span class='fl'>100</span>,
-                 <span class='kw'>do.update</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)
-
-<span class='co'># Burn and thin</span>
-<span class='no'>rj.trace</span> <span class='kw'>&lt;-</span> <span class='fu'>trace_rjMCMC</span>(<span class='kw'>rj.dat</span> <span class='kw'>=</span> <span class='no'>rj</span>)</div></span></pre>
+    <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span></span>
+<span class='r-in'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Import the example data, excluding species with sample sizes &lt; 5</span></span>
+<span class='r-in'><span class='co'># and considering the sonar covariate</span></span>
+<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='read_data.html'>read_data</a></span><span class='op'>(</span>file <span class='op'>=</span> <span class='cn'>NULL</span>, min.N <span class='op'>=</span> <span class='fl'>5</span>, covariates <span class='op'>=</span> <span class='st'>"sonar"</span><span class='op'>)</span> </span>
+<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Configure the sampler</span></span>
+<span class='r-in'><span class='va'>mydat.config</span> <span class='op'>&lt;-</span> <span class='fu'><a href='configure_rjMCMC.html'>configure_rjMCMC</a></span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat</span>,</span>
+<span class='r-in'>                                 model.select <span class='op'>=</span> <span class='cn'>TRUE</span>,</span>
+<span class='r-in'>                                 covariate.select <span class='op'>=</span> <span class='cn'>FALSE</span>,</span>
+<span class='r-in'>                                 proposal.mh <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>t.ij <span class='op'>=</span> <span class='fl'>10</span>, mu.i <span class='op'>=</span> <span class='fl'>10</span>, </span>
+<span class='r-in'>                                                    mu <span class='op'>=</span> <span class='fl'>7</span>, phi <span class='op'>=</span> <span class='fl'>10</span>, sigma <span class='op'>=</span> <span class='fl'>10</span><span class='op'>)</span>,</span>
+<span class='r-in'>                                 proposal.rj <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>dd <span class='op'>=</span> <span class='fl'>20</span>, cov <span class='op'>=</span> <span class='fl'>7</span><span class='op'>)</span>,</span>
+<span class='r-in'>                                 prior.covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>30</span><span class='op'>)</span>,</span>
+<span class='r-in'>                                 n.rep <span class='op'>=</span> <span class='fl'>100</span><span class='op'>)</span></span>
+<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat.config</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Run the reversible jump MCMC</span></span>
+<span class='r-in'><span class='va'>rj</span> <span class='op'>&lt;-</span> <span class='fu'><a href='run_rjMCMC.html'>run_rjMCMC</a></span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat.config</span>,</span>
+<span class='r-in'>                 n.chains <span class='op'>=</span> <span class='fl'>2</span>,</span>
+<span class='r-in'>                 n.burn <span class='op'>=</span> <span class='fl'>100</span>,</span>
+<span class='r-in'>                 n.iter <span class='op'>=</span> <span class='fl'>100</span>,</span>
+<span class='r-in'>                 do.update <span class='op'>=</span> <span class='cn'>FALSE</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Burn and thin</span></span>
+<span class='r-in'><span class='va'>rj.trace</span> <span class='op'>&lt;-</span> <span class='fu'>trace_rjMCMC</span><span class='op'>(</span>rj.dat <span class='op'>=</span> <span class='va'>rj</span><span class='op'>)</span></span>
+<span class='r-in'><span class='op'>}</span></span>
+</code></pre></div>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -318,11 +191,11 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Dina Sadykova.</p>
+  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
 </div>
 
       </footer>
@@ -330,6 +203,8 @@
 
   
 
+
+  
 
   </body>
 </html>

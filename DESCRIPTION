@@ -9,7 +9,7 @@ Authors@R:
       person("Elizabeth", "Henderson", email = "ehenders@spawar.navy.mil", role = c("aut")), 
       person("Dina", "Sadykova", email = "DinSad@ceh.ac​.uk", role = c("aut")))
 Description: The espresso package provides functions for fitting and selecting among behavioural dose-response functions using Bayesian reversible jump Markov Chain Monte Carlo (rjMCMC) methods.
-License: GPL-3 + file LICENSE
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 RdMacros: Rdpack

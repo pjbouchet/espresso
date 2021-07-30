@@ -24,6 +24,8 @@ gibbs(
 
 \item{mcmc.n}{Number of posterior samples.}
 
+\item{burnin}{Number of iterations to discard as burn-in.}
+
 \item{n.chains}{Number of MCMC chains.}
 
 \item{thin}{Thinning interval.}
@@ -58,7 +60,6 @@ summary(mydat)
 # Model selection by GVS                        
 gvs <- gibbs(dat = mydat, 
              random.effects = FALSE, 
-             include.covariates = FALSE, 
              mcmc.n = 1000, 
              burnin = 500)
 }

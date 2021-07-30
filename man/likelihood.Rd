@@ -18,6 +18,8 @@ likelihood(
 \arguments{
 \item{rj.obj}{rjMCMC object.}
 
+\item{iter}{Current iteration.}
+
 \item{model}{Model ID number.}
 
 \item{values}{List of proposed values, if available.}

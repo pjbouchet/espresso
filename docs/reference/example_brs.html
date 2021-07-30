@@ -45,6 +45,8 @@
 
 
 
+
+
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -56,9 +58,15 @@
 
 
 
+  
+
+  
+
   </head>
 
   <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -79,10 +87,7 @@
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
+  <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
   <a href="../reference/index.html">Reference</a>
@@ -112,7 +117,7 @@
     <p>Example dataset used to illustrate the format expected by <code>espresso</code>.</p>
     </div>
 
-    <pre class="usage"><span class='fu'><a href='https://rdrr.io/r/utils/data.html'>data</a></span>(<span class='no'>example_brs</span>)</pre>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'><a href='https://rdrr.io/r/utils/data.html'>data</a></span><span class='op'>(</span><span class='va'>example_brs</span><span class='op'>)</span></code></pre></div>
 
 
     <h2 class="hasAnchor" id="format"><a class="anchor" href="#format"></a>Format</h2>
@@ -121,20 +126,20 @@
 <tr><td><code>Project</code></td><td>Project name or code</td></tr>
 <tr><td><code>Species</code></td><td>Species code, as listed in <code>species_brs</code></td></tr>
 <tr><td><code>Tag_ID</code></td><td>Unique tag identifier</td></tr>
-<tr><td><code>Exp_signal</code></td><td>Type of sonar signal (e.g., MFAS, REAL MFA, PRN, CAS)</td></tr>
-<tr><td><code>Exp_order</code></td><td>History of exposure (1 = 1st exposure, 2 = 2nd exposure, etc.)</td></tr>
-<tr><td><code>Exp_duration</code></td><td>Duration of the exposure</td></tr>
 <tr><td><code>Resp_time</code></td><td>Time at response</td></tr>
 <tr><td><code>Resp_type</code></td><td>Response type (avoidance, startle, respiration, foraging, locomotion, group, dive, orientation, resting, vocal, or any)</td></tr>
 <tr><td><code>Resp_score</code></td><td>Severity of the response (on a point scale from 0 to 7), as scored by expert elicitation</td></tr>
 <tr><td><code>Resp_SPL</code></td><td>Sound pressure level at time of response (in dB re 1μPa)</td></tr>
 <tr><td><code>Resp_SELcum</code></td><td>Cumulative sound exposure level at time of response (in dB re 1μPa)</td></tr>
-<tr><td><code>Pre_feeding</code></td><td>Behavioural mode (TRUE = feeding, FALSE = non-feeding)</td></tr>
 <tr><td><code>Max_SPL</code></td><td>Maximum sound pressure level reached during the exposure</td></tr>
 <tr><td><code>Max_SELcum</code></td><td>Maximum sound exposure level reached during the exposure</td></tr>
+<tr><td><code>Censored</code></td><td>Integer variable indicating whether an observation is left-censored (-1), right-censored (1) or not censored (0)</td></tr>
+<tr><td><code>Exp_order</code></td><td>History of exposure (1 = 1st exposure, 2 = 2nd exposure, etc.)</td></tr>
+<tr><td><code>Exp_duration</code></td><td>Duration of the exposure</td></tr>
+<tr><td><code>Exp_signal</code></td><td>Type of sonar signal (e.g., MFAS, REAL MFA, PRN, CAS)</td></tr>
+<tr><td><code>Pre_feeding</code></td><td>Behavioural mode (TRUE = feeding, FALSE = non-feeding)</td></tr>
 <tr><td><code>Resp_range</code></td><td>Whale-source range at the time of response</td></tr>
 <tr><td><code>Min_range</code></td><td>Minimum whale-source range during the exposure</td></tr>
-<tr><td><code>Censored</code></td><td>Binary variable indicating whether an observation is right-censored (1) or not (0)</td></tr>
 <tr><td><code>Inferred Resp_range</code></td><td>Best estimate of whale-source range at the time of response</td></tr>
 <tr><td><code>Inferred Min_range</code></td><td>Best estimate of minimum whale-source range during the exposure</td></tr>
 </table>
@@ -142,7 +147,7 @@
 
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
-    <p>Note: This is a completely manufactured dataset, which should not be used for inference.</p>
+    <p>Note: This is a completely manufactured dataset, which should not be used for inference. The ordering of columns does nto matter.</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -155,11 +160,11 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Dina Sadykova.</p>
+  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
 </div>
 
       </footer>
@@ -167,6 +172,8 @@
 
   
 
+
+  
 
   </body>
 </html>

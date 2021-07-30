@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 
 ## Rationale
 
-This work builds upon previous research completed under the U.S. Navy-funded [MOCHA project](https://synergy.st-andrews.ac.uk/mocha/) [@Harris2016; @Harris2018], in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to individual marine mammals, whilst accounting for uncertainty and the effects of contextual covariates [@Miller2014; @Antunes2014]. The current modelling framework is implemented in the Bayesian analysis software JAGS (<https://mcmc-jags.sourceforge.io/>), and relies on Gibbs Variable Selection [@OHara2009] to identify groups of species exhibiting similar patterns of responsiveness to impulsive sound stimuli. However, this approach proves computationally intractable for more than a few species and/or covariates. `espresso` uses a bespoke dimension-jumping reversible-jump Markov chain Monte Carlo algorithm [rjMCMC, @Green1995; @Hastie2012] to relax these constraints and allow species groupings to be identified in an objective, data-driven way. The package also accommodates: (1) the selection of any number of explanatory covariates (e.g., sonar frequency, previous history of exposure, feeding behaviour, source-whale range), (2) the comparison of dose-response functional forms (i.e., monophasic or biphasic), and (3) the appropriate treatment of both left- and right-censored observations (i.e., animals which display either an immediate response on first exposure, or no signs of response across the array of doses received, respectively).
+This work builds upon previous research completed under the U.S. Navy-funded [MOCHA project](https://synergy.st-andrews.ac.uk/mocha/) [@Harris2016; @Harris2018], in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to individual marine mammals, whilst accounting for uncertainty and the effects of contextual covariates [@Miller2014; @Antunes2014]. The current modelling framework is implemented in the Bayesian analysis software JAGS (<https://mcmc-jags.sourceforge.io/>), and relies on Gibbs Variable Selection [@OHara2009] to identify groups of species exhibiting similar patterns of responsiveness to impulsive sound stimuli. However, this approach proves computationally intractable for more than a few species and/or covariates. `espresso` uses a bespoke dimension-jumping reversible-jump Markov chain Monte Carlo algorithm [rjMCMC, @Green1995; @Hastie2012] to relax these constraints and allow species groupings to be identified in an objective, data-driven way. The package also accommodates: (1) the selection of any number of explanatory covariates (e.g., sonar frequency, previous history of exposure, feeding behaviour, source-whale range), (2) the comparison of dose-response functional forms (i.e., monophasic or biphasic [soon to be released]), and (3) the appropriate treatment of both left- and right-censored observations (i.e., animals which display either an immediate response on first exposure, or no signs of response across the array of doses received, respectively).
 
 ## Getting started
 
@@ -37,7 +37,10 @@ Install the GitHub development version to access the latest features and patches
 
 ```{r, eval = FALSE}
 # install.packages("remotes")
-remotes::install_github("pjbouchet/espresso")
+remotes::install_github("pjbouchet/espresso") # OR
+
+# install.packages("devtools")
+devtools::install_github("pjbouchet/espresso")
 ```
 
 ## References

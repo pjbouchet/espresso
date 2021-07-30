@@ -48,6 +48,8 @@
 
 
 
+
+
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -59,9 +61,15 @@
 
 
 
+  
+
+  
+
   </head>
 
   <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -82,10 +90,7 @@
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
+  <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
   <a href="../reference/index.html">Reference</a>
@@ -118,16 +123,16 @@
 .</p>
     </div>
 
-    <pre class="usage"><span class='fu'>gibbs</span>(
-  <span class='no'>dat</span>,
-  <span class='kw'>random.effects</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>include.covariates</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>mcmc.n</span> <span class='kw'>=</span> <span class='fl'>1000</span>,
-  <span class='kw'>burnin</span> <span class='kw'>=</span> <span class='fl'>1000</span>,
-  <span class='kw'>n.chains</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>thin</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>epsilon.upper</span> <span class='kw'>=</span> <span class='fl'>30</span>
-)</pre>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>gibbs</span><span class='op'>(</span>
+  <span class='va'>dat</span>,
+  random.effects <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  pseudo.n <span class='op'>=</span> <span class='fl'>10000</span>,
+  mcmc.n <span class='op'>=</span> <span class='fl'>1000</span>,
+  burnin <span class='op'>=</span> <span class='fl'>1000</span>,
+  n.chains <span class='op'>=</span> <span class='fl'>1</span>,
+  thin <span class='op'>=</span> <span class='fl'>1</span>,
+  epsilon.upper <span class='op'>=</span> <span class='fl'>30</span>
+<span class='op'>)</span></code></pre></div>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -141,12 +146,16 @@
       <td><p>Logical. When <code>TRUE</code>, uses a random effect model formulation.</p></td>
     </tr>
     <tr>
-      <th>include.covariates</th>
-      <td><p>Logical. Whether to include contextual covariates. Note that covariate selection is not implemented in <code>gibbs</code>.</p></td>
+      <th>pseudo.n</th>
+      <td><p>Number of iterations for the pseudo-priors.</p></td>
     </tr>
     <tr>
       <th>mcmc.n</th>
       <td><p>Number of posterior samples.</p></td>
+    </tr>
+    <tr>
+      <th>burnin</th>
+      <td><p>Number of iterations to discard as burn-in.</p></td>
     </tr>
     <tr>
       <th>n.chains</th>
@@ -182,80 +191,33 @@ R package version 4-10, <a href='https://CRAN.R-project.org/package=rjags'>https
     <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
 
     <div class='dont-index'><p><code><a href='summary.gvs.html'>summary.gvs</a></code></p></div>
+    <h2 class="hasAnchor" id="author"><a class="anchor" href="#author"></a>Author</h2>
+
+    <p>Phil J. Bouchet</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>espresso</span>)
-
-<span class='co'># Simulate data for two species</span>
-<span class='no'>mydat</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='simulate_data.html'>simulate_data</a></span>(<span class='kw'>n.species</span> <span class='kw'>=</span> <span class='fl'>2</span>,
-                       <span class='kw'>n.whales</span> <span class='kw'>=</span> <span class='fl'>16</span>,
-                       <span class='kw'>max.trials</span> <span class='kw'>=</span> <span class='fl'>3</span>,
-                       <span class='kw'>covariates</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>exposed</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0</span>, <span class='fl'>5</span>), <span class='kw'>range</span> <span class='kw'>=</span> <span class='fl'>0.5</span>),
-                       <span class='kw'>mu</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>101</span>, <span class='fl'>158</span>),
-                       <span class='kw'>phi</span> <span class='kw'>=</span> <span class='fl'>20</span>,
-                       <span class='kw'>sigma</span> <span class='kw'>=</span> <span class='fl'>20</span>,
-                       <span class='kw'>Rc</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>210</span>, <span class='fl'>211</span>),
-                       <span class='kw'>seed</span> <span class='kw'>=</span> <span class='fl'>58697</span>)
-<span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span>(<span class='no'>mydat</span>)</div><div class='output co'>#&gt; 
-#&gt; ======================================================
-#&gt; DATA SUMMARY
-#&gt; ======================================================
-#&gt; 
-#&gt; Simulation: TRUE
-#&gt; 
-#&gt; --------------------
-#&gt; OBSERVATIONS
-#&gt; --------------------
-#&gt; Right-censoring: TRUE 
-#&gt; Total: 1 
-#&gt; 
-#&gt; --------------------
-#&gt; SPECIES
-#&gt; --------------------
-#&gt; N =  2 
-#&gt; Excluded: None 
-#&gt; Species groupings: FALSE
-#&gt; 
-#&gt; <span style='color: #949494;'># A tibble: 2 x 6</span><span>
-#&gt;   species N_ind N_trials  mean   min   max
-#&gt;     </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>    </span><span style='color: #949494;font-style: italic;'>&lt;int&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span> </span><span style='color: #949494;font-style: italic;'>&lt;dbl&gt;</span><span>
-#&gt; </span><span style='color: #BCBCBC;'>1</span><span>       1     8       12  116.  60.4  172.
-#&gt; </span><span style='color: #BCBCBC;'>2</span><span>       2     8       17  162.  98.3  210.
-#&gt; 
-#&gt; --------------------
-#&gt; COVARIATES
-#&gt; --------------------
-#&gt; --  exposed  --
-#&gt; Levels: 2 
-#&gt; [0]: n = 16
-#&gt; [1]: n = 13
-#&gt; [NA]: n = 0
-#&gt; 
-#&gt; --  range  --
-#&gt; [min]: 0.068
-#&gt; [mean]: 10.127
-#&gt; [max]: 19.431
-#&gt; [NA]: n = 0
-#&gt; 
-#&gt; </div><div class='input'>
-<span class='co'># Model selection by GVS                        </span>
-<span class='no'>gvs</span> <span class='kw'>&lt;-</span> <span class='fu'>gibbs</span>(<span class='kw'>dat</span> <span class='kw'>=</span> <span class='no'>mydat</span>,
-             <span class='kw'>random.effects</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-             <span class='kw'>include.covariates</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-             <span class='kw'>mcmc.n</span> <span class='kw'>=</span> <span class='fl'>1000</span>,
-             <span class='kw'>burnin</span> <span class='kw'>=</span> <span class='fl'>500</span>)</div><div class='output co'>#&gt; 
-#&gt; --------------------------------------------------
-#&gt; PSEUDO-PRIORS
-#&gt; --------------------------------------------------
-#&gt; 
-#&gt;  Candidate model (1 out of 2): (1)+(2)
-#&gt; 
-#&gt;  Candidate model (2 out of 2): (1,2)
-#&gt; 
-#&gt; --------------------------------------------------
-#&gt; MAIN MODEL
-#&gt; --------------------------------------------------
-#&gt; </div></span></pre>
+    <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span></span>
+<span class='r-in'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Simulate data for two species</span></span>
+<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='simulate_data.html'>simulate_data</a></span><span class='op'>(</span>n.species <span class='op'>=</span> <span class='fl'>2</span>, </span>
+<span class='r-in'>                       n.whales <span class='op'>=</span> <span class='fl'>16</span>, </span>
+<span class='r-in'>                       max.trials <span class='op'>=</span> <span class='fl'>3</span>, </span>
+<span class='r-in'>                       covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>exposed <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>5</span><span class='op'>)</span>, range <span class='op'>=</span> <span class='fl'>0.5</span><span class='op'>)</span>,</span>
+<span class='r-in'>                       mu <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>101</span>, <span class='fl'>158</span><span class='op'>)</span>, </span>
+<span class='r-in'>                       phi <span class='op'>=</span> <span class='fl'>20</span>, </span>
+<span class='r-in'>                       sigma <span class='op'>=</span> <span class='fl'>20</span>, </span>
+<span class='r-in'>                       Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>210</span>, <span class='fl'>211</span><span class='op'>)</span>, </span>
+<span class='r-in'>                       seed <span class='op'>=</span> <span class='fl'>58697</span><span class='op'>)</span></span>
+<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat</span><span class='op'>)</span></span>
+<span class='r-in'>     </span>
+<span class='r-in'><span class='co'># Model selection by GVS                        </span></span>
+<span class='r-in'><span class='va'>gvs</span> <span class='op'>&lt;-</span> <span class='fu'>gibbs</span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat</span>, </span>
+<span class='r-in'>             random.effects <span class='op'>=</span> <span class='cn'>FALSE</span>, </span>
+<span class='r-in'>             mcmc.n <span class='op'>=</span> <span class='fl'>1000</span>, </span>
+<span class='r-in'>             burnin <span class='op'>=</span> <span class='fl'>500</span><span class='op'>)</span></span>
+<span class='r-in'><span class='op'>}</span></span>
+</code></pre></div>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -267,11 +229,11 @@ R package version 4-10, <a href='https://CRAN.R-project.org/package=rjags'>https
 
       <footer>
       <div class="copyright">
-  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Dina Sadykova.</p>
+  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
 </div>
 
       </footer>
@@ -279,6 +241,8 @@ R package version 4-10, <a href='https://CRAN.R-project.org/package=rjags'>https
 
   
 
+
+  
 
   </body>
 </html>

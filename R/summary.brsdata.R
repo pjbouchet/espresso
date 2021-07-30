@@ -57,7 +57,7 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     cat("Excluded: None \n")
   } else {
     ex.sp <- unlist(dat.obj$species$exclude)
-    cat(paste0("Excluded (N = ", length(ex.sp), "):"), ex.sp, "\n")
+    cat(paste0("Excluded (N = ", length(unique(ex.sp)), "):"), unique(ex.sp), "\n")
   }
   
   if(is.null(dat.obj$species$groups)){
@@ -74,7 +74,6 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     cat("\n")
   }
   
-  # print(dat.obj$species$summary, n = ifelse(print.allrows, 9999, NULL))
   print(dat.obj$species$summary, n = 9999)
   
   cat("\n--------------------")

@@ -45,6 +45,8 @@
 
 
 
+
+
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -56,9 +58,15 @@
 
 
 
+  
+
+  
+
   </head>
 
   <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -79,10 +87,7 @@
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
+  <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
   <a href="../reference/index.html">Reference</a>
@@ -112,13 +117,14 @@
     <p>Compute dose-response functions from a fitted rjMCMC model.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>compile_rjMCMC</span>(
-  <span class='no'>rj.object</span>,
-  <span class='kw'>by.model</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>covariate</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>covariate.values</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>species</span> <span class='kw'>=</span> <span class='kw'>NULL</span>
-)</pre>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>compile_rjMCMC</span><span class='op'>(</span>
+  <span class='va'>rj.object</span>,
+  by.model <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  covariate <span class='op'>=</span> <span class='cn'>NULL</span>,
+  covariate.values <span class='op'>=</span> <span class='cn'>NULL</span>,
+  species <span class='op'>=</span> <span class='cn'>NULL</span>,
+  credible.intervals <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/seq.html'>seq</a></span><span class='op'>(</span><span class='fl'>95</span>, <span class='fl'>1</span>, by <span class='op'>=</span> <span class='op'>-</span><span class='fl'>5</span><span class='op'>)</span>
+<span class='op'>)</span></code></pre></div>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -129,11 +135,11 @@
     </tr>
     <tr>
       <th>by.model</th>
-      <td><p>Logical. If <code>TRUE</code>, the functions subsets posterior parameter estimates to produce separate dose-response curves for each model.</p></td>
+      <td><p>Logical. If <code>TRUE</code>, the function subsets posterior parameter estimates to produce separate dose-response curves for each candidate model.</p></td>
     </tr>
     <tr>
       <th>covariate</th>
-      <td><p>Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given in <code>species</code>.</p></td>
+      <td><p>Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given by <code>species</code>.</p></td>
     </tr>
     <tr>
       <th>covariate.values</th>
@@ -143,6 +149,10 @@
       <th>species</th>
       <td><p>Species name.</p></td>
     </tr>
+    <tr>
+      <th>credible.intervals</th>
+      <td><p>Credible intervals. Must be a integer vector in <code>(0, 100]</code>. Defaults to 5-95% in 5% increments.</p></td>
+    </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
@@ -150,22 +160,44 @@
     <p>A list object of class <code>dose_response</code>.</p>
     <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
 
-    <div class='dont-index'><p><code><a href='simulate_data.html'>simulate_data</a></code> <code><a href='example_brs.html'>example_brs</a></code> <code>summary.rjdata</code></p></div>
+    <div class='dont-index'><p><code><a href='run_rjMCMC.html'>run_rjMCMC</a></code> <code><a href='plot.dose_response.html'>plot.dose_response</a></code></p></div>
+    <h2 class="hasAnchor" id="author"><a class="anchor" href="#author"></a>Author</h2>
+
+    <p>Phil J. Bouchet</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>espresso</span>)
-
-<span class='co'># Import the example data</span>
-
-<span class='no'>mydat</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='read_data.html'>read_data</a></span>(<span class='kw'>file</span> <span class='kw'>=</span> <span class='kw'>NULL</span>)</div><div class='output co'>#&gt; <span class='warning'>Warning: N &lt; 5 for some species. Species with low sample sizes may need to be grouped a priori.</span></div><div class='input'>
-<span class='co'># Import a real dataset with the sonar and range covariates, </span>
-<span class='co'># excluding sperm whales and any other species with a sample size</span>
-<span class='co'># smaller than two</span>
-
-<span class='no'>mydat</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='read_data.html'>read_data</a></span>(<span class='kw'>file</span> <span class='kw'>=</span> <span class='st'>"path/to/my/data.csv"</span>,
-                  <span class='kw'>exclude.species</span> <span class='kw'>=</span> <span class='st'>"Sperm whale"</span>,
-                  <span class='kw'>min.N</span> <span class='kw'>=</span> <span class='fl'>2</span>)</div><div class='output co'>#&gt; <span class='error'>Error: 'path/to/my/data.csv' does not exist in current working directory ('/Users/philippebouchet/Google Drive/Documents/git/espresso/docs/reference').</span></div><div class='input'>
-</div></pre>
+    <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span></span>
+<span class='r-in'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Import the example data, excluding species with sample sizes &lt; 5</span></span>
+<span class='r-in'><span class='co'># and considering the sonar covariate</span></span>
+<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='read_data.html'>read_data</a></span><span class='op'>(</span>file <span class='op'>=</span> <span class='cn'>NULL</span>, min.N <span class='op'>=</span> <span class='fl'>5</span>, covariates <span class='op'>=</span> <span class='st'>"sonar"</span><span class='op'>)</span> </span>
+<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Configure the sampler</span></span>
+<span class='r-in'><span class='va'>mydat.config</span> <span class='op'>&lt;-</span> <span class='fu'><a href='configure_rjMCMC.html'>configure_rjMCMC</a></span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat</span>,</span>
+<span class='r-in'>                                 model.select <span class='op'>=</span> <span class='cn'>TRUE</span>,</span>
+<span class='r-in'>                                 covariate.select <span class='op'>=</span> <span class='cn'>FALSE</span>,</span>
+<span class='r-in'>                                 proposal.mh <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>t.ij <span class='op'>=</span> <span class='fl'>10</span>, mu.i <span class='op'>=</span> <span class='fl'>10</span>, </span>
+<span class='r-in'>                                                    mu <span class='op'>=</span> <span class='fl'>7</span>, phi <span class='op'>=</span> <span class='fl'>10</span>, sigma <span class='op'>=</span> <span class='fl'>10</span><span class='op'>)</span>,</span>
+<span class='r-in'>                                 proposal.rj <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>dd <span class='op'>=</span> <span class='fl'>20</span>, cov <span class='op'>=</span> <span class='fl'>7</span><span class='op'>)</span>,</span>
+<span class='r-in'>                                 prior.covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>30</span><span class='op'>)</span>,</span>
+<span class='r-in'>                                 n.rep <span class='op'>=</span> <span class='fl'>100</span><span class='op'>)</span></span>
+<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat.config</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Run the reversible jump MCMC</span></span>
+<span class='r-in'><span class='va'>rj</span> <span class='op'>&lt;-</span> <span class='fu'><a href='run_rjMCMC.html'>run_rjMCMC</a></span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat.config</span>,</span>
+<span class='r-in'>                 n.chains <span class='op'>=</span> <span class='fl'>2</span>,</span>
+<span class='r-in'>                 n.burn <span class='op'>=</span> <span class='fl'>100</span>,</span>
+<span class='r-in'>                 n.iter <span class='op'>=</span> <span class='fl'>100</span>,</span>
+<span class='r-in'>                 do.update <span class='op'>=</span> <span class='cn'>FALSE</span><span class='op'>)</span></span>
+<span class='r-in'><span class='co'># Burn and thin</span></span>
+<span class='r-in'><span class='va'>rj.trace</span> <span class='op'>&lt;-</span> <span class='fu'><a href='trace_rjMCMC.html'>trace_rjMCMC</a></span><span class='op'>(</span>rj.dat <span class='op'>=</span> <span class='va'>rj</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># Get dose-response functions</span></span>
+<span class='r-in'><span class='va'>doseR</span> <span class='op'>&lt;-</span> <span class='fu'>compile_rjMCMC</span><span class='op'>(</span><span class='va'>rj.trace</span><span class='op'>)</span></span>
+<span class='r-in'><span class='op'>}</span></span>
+</code></pre></div>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -177,11 +209,11 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Dina Sadykova.</p>
+  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
 </div>
 
       </footer>
@@ -189,6 +221,8 @@
 
   
 
+
+  
 
   </body>
 </html>
