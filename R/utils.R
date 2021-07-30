@@ -1046,7 +1046,7 @@ print.gvs <- function(gvs.dat){
 
 # Rescale probability vector
 rescale_p <- function(p, default.value = 0.05){
-  if(length(p) == 1 & p == 0){
+  if(length(p) == 1){
     p.out <- 1
   } else {
   min.p <- min(p[p > 0])
