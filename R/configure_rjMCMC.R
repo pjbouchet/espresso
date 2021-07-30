@@ -62,7 +62,7 @@ configure_rjMCMC <- function(dat,
                              model.select = TRUE,
                              covariate.select = FALSE,
                              proposal.mh = list(t.ij = 10, mu.i = 10, mu = 7, phi = 10, sigma = 10),
-                             proposal.rj = list(dd = 20, cov = 7),
+                             proposal.rj = list(dd = 1, cov = 7),
                              prior.covariates = c(0, 30),
                              p.split = 0.5,
                              p.merge = 0.5,
@@ -240,7 +240,7 @@ configure_rjMCMC <- function(dat,
       dplyr::rename(model = Var1, p = Freq) %>% 
       dplyr::mutate(model = as.character(model)) %>% 
       dplyr::arrange(-p) %>% 
-      dplyr::mutate(p_scale = p)
+      dplyr::mutate(p_scale = rescale_p(p))
     
     # // Cluster moves 
     
@@ -248,7 +248,8 @@ configure_rjMCMC <- function(dat,
     p.Clust <- sapply(X = seq_len(dat$species$n), 
                       FUN = function(x) {tmp <- sum(n.Clust == x, na.rm = TRUE) / n.rep
                       names(tmp) <- x; tmp})
-    p.Clust <- tibble::tibble(cluster = as.numeric(names(p.Clust)), p = p.Clust)
+    p.Clust <- tibble::tibble(cluster = as.numeric(names(p.Clust)), p = p.Clust) %>% 
+      dplyr::mutate(p_scale = rescale_p(p))
     
     mlist <- unique(datGroups)
     names(mlist) <- purrr::map(.x = mlist, 

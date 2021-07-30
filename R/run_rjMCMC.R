@@ -176,7 +176,8 @@ run_rjMCMC <- function(dat,
                                        
                                        rj$config$clust[[1]] <- 
                                        rbind(rj$config$clust[[1]], 
-                                             tibble::tibble(model = new.model, p = 0, p_scale = 0))
+                                             tibble::tibble(model = new.model, p = 0, p_scale = 0)) %>% 
+                                       dplyr::mutate(p_scale = rescale_p(p))
                                      
                                      rj$mu[i, ] <- new.params$mu
                                      

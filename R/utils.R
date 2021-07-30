@@ -272,7 +272,6 @@ propose_jump <- function(rj.obj, move.type) {
           rj.obj$config$clust[[1]]$p[positive.ind] - (scale.value * rj.obj$config$clust[[1]]$p[positive.ind])
       }
       
-      
       # Rescale probabilities so they sum to 1
       p1 <- rj.obj$config$clust[[1]] %>% 
         dplyr::filter(!model == rj.obj$current.model) %>% 
@@ -284,7 +283,8 @@ propose_jump <- function(rj.obj, move.type) {
       
       # Rescale probabilities for reverse move so they sum to 1
       p2 <- rj.obj$config$clust[[1]] %>% 
-        dplyr::filter(!model == vec_to_model(input.vector = new.model, sp.names = rj.obj$dat$species$names)) %>% 
+        dplyr::filter(!model == vec_to_model(input.vector = new.model, 
+                                             sp.names = rj.obj$dat$species$names)) %>% 
         dplyr::mutate(p_scale = p_scale/sum(p_scale))
       
       p.jump <- c(p1$p_scale[which(p1$model == vec_to_model(input.vector = new.model, sp.names = rj.obj$dat$species$names))], p2$p_scale[which(p2$model == rj.obj$current.model)])
@@ -311,7 +311,8 @@ propose_jump <- function(rj.obj, move.type) {
         new.model <- relabel(new.model)
         
         if(!identical(vec_to_model(input.vector = new.model,
-                                   sp.names = rj.obj$dat$species$names), rj.obj$current.model)) keep.going <- FALSE}
+                                   sp.names = rj.obj$dat$species$names), rj.obj$current.model)) 
+          keep.going <- FALSE}
       
       # Probability of jump = prob(choose a cluster) x prob(choose model | cluster)
       # A Stirling number of the second kind (or Stirling partition number) is the
@@ -319,8 +320,10 @@ propose_jump <- function(rj.obj, move.type) {
       p.jump <- c(
         rj.obj$config$clust[[2]][rj.obj$config$clust[[2]]$cluster == new.cluster, ]$p *
           (1 / multicool::Stirling2(n = rj.obj$dat$species$n, k = new.cluster)),
+        
         rj.obj$config$clust[[2]][rj.obj$config$clust[[2]]$cluster == n_groups(vec = rj.obj$mlist[[rj.obj$current.model]]), ]$p *
-          (1 / (multicool::Stirling2(n = rj.obj$dat$species$n, k = n_groups(vec = rj.obj$mlist[[rj.obj$current.model]])) - 1))
+          (1 / (multicool::Stirling2(n = rj.obj$dat$species$n, 
+                                     k = n_groups(vec = rj.obj$mlist[[rj.obj$current.model]]))))
       )
       
       J <- 1 
@@ -1040,6 +1043,14 @@ print.gvs <- function(gvs.dat){
 }
 
 # Convenience ----------------------------------------------------------------
+
+# Rescale probability vector
+rescale_p <- function(p, default.value = 0.05){
+  min.p <- min(p[p > 0])
+  if(min.p == 1) min.p <- default.value
+  if(length(p) > 1) p[p == 0] <- min.p
+  p / sum(p)
+}
 
 # Posterior model probabilities
 prob_models <- function(input.obj, 
@@ -2090,18 +2101,6 @@ acceptance_rate <- function(AR.obj, rj.obj, mp){
   }
   
   return(AR.obj)
-}
-
-# Rescale probabilities
-rescale_p <- function(p, min.p){
-  
-  test <- c(0, 0.2, 0.8)
-  testval <- 0.1
-  test[test > 0] <- test[test > 0] - testval / length(test[test > 0])
-  test[test == 0] <- testval
-  
-  
-  (p - min(p)) / sum((p - min(p)))
 }
 
 format_group <- function(input.list){
