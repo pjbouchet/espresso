@@ -1965,8 +1965,8 @@ mean_data <- function(rj.obj, model.id){
                      sp.data %>% 
                        dplyr::rowwise() %>% 
                        dplyr::mutate(y = ifelse(censored == 1,
-                                     runif(n = 1, min = rc, max = rj.input$param$bounds["mu", 2]),
-                                     runif(n = 1, min = rj.input$param$bounds["mu", 1], max = lc))) %>% 
+                                     runif(n = 1, min = rc, max = rj.obj$dat$param$bounds["mu", 2]),
+                                     runif(n = 1, min = rj.obj$dat$param$bounds["mu", 1], max = lc))) %>% 
                        dplyr::ungroup() %>% 
                        dplyr::pull(y) %>% 
                        mean(., na.rm = TRUE)
