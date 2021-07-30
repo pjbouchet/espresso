@@ -48,7 +48,7 @@
 
 plot.rjtrace <- function(rj.obj, 
                          param.name = NULL, 
-                         covariates.incl = TRUE,
+                         covariates.incl = FALSE,
                          autocorr = FALSE, 
                          individual = TRUE){
   
@@ -141,21 +141,28 @@ plot.rjtrace <- function(rj.obj,
       if(rj.obj$dat$covariates$n > 0){
         
         cov.cols <- purrr::map(.x = rj.obj$dat$covariates$names,
-                               .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]])))) 
+                               .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]])))) %>% 
+          unlist()
         
-        cov.trace <- purrr::map(.x = cov.cols, .f = ~mcmc.trace[, .x])
-        cov.trace <- purrr::map_depth(.x = cov.trace, .depth = 2, 
+        cov.trace <- mcmc.trace[, cov.cols]
+        # cov.trace <- purrr::map(.x = 1:length(mcmc.trace), .f = ~mcmc.trace[[.x]][, cov.cols])
+        cov.trace <- purrr::map(.x = cov.trace, 
                                       .f = ~tibble::as_tibble(.x) %>% 
-                                        dplyr::filter(.[[2]] == 1) %>% 
+                                        dplyr::filter(dplyr::across(contains("incl"), ~. == 1)) %>% 
                                         dplyr::select_at(dplyr::vars(-contains("incl."))))
         
-        cov.n <- purrr::map_depth(.x = cov.trace, .depth = 2, .f = ~nrow(.x)) %>% 
-          purrr::map_dbl(.x = ., .f = ~min(unlist(.x)))
+        # cov.trace <- purrr::map_depth(.x = cov.trace, .depth = 2, 
+        #                               .f = ~tibble::as_tibble(.x) %>% 
+        #                                 dplyr::filter(.[[2]] == 1) %>% 
+        #                                 dplyr::select_at(dplyr::vars(-contains("incl."))))
         
+        # Calculate minimum sample size so that can convert into mcmc.list object
+        cov.n <- purrr::map_dbl(.x = cov.trace, .depth = 2, .f = ~nrow(.x)) %>% min(.)
+          # purrr::map_dbl(.x = ., .f = ~min(unlist(.x)))
+
         for(u in seq_len(rj.obj$dat$covariates$n)){
           for(j in seq_along(cov.trace[[u]])){
-            cov.trace[[u]][[j]] <- cov.trace[[u]][[j]][(nrow(cov.trace[[u]][[j]]) - cov.n[u] + 1):nrow(cov.trace[[u]][[j]]), ] %>% 
-              coda::as.mcmc(.)}}
+            cov.trace[[u]][[j]] <- cov.trace[[u]][[j]][(nrow(cov.trace[[u]][[j]]) - cov.n[u] + 1):nrow(cov.trace[[u]][[j]]), ] %>% coda::as.mcmc(.)}}
         
         cov.trace <- purrr::map(.x = cov.trace, .f = ~coda::as.mcmc.list(.x))
         
