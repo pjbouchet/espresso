@@ -52,158 +52,117 @@ plot.rjtrace <- function(rj.obj,
                          autocorr = FALSE, 
                          individual = TRUE){
   
+  # Redo this in simpler way.
+  # 1 determine if covariates
+  # run plot on all params except cov
+  # for cov: run below with covariates.incl
+  # then lastly run autocorr
+  
   if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
   
   #' ---------------------------------------------
-  # Extract the trace
+  # Extract the trace and rename columns
   #' ---------------------------------------------
   mcmc.trace <- rj.obj$trace
   
-  #' ---------------------------------------------
-  # Rename columns
-  #' ---------------------------------------------
   for(nc in 1:length(mcmc.trace)){
     colnames(mcmc.trace[[nc]])[which(startsWith(colnames(mcmc.trace[[1]]), prefix = "mu"))] <- 
       paste0("mu (", rj.obj$dat$species$names, ")")}
   
-  #' ---------------------------------------------
-  # Generate plots
-  #' ---------------------------------------------
-  
-  if(!is.null(param.name)){
-    
-    if(param.name %in% rj.obj$dat$covariates$names){
-      
-      if(covariates.incl){
-        
-        cov.cols <- which(grepl(pattern = param.name, x = colnames(mcmc.trace[[1]])))
-        
-        cov.trace <- mcmc.trace[, cov.cols]
-        cov.trace <- purrr::map(.x = cov.trace, 
-                                .f = ~
-                                  tibble::as_tibble(.x) %>% 
-                                  dplyr::filter(.[[ncol(.)]] == 1) %>% 
-                                  dplyr::select_at(dplyr::vars(-contains("incl."))))
-        
-        cov.n <- purrr::map(.x = cov.trace, .f = ~nrow(.x)) %>% 
-          unlist(.) %>% min(.)
-        
-        for(j in seq_along(cov.trace)){
-          cov.trace[[j]] <- cov.trace[[j]][(nrow(cov.trace[[j]]) - cov.n + 1):nrow(cov.trace[[j]]), ] %>% 
-            coda::as.mcmc(.)}
-        
-        cov.trace <- coda::as.mcmc.list(cov.trace)
-        
-        MCMC_trace(cov.trace, 
-                   iter = cov.n, 
-                   pdf = FALSE, 
-                   ind = individual,
-                   params = "all")
-        
-        if(autocorr) bayesplot::mcmc_acf(x = cov.trace, pars = colnames(cov.trace[[1]]))
-        
-      } else {
-        
-        param.name <- colnames(mcmc.trace[[1]])[startsWith(colnames(mcmc.trace[[1]]), prefix = param.name)]
-        
-        MCMC_trace(mcmc.trace, 
-                   iter = rj.obj$mcmc$n.iter, 
-                   pdf = FALSE, 
-                   ind = individual,
-                   params = ifelse(is.null(param.name), "all", param.name))
-        
-        if(autocorr){
-          if(is.null(param.name)) bpars <- character() else bpars <- param.name
-          bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)}
-        
-      }
-      
-    } else {
-      
-      plot.pm <- colnames(mcmc.trace[[1]])[grepl(pattern = param.name, x = colnames(mcmc.trace[[1]]))]
-      
-      MCMC_trace(mcmc.trace, 
-                 iter = rj.obj$mcmc$n.iter, 
-                 pdf = FALSE, 
-                 ind = individual,
-                 params = plot.pm)
-      
-      if(autocorr){
-        if(is.null(param.name)) bpars <- character() else bpars <- plot.pm
-        bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)}
-      
-    }
-    
-  } else {
+  if(is.null(param.name)){
     
     if(covariates.incl){
       
-      if(rj.obj$dat$covariates$n > 0){
-        
-        cov.cols <- purrr::map(.x = rj.obj$dat$covariates$names,
-                               .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]])))) %>% 
-          unlist()
-        
-        cov.trace <- mcmc.trace[, cov.cols]
-        # cov.trace <- purrr::map(.x = 1:length(mcmc.trace), .f = ~mcmc.trace[[.x]][, cov.cols])
-        cov.trace <- purrr::map(.x = cov.trace, 
-                                      .f = ~tibble::as_tibble(.x) %>% 
-                                        dplyr::filter(dplyr::across(contains("incl"), ~. == 1)) %>% 
-                                        dplyr::select_at(dplyr::vars(-contains("incl."))))
-        
-        # cov.trace <- purrr::map_depth(.x = cov.trace, .depth = 2, 
-        #                               .f = ~tibble::as_tibble(.x) %>% 
-        #                                 dplyr::filter(.[[2]] == 1) %>% 
-        #                                 dplyr::select_at(dplyr::vars(-contains("incl."))))
-        
-        # Calculate minimum sample size so that can convert into mcmc.list object
-        cov.n <- purrr::map_dbl(.x = cov.trace, .depth = 2, .f = ~nrow(.x)) %>% min(.)
-          # purrr::map_dbl(.x = ., .f = ~min(unlist(.x)))
-
-        for(u in seq_len(rj.obj$dat$covariates$n)){
-          for(j in seq_along(cov.trace[[u]])){
-            cov.trace[[u]][[j]] <- cov.trace[[u]][[j]][(nrow(cov.trace[[u]][[j]]) - cov.n[u] + 1):nrow(cov.trace[[u]][[j]]), ] %>% coda::as.mcmc(.)}}
-        
-        cov.trace <- purrr::map(.x = cov.trace, .f = ~coda::as.mcmc.list(.x))
-        
-        mcmc.trace <- mcmc.trace[, -unlist(cov.cols)]
-        
-        MCMC_trace(mcmc.trace, 
-                   iter = rj.obj$mcmc$n.iter, 
-                   pdf = FALSE, 
-                   ind = individual,
-                   params = "all")
-        
-        
-        purrr::walk2(.x = cov.trace,
-                     .y = cov.n,
-                     .f = ~MCMC_trace(.x, 
-                                      iter = .y, 
-                                      pdf = FALSE, 
-                                      ind = individual,
-                                      params = "all"))
-        
-        if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace)
-        if(autocorr) {
-          for(j in seq_along(cov.trace)) temp <- bayesplot::mcmc_acf(x = cov.trace[[j]]); print(temp)
-        }
-        
-        
-      }
+      do.filter <- TRUE
       
     } else {
+    
+    MCMC_trace(main.trace, 
+               iter = rj.obj$mcmc$n.iter, 
+               pdf = FALSE, 
+               ind = individual,
+               params = "all")
+      
+    if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+      
+    }
+    
+    
+  } else {
+    
+    pn <- purrr::map(.x = param.name, 
+                     .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]])))) %>%
+      unlist()
+    
+    mcmc.trace <- mcmc.trace[, pn, drop = FALSE]
+    
+    if(any(param.name %in% rj.obj$dat$covariates$names) & covariates.incl){
+      
+      do.filter <- TRUE
+      
+    } else {
+      
+      do.filter <- FALSE
       
       MCMC_trace(mcmc.trace, 
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
-                 params = ifelse(is.null(param.name), "all", param.name))
-      
-      if(is.null(param.name)) bpars <- character() else bpars <- param.name
-      if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+                 params = "all")
       
     }
     
-    
   }
+  
+  
+  if(do.filter){
+    
+    
+    cov.cols <- purrr::map(.x = param.name[param.name %in% rj.obj$dat$covariates$names],
+                           .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))))
+    
+    cov.trace <- purrr::map(.x = cov.cols, .f = ~mcmc.trace[, .x, drop = FALSE])
+    main.trace <- mcmc.trace[, seq_len(ncol(mcmc.trace[[1]]))[-unlist(cov.cols)], drop = FALSE]
+    
+    cov.trace <- purrr::map_depth(.x = cov.trace, 
+                                  .depth = 2,
+                                  .f = ~
+                                    tibble::as_tibble(.x) %>% 
+                                    dplyr::filter(dplyr::across(contains("incl."), ~. == 1)) %>% 
+                                    dplyr::select_at(dplyr::vars(-contains("incl."))))
+    
+    cov.n <- purrr::map_depth(.x = cov.trace, 
+                              .depth = 2,
+                              .f = ~nrow(.x)) %>% 
+      tibble::enframe() %>% 
+      dplyr::rowwise() %>% 
+      dplyr::mutate(minimum = min(unlist(value))) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::pull(minimum)
+    
+    cov.trace.final <- cov.trace
+    
+    for(co in seq_along(cov.trace.final)){
+      for(ch in seq_len(rj.obj$mcmc$n.chains)){
+        cov.trace.final[[co]][[ch]] <- cov.trace.final[[co]][[ch]][(nrow(cov.trace.final[[co]][[ch]]) - cov.n[co] + 1):nrow(cov.trace.final[[co]][[ch]]), ] %>% coda::as.mcmc(.)}}
+    
+    cov.trace.final <- purrr::map(.x = cov.trace.final, .f = ~coda::as.mcmc.list(.x))
+    
+    MCMC_trace(main.trace, 
+               iter = rj.obj$mcmc$n.iter, 
+               pdf = FALSE, 
+               ind = individual,
+               params = "all")
+    
+    purrr::walk2(.x = cov.trace.final,
+                 .y = cov.n,
+                 .f = ~MCMC_trace(.x,  iter = .y, pdf = FALSE, ind = individual, params = "all"))
+  }
+  
+  if(autocorr){
+    
+    if(is.null(param.name)) bpars <- character() else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
+    bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+    }
+  
 }
