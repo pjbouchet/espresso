@@ -21,6 +21,7 @@ setup_rjMCMC <- function(rj.input,
                          n.chains = 3,
                          p.split,
                          p.merge,
+                         moves,
                          move.ratio,
                          m,
                          do.update = FALSE,
@@ -34,7 +35,7 @@ setup_rjMCMC <- function(rj.input,
     stop("Input data must be initialised using <rj_initialise>.")
   
   if(is.null(start.values) & do.update) stop("Missing starting values.")
-  if(!"integer" %in% class(move.ratio) & !"list" %in% class(move.ratio)) stop("<move.ratio> must be either an integer vector or a list.")
+  if(!is.null(move.ratio) & !"integer" %in% class(move.ratio) & !"list" %in% class(move.ratio)) stop("<move.ratio> must be either an integer vector or a list.")
 
   if(is.list(move.ratio)) move.ratio <- unlist(move.ratio)
   
@@ -51,16 +52,19 @@ setup_rjMCMC <- function(rj.input,
   
   modelmoves <- numeric(length = tot.iter)
   
-  if(m < tot.iter){
-    move.iters <- seq(from = m, to = tot.iter, by = m)
-  } else {
-    move.iters <- rep(0, tot.iter)
+  if(length(moves) == 1){
+    modelmoves <- rep(moves, tot.iter)
+  } else if (length(moves) > 1){
+    if(m < tot.iter){
+      move.iters <- seq(from = m, to = tot.iter, by = m)
+    } else {
+      move.iters <- rep(0, tot.iter)
+    }
+    move.ratio <- unlist(move.ratio)
+    modelmoves[move.iters] <- rep(unlist(sapply(X = which(move.ratio > 0), 
+                                                FUN = function(a) rep(a, each = move.ratio[a]))),
+                                  length.out = length(move.iters))
   }
-  
-  move.ratio <- unlist(move.ratio)
-  modelmoves[move.iters] <- rep(unlist(sapply(X = which(move.ratio > 0), 
-                                       FUN = function(a) rep(a, each = move.ratio[a]))),
-                                    length.out = length(move.iters))
   
   modelmoves.tab <- table(modelmoves[(n.burn+1):tot.iter]) %>% 
     tibble::enframe() %>% 
@@ -68,7 +72,7 @@ setup_rjMCMC <- function(rj.input,
     dplyr::mutate(move = dplyr::case_when(move == "0" ~ "split-merge",
                                           move == "1" ~ "data-driven (Type I)",
                                           move == "2" ~ "data-driven (Type II)",
-                                          move == "3" ~ "random"))
+                                          move == "3" ~ "random")) 
   
   if(do.update){
     rj.input <- append(rj.input[[1]][["dat"]], rj.input[[1]]["config"])
@@ -149,12 +153,12 @@ setup_rjMCMC <- function(rj.input,
                     mu.i = numeric(rj.input$whales$n), 
                     mu = 0, phi = 0, sigma = 0)
   if(rj.input$covariates$n > 0) rj$accept <- append(rj$accept, numeric(rj.input$covariates$n))
-  rj$accept <- append(rj$accept, numeric(4))
+  rj$accept <- append(rj$accept, length(rj.input$config$move$moves))
   
   if(rj.input$config$covariate.select) rj$accept <- append(rj$accept, numeric(1))
   names(rj$accept) <- unlist(list("t.ij", "mu.i", "mu", "phi", "sigma", 
                                   rj.input$covariates$names, 
-                                  paste0("move.", c(0, 1, 2, 3)),
+                                  paste0("move.", rj.input$config$move$moves),
                                   ifelse(rj.input$config$covariate.select, "move.covariates", list(NULL))))
   
   
@@ -246,9 +250,11 @@ setup_rjMCMC <- function(rj.input,
     # The scale needs to be large here to prevent numerical issues (returning Inf)
     rj$t.ij[1, ] <- rtnorm(n = rj.input$trials$n, 
                            location = mu.ij.config, 
-                           scale = rj$sigma[1],
+                           scale = 30,
+                             # rj$sigma[1],
                            L = rj.input$param$bounds["t.ij", 1], 
                            U = rj.input$param$bounds["t.ij", 2])
+
     
     # Censoring
     if (!all(rj.input$obs$censored == 0)) {
@@ -257,7 +263,7 @@ setup_rjMCMC <- function(rj.input,
       rj$t.ij[1, rj.input$obs$censored == 1] <-
         rtnorm(n = sum(rj.input$obs$censored == 1),
               location = mu.ij.config[rj.input$obs$censored == 1],
-              scale = rj$sigma[1],
+              scale = 30,
               L = rj.input$obs$Rc[rj.input$obs$censored == 1], 
               U = rj.input$param$bounds["t.ij", 2])
       
@@ -265,14 +271,12 @@ setup_rjMCMC <- function(rj.input,
       rj$t.ij[1, rj.input$obs$censored == -1] <-
         rtnorm(n = sum(rj.input$obs$censored == -1),
                location = mu.ij.config[rj.input$obs$censored == -1],
-               scale = rj$sigma[1],
+               scale = 30,
                L = rj.input$param$bounds["t.ij", 1],
                U = rj.input$obs$Lc[rj.input$obs$censored == -1])
       
       
     }
-    
-    if(any(is.infinite(rj$t.ij[1, ]))) warning("Inf returned as initial values for t.ij")
     
     rj$y.ij[1, ] <- rj.input$obs$y_ij
     
@@ -285,7 +289,10 @@ setup_rjMCMC <- function(rj.input,
               sd = rj.input$obs$sd)
     }
     
-    if(any(is.na(rj$y.ij[1, ]))) warning("NAs returned as initial values for y.ij")
+    if(any(is.na(rj$t.ij[1, ]))) warning("NA(s) returned as initial values for t.ij")
+    if(any(is.na(rj$y.ij[1, ]))) warning("NA(s) returned as initial values for y.ij")
+    if(any(is.infinite(rj$t.ij[1, ]))) warning("Inf returned as initial values for t.ij")
+    if(any(is.infinite(rj$y.ij[1, ]))) warning("Inf returned as initial values for y.ij")
     
   } # End if do.update
   
