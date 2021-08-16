@@ -118,16 +118,21 @@ summary.rjtrace <- function(rj.obj,
       # Excludes columns with a less than 10 unique value 
       # (e.g., when a model has been specified a priori, or when there are only 2 species,
       # and hence only two possible models)
-      cvg <- coda::gelman.diag(x = rj.obj$trace[, 
-                                                which(apply(mctrace, 2, FUN = function(df) length(unique(df))) > 10)],
-                               autoburnin = FALSE, multivariate = TRUE)
+      coda.out <- tryCatch(exp = {
+        cvg <- coda::gelman.diag(x = rj.obj$trace,
+                                 autoburnin = FALSE, 
+                                 multivariate = TRUE)},
+        error = function(e){ NA })
       
-      if(cvg$mpsrf < gelman.rubin){ 
-        cat("Convergence: TRUE\n") 
+      if(is.na(coda.out)){
+        cat("Convergence: Not assessed (insufficient MCMC samples)\n")
       } else {
-        cat("Convergence: FALSE\n")}
-      
-      print(cvg)
+        if(cvg$mpsrf < gelman.rubin){ 
+          cat("Convergence: TRUE\n") 
+        } else {
+          cat("Convergence: FALSE\n")}
+        print(cvg)
+      }
     }
   }
   
