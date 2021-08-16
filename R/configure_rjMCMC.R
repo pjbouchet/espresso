@@ -17,6 +17,7 @@
 #' @param prior.covariates Mean and standard deviation of the Normal prior placed on covariates. At present, the same prior is applied to all covariates.
 #' @param p.split Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}. 
 #' @param p.merge Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.
+#' @param moves Integer indicating which between-model moves to implement. 0 = split/merge, 1 = data driven Type I, 2 = data driven Type II, 3 = random. Useful for testing purposes.
 #' @param move.ratio Relative proportion of calls to data-driven (type I and II) and independence samplers.
 #' @param m Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.
 #' @param bootstrap Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increase efficiency when reconfiguring the sampler. 
@@ -66,6 +67,7 @@ configure_rjMCMC <- function(dat,
                              prior.covariates = c(0, 30),
                              p.split = 0.5,
                              p.merge = 0.5,
+                             moves = 0:3,
                              move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
                              m = 100,
                              bootstrap = TRUE,
@@ -80,12 +82,16 @@ configure_rjMCMC <- function(dat,
   
   if(!bootstrap & !"rjconfig" %in% class(dat)) stop("<rjconfig> object required when bootstrap = FALSE.")
   
-  if(!length(move.ratio) == 3) stop("Length mismatch for <move.ratio>.")
   if(!sum(p.split, p.merge) == 1) stop("Move probabilities do not sum to 1.")
   if(sum(c(p.split, p.merge) < 0) > 0) stop("Move probabilities cannot be negative.")
   
   if(dat$covariates$n == 0) covariate.select <- FALSE
   if(dat$species$n == 1) model.select <- FALSE
+  
+  if(length(moves) == 1){
+    m <- 1
+    move.ratio <- NULL
+  }
   
   #' -----------------------------------------------
   # Estimate variance parameters from the data
@@ -276,7 +282,9 @@ configure_rjMCMC <- function(dat,
     dat$config <- list(var = setNames(c(dat.sigma, dat.phi), c("sigma", "phi")),
                        prop = list(dd = proposal.rj$dd, mh = proposal.mh),
                        move = list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
-                                   ratio = move.ratio, freq = m),
+                                   moves = moves,
+                                   ratio = move.ratio, 
+                                   freq = m),
                        model.select = model.select,
                        boot = datGroups,
                        mlist = mlist,
