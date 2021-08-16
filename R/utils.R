@@ -1216,7 +1216,7 @@ p_covariates <- function(input.trace, ddf){
   col.indices <- which(grepl(pattern = "incl.", x = colnames(input.trace)))
   
   # Extract the data and update column names
-  covtrace <- input.trace[, col.indices] %>% 
+  covtrace <- input.trace[, col.indices, drop = FALSE] %>% 
     tibble::as_tibble(.)
   colnames(covtrace) <- gsub(x = colnames(covtrace), pattern = "incl.", replacement = "")
   
