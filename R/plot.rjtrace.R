@@ -77,7 +77,8 @@ plot.rjtrace <- function(rj.obj,
       
     } else {
     
-    MCMC_trace(main.trace, 
+      do.filter <- FALSE
+      MCMC_trace(mcmc.trace, 
                iter = rj.obj$mcmc$n.iter, 
                pdf = FALSE, 
                ind = individual,

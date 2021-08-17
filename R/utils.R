@@ -1045,49 +1045,88 @@ print.gvs <- function(gvs.dat){
 
 # Convenience ----------------------------------------------------------------
 
-export <- function(dat, reprex = TRUE){
-  
-  obj.n <- list(dat = deparse(substitute(dat)))
+create_report <- function(outdir = getwd(), filename = "espresso_report", plot.height = 3){
+
+  obj.n <- sapply(X = ls(envir = .GlobalEnv), FUN = function(x) class(get(x))[1]) %>% unlist()
+  obj.ind <- purrr::map(.x = obj.n, .f = ~ any(.x %in% c("brsdata", "rjtrace", "dose_response"))) %>% 
+    unlist()
+  obj.n <- obj.n[obj.ind]
   
   # Create temp directory
   out.dir <- file.path(getwd(), "tmp")
   dir.create(out.dir, showWarnings = FALSE)
 
   # Save objects
-  save(list = unlist(obj.n), file = file.path(out.dir, "tmp_data.rda"))
-  
-  if(reprex){
+  save(list = names(obj.n), file = file.path(out.dir, "tmp_data.rda"))
     
-    
-    sink(file.path(out.dir, "tmp_file.R"))
-    writeLines(text = "library(espresso)")
-    writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")\n"))
-    writeLines(text = paste0("summary(", obj.n$dat, ")"))
-    sink()
-    
-  } else {
-    
-
-  sink(file.path(out.dir, "tmp_file.Rmd"))
+  sink(file.path(out.dir, paste0(filename, ".Rmd")))
   
   writeLines(text = "---")
-  writeLines(text = "title: \"espresso outputs\"")
+  writeLines(text = "title: \"espresso\"")
+  writeLines(text = "subtitle: \"rjMCMC report\"")
+  writeLines(text = "date: \"`r format(Sys.time(), '%d %B, %Y')`\"")
   writeLines(text = "output: html_document")
   writeLines(text = "---")
     
-  writeLines(text = " ```{r echo = TRUE, include = FALSE}")
-  writeLines(text = "library(espresso)")
-  writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")\n"))
-  writeLines(text = paste0("summary(", obj.n$dat, ")"))
-  writeLines(text = " ```")
-  sink()
+  # CSS
+  writeLines(text = "```{css, echo=FALSE}")
+  writeLines(text = ".scroll-100 {")
+  writeLines(text = "max-height: 500px;")
+  writeLines(text = "overflow-y: auto;")
+  writeLines(text = "background-color: inherit;")
+  writeLines(text = "}")
+  writeLines(text = ".hljs-keyword {color: #63a35c;") 
+  writeLines(text = " font-weight: normal;}")
+  writeLines(text = ".hljs-string {color: #183691;")
+  writeLines(text = ".hljs{color: #929292;}")
+  writeLines(text = "```")
   
+  writeLines(text = "```{r, include = FALSE}")
+  writeLines(text = "library(espresso)")
+  writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")"))
+  writeLines(text = "```")
+  
+  writeLines(text = "## Results {.tabset}") # Interactive tabs
+  
+  if(sum(obj.n == "brsdata") > 0){
+    
+    writeLines(text = "### Data")
+    writeLines(text = "```{r, class.output=\"scroll-100\"}")
+    writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata")], ")"))
+    writeLines(text = "```")
+    
   }
   
+  if(sum(obj.n == "rjtrace") > 0){
+    
+    writeLines(text = "### MCMC")
+    writeLines(text = paste0("```{r, fig.height = ", plot.height, ", class.output=\"scroll-100\"}"))
+    writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "rjtrace")], ", rmd = TRUE)"))
+    writeLines(text = "```\n")
+    
+    writeLines(text = "### Trace")
+    writeLines(text = paste0("```{r}"))
+    writeLines(text = paste0("plot(", names(obj.n)[which(obj.n == "rjtrace")], ")"))
+    writeLines(text = "```")
+    
+  }
+  
+  if(sum(obj.n == "dose_response") > 0){
+    
+    writeLines(text = "### Dose-response")
+    writeLines(text = paste0("```{r, fig.height = ", plot.height, ", class.output=\"scroll-100\"}"))
+    writeLines(text = paste0("plot(", names(obj.n)[which(obj.n == "dose_responze")], ", rmd = TRUE)"))
+    writeLines(text = "```")
+    
+  }
+  
+  sink()
+  
+  rmarkdown::render(input = file.path(out.dir, paste0(filename, ".Rmd")), output_dir = outdir)
+  unlink(out.dir, recursive = TRUE)
 
 }
 
-# reprex::reprex(input = file.path(out.dir, "tmp_file.R"))
 
 # Rescale probability vector
 rescale_p <- function(p, default.value = 0.05){
@@ -1274,11 +1313,11 @@ p_models <- function(input.trace,
 }
 
 # Function to create a tiled representation of model rankings using ggplot
-gg_model <- function(dat, colours, n.top, combine, no = 0){
+gg_model <- function(dat, rj.obj, colours, n.top, combine, no = 0){
   
   ggplot2::ggplot(data = dat, aes(x = x, y = y)) + 
     ggplot2::geom_tile(aes(fill = as.factor(grouping)), col = "white", size = 0.25) +
-    ggplot2::scale_fill_manual(values = gg.cols) + 
+    ggplot2::scale_fill_manual(values = colours) + 
     ggplot2::xlab("") +
     {if(!combine) ggplot2::ylab("Chain")} +
     {if(combine) ggplot2::ylab("Rank")} +

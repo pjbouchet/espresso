@@ -51,7 +51,8 @@ summary.rjtrace <- function(rj.obj,
                             model.ranks = TRUE,
                             n.top = 10, 
                             covariate.prob = TRUE,
-                            combine.chains = FALSE){
+                            combine.chains = FALSE,
+                            rmd = FALSE){
   
   options(tibble.width = Inf) 
   options(pillar.neg = FALSE) 
@@ -235,7 +236,12 @@ summary.rjtrace <- function(rj.obj,
           gg.tiles <- purrr::map(.x = seq_along(gg.matrix), 
                                  .f = ~gg_model(dat = gg.matrix[[.x]], colours = gg.cols, 
                                                 n.top = n.top, rj.obj = rj.obj, combine = FALSE, no = .x))
-          patchwork::wrap_plots(gg.tiles)
+          if(!rmd){
+            patchwork::wrap_plots(gg.tiles)
+          } else {
+            purrr::walk(.x = gg.tiles, .f = ~print(.x))
+
+          }
 
       }
     } else {
