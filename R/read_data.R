@@ -525,7 +525,7 @@ read_data <- function(file = NULL,
                sd = obs.sd),
     # Parameters
     param = list(sim = simulation,
-                 data.file = file,
+                 data.file = basename(file),
                  bounds = param.bounds,
                  dose.range = range.dB))
   
