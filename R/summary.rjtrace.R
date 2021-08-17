@@ -202,7 +202,7 @@ summary.rjtrace <- function(rj.obj,
           dplyr::ungroup() %>% 
           dplyr::mutate(y = n.top - y + 1)
         
-        gg_model(dat = gg.matrix, colours = gg.cols, n.top = n.top, combine = TRUE)
+        gg_model(dat = gg.matrix, rj.obj = rj.obj, colours = gg.cols, n.top = n.top, combine = TRUE)
         
       } else {
         
@@ -234,7 +234,7 @@ summary.rjtrace <- function(rj.obj,
           
           gg.tiles <- purrr::map(.x = seq_along(gg.matrix), 
                                  .f = ~gg_model(dat = gg.matrix[[.x]], colours = gg.cols, 
-                                                n.top = n.top, combine = FALSE, no = .x))
+                                                n.top = n.top, rj.obj = rj.obj, combine = FALSE, no = .x))
           patchwork::wrap_plots(gg.tiles)
 
       }
