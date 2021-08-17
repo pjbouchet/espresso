@@ -13,6 +13,7 @@ configure_rjMCMC(
   prior.covariates = c(0, 30),
   p.split = 0.5,
   p.merge = 0.5,
+  moves = 0:3,
   move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
   m = 100,
   bootstrap = TRUE,
@@ -35,6 +36,8 @@ configure_rjMCMC(
 \item{p.split}{Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}.}
 
 \item{p.merge}{Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
+
+\item{moves}{Integer indicating which between-model moves to implement. 0 = split/merge, 1 = data driven Type I, 2 = data driven Type II, 3 = random. Useful for testing purposes.}
 
 \item{move.ratio}{Relative proportion of calls to data-driven (type I and II) and independence samplers.}
 

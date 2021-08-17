@@ -11,7 +11,7 @@
   convergence = TRUE,
   gelman.rubin = 1.1,
   model.ranks = TRUE,
-  n.top = NULL,
+  n.top = 10,
   covariate.prob = TRUE,
   combine.chains = FALSE
 )

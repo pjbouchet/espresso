@@ -11,6 +11,7 @@ setup_rjMCMC(
   n.chains = 3,
   p.split,
   p.merge,
+  moves,
   move.ratio,
   m,
   do.update = FALSE,
