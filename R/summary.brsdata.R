@@ -65,16 +65,16 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   } else {
     cat("Species groupings:\n\n")
     if(!is.null(dat.obj$species$abbrev)) {
-      print(dat.obj$species$abbrev)
+      print(dat.obj$species$abbrev, na.print = "NA")
     } else { 
       groups.df <- tibble::tibble(name = names(dat.obj$species$groups), 
                                   species = unlist(purrr::map(.x = dat.obj$species$groups,
                                                               .f = ~paste0(.x, collapse = ","))))
-      print(groups.df)}
+      print(groups.df, na.print = "NA")}
     cat("\n")
   }
   
-  print(dat.obj$species$summary, n = 9999)
+  print(dat.obj$species$summary, n = 9999, na.print = "NA")
   
   cat("\n--------------------")
   cat("\nCOVARIATES\n")
@@ -128,7 +128,7 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     cat("\nSONAR GROUPINGS\n")
     cat("--------------------\n")
     
-    print(dat.obj$covariates$signal.types)
+    print(dat.obj$covariates$signal.types, na.print = "NA")
   }
   
   if(sum(is.na(dat.obj$covariates$df)) > 0) {
@@ -154,7 +154,7 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
       dplyr::bind_rows(., tibble::tibble(param = "data-driven", 
                                          SD = dat.obj$config$prop$dd, 
                                          step = "RJ"))
-    print(prop.df)
+    print(prop.df, na.print = "NA")
     
     cat("\n")
     cat("Priors:\n\n")
@@ -172,7 +172,7 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     cat("\n")
     
     cat("\nClustering:\n\n")
-    print(dat.obj$config$clust)
+    print(dat.obj$config$clust, na.print = "NA")
     
     
   }
