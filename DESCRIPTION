@@ -32,6 +32,7 @@ Imports:
     pals,
     multicool,
     truncnorm,
+    patchwork,
     foreach,
     parallel,
     hms,
