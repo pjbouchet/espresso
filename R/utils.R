@@ -1045,6 +1045,11 @@ print.gvs <- function(gvs.dat){
 
 # Convenience ----------------------------------------------------------------
 
+#' Convenience function for generating a summary of results in R Markdown
+#' @param outdir Output directory
+#' @param filename Output file name
+#' @param plot.height Height of tile plots comparing species groupings
+#' @export
 create_report <- function(outdir = getwd(), filename = "espresso_report", plot.height = 3){
 
   obj.n <- sapply(X = ls(envir = .GlobalEnv), FUN = function(x) class(get(x))[1]) %>% unlist()
