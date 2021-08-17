@@ -13,7 +13,8 @@
   model.ranks = TRUE,
   n.top = 10,
   covariate.prob = TRUE,
-  combine.chains = FALSE
+  combine.chains = FALSE,
+  rmd = FALSE
 )
 }
 \arguments{
