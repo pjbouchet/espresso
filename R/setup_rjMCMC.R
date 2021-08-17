@@ -153,7 +153,7 @@ setup_rjMCMC <- function(rj.input,
                     mu.i = numeric(rj.input$whales$n), 
                     mu = 0, phi = 0, sigma = 0)
   if(rj.input$covariates$n > 0) rj$accept <- append(rj$accept, numeric(rj.input$covariates$n))
-  rj$accept <- append(rj$accept, length(rj.input$config$move$moves))
+  rj$accept <- append(rj$accept, as.list(rep(0, length(rj.input$config$move$moves))))
   
   if(rj.input$config$covariate.select) rj$accept <- append(rj$accept, numeric(1))
   names(rj$accept) <- unlist(list("t.ij", "mu.i", "mu", "phi", "sigma", 
