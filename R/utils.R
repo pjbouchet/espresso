@@ -1060,6 +1060,7 @@ rescale_p <- function(p, default.value = 0.05){
 
 # Posterior model probabilities
 prob_models <- function(input.obj, 
+                        n.top = NULL,
                         mlist = NULL, 
                         select = NULL, 
                         do.combine, 
@@ -1070,16 +1071,25 @@ prob_models <- function(input.obj,
   
   if(do.combine){
     ptrace <- do.call(rbind, input.trace) %>% coda::as.mcmc()
-    p_models(input.trace = ptrace, mlist = mlist, select = select, 
-             gvs = gvs, species.Groups = species.Groups)
+    p_models(input.trace = ptrace,
+             n.top = n.top,
+             mlist = mlist, 
+             select = select, 
+             gvs = gvs, 
+             species.Groups = species.Groups)
   } else {
     purrr::map(.x = input.trace, 
-               .f = ~p_models(input.trace = .x, mlist = mlist, select = select, 
-                              gvs = gvs, species.Groups = species.Groups))
+               .f = ~p_models(input.trace = .x, 
+                              n.top = n.top,
+                              mlist = mlist, 
+                              select = select, 
+                              gvs = gvs, 
+                              species.Groups = species.Groups))
   }
 }
 
 p_models <- function(input.trace, 
+                     n.top,
                      mlist, 
                      select, 
                      gvs, 
@@ -1100,7 +1110,9 @@ p_models <- function(input.trace,
     model.ID.posterior <- as.numeric(names(sort(mselect.species, decreasing = TRUE)))
     names(mselect.species) <- species.Groups[as.numeric(names(mselect.species))]
     mselect.species <- sort(mselect.species, decreasing = TRUE)
-    m_prob <- tibble::tibble(as.data.frame(mselect.species))
+    m_prob <- tibble::tibble(as.data.frame(mselect.species)) %>% 
+      dplyr::arrange(-value) %>% 
+      dplyr::slice(1:n.top)
     
     if(ncol(m_prob) == 1) m_prob <- m_prob %>%
       dplyr::rename(p = mselect.species) %>%
@@ -1143,47 +1155,65 @@ p_models <- function(input.trace,
     # Tabulate
     res$model$m_prob <- table(mtrace)/nrow(input.trace)
     
-    # Identify top-ranking model
-    model.ID.posterior <- as.numeric(names(res$model$m_prob))[order(res$model$m_prob, decreasing = TRUE)]
-    bestmod <- as.numeric(names(which.max(res$model$m_prob))); names(bestmod) <- NULL
-    
-    # Assign names
-    if (select) {
-      names(res$model$m_prob) <- 
-        sapply(X = names(res$model$m_prob), FUN = function(nn) mlist$model[as.numeric(nn)])
-    } else {
-      names(res$model$m_prob) <- mlist$model
-    }
+    # model.ID.posterior <- as.numeric(names(res$model$m_prob))[order(res$model$m_prob, decreasing = TRUE)]
+    # bestmod <- as.numeric(names(which.max(res$model$m_prob))); names(bestmod) <- NULL
     
     # Generate tibble output
-    res$model$m_prob <- sort(res$model$m_prob, decreasing = TRUE)
-    res$model$bestmod <- names(which.max(res$model$m_prob))
-    res$model$m_prob <- tibble::enframe(res$model$m_prob) %>% 
-      dplyr::rename(model = name, p = value) %>% 
-      dplyr::mutate(p = as.numeric(p))
+    res$model$m_prob <- res$model$m_prob %>% 
+      tibble::enframe() %>% 
+      dplyr::arrange(-value) %>% 
+      dplyr::rename(ID = name, p = value) %>% 
+      dplyr::mutate(ID = as.numeric(ID)) %>% 
+      dplyr::left_join(., mlist[, c("ID", "model")], by = "ID") %>% 
+      dplyr::mutate(p = as.numeric(p)) %>% 
+      dplyr::slice(1:n.top)
+    
+    # Identify top-ranking model
+    res$model$bestmod <- res$model$m_prob$model[1]
+    
+    # # Assign names
+    # if (select) {
+    #   names(res$model$m_prob) <- 
+    #     sapply(X = names(res$model$m_prob), FUN = function(nn) mlist$model[as.numeric(nn)])
+    # } else {
+    #   names(res$model$m_prob) <- mlist$model
+    # }
+    
+
+    # res$model$m_prob <- sort(res$model$m_prob, decreasing = TRUE)
+    # res$model$bestmod <- names(which.max(res$model$m_prob))
+    # res$model$m_prob <- tibble::enframe(res$model$m_prob) %>% 
+    #   dplyr::rename(model = name, p = value) %>% 
+    #   dplyr::mutate(p = as.numeric(p)) %>% 
+    #   dplyr::slice(1:n.top)
     
     # Compute Monte Carlo error
-    mce <- sapply(X = unique(mtrace), FUN = function(x) as.numeric(mtrace == x))
+    mce <- as.numeric(mtrace)
+    mce <- purrr::map(.x = res$model$m_prob$ID, .f = ~as.numeric(mce == .x))
+
+    mce <- lapply(X = res$model$m_prob$ID, FUN = function(x) as.numeric(mtrace == x))
     
     # There are some differences in the ESS values calculated by coda and mcmcse
     # The original code (using mean * 1 - mean etc.) gives exactly the same Monte Carlo errors
-    # as the mcse function from <mcmcse> when neff is calculated using that package,
+    # as the mcse function from <mcmcse> when neff is calculated using the mcmcse package,
     # neff <- apply(X = mce, MARGIN = 2, FUN = coda::effectiveSize)
     # neff <- apply(X = mce, MARGIN = 2, FUN = mcmcse::ess)
     
-    res$mc.error <- apply(X = mce, MARGIN = 2, FUN = mcmcse::mcse) %>% 
-      purrr::map_dbl(.x = ., .f = "se")
+    res$mc.error <- purrr::map_dbl(.x = mce, .f = ~mcmcse::mcse(.x)$se) %>% 
+      purrr::set_names(x = ., nm = res$model$m_prob$model) %>% 
+      tibble::enframe() %>% 
+      dplyr::rename(model = name, monte_carlo = value)
     
     # res$mc.error <- sapply(X = seq_along(unique(mtrace)),
-    #                              FUN = function(x) sqrt(mean(mce[, x]) * (1 - mean(mce[, x])) / neff[x]))
+    #                        FUN = function(x) sqrt(mean(mce[, x]) * (1 - mean(mce[, x])) / neff[x]))
     
-    names(res$mc.error) <- purrr::map_chr(.x = unique(mtrace), 
-                                          .f = ~mlist %>% 
-                                            dplyr::filter(ID == .x) %>% 
-                                            dplyr::pull(model))
+    # names(res$mc.error) <- purrr::map_chr(.x = unique(mtrace), 
+    #                                       .f = ~mlist %>% 
+    #                                         dplyr::filter(ID == .x) %>% 
+    #                                         dplyr::pull(model))
     
-    res$mc.error <- tibble::as_tibble(res$mc.error, rownames = "model") %>% 
-      dplyr::rename(monte_carlo = value)
+    # res$mc.error <- tibble::as_tibble(res$mc.error, rownames = "model") %>% 
+    #   dplyr::rename(monte_carlo = value)
     
     # Compute lower and upper interval bounds
     res$model$m_prob <- res$model$m_prob %>% 
@@ -1197,6 +1227,35 @@ p_models <- function(input.trace,
   
   return(res)
   
+}
+
+# Function to create a tiled representation of model rankings using ggplot
+gg_model <- function(dat, colours, n.top, combine, no = 0){
+  
+  ggplot2::ggplot(data = dat, aes(x = x, y = y)) + 
+    ggplot2::geom_tile(aes(fill = as.factor(grouping)), col = "white", size = 0.25) +
+    ggplot2::scale_fill_manual(values = gg.cols) + 
+    ggplot2::xlab("") +
+    {if(!combine) ggplot2::ylab("Chain")} +
+    {if(combine) ggplot2::ylab("Rank")} +
+    ggplot2::scale_y_continuous(breaks = rev(seq_len(n.top)), 
+                                labels = 1:n.top,
+                                expand = c(0, 0)) +
+    ggplot2::scale_x_continuous(breaks = seq_len(rj.obj$dat$species$n), 
+                                labels = rj.obj$dat$species$names, 
+                                expand = c(0, 0)) +
+    ggplot2::theme(axis.text = element_text(size = 12, colour = "black"),
+                   axis.title = element_text(size = 12, colour = "black"),
+                   axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+                   axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 00, l = 0)),
+                   plot.margin = margin(t = 1, r = 1.5, b = 0.25, l = 1, "cm"),
+                   legend.position = "top",
+                   legend.title = element_blank(),
+                   legend.text = element_text(size = 12)) + 
+    ggplot2::guides(fill = guide_legend(nrow = 1)) +
+    {if(!combine) ggplot2::theme(legend.position = "none",
+                                 axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))} +
+    {if(!combine) ggtitle(paste0("Rank: ", no)) }
 }
 
 #' Posterior inclusion probabilities for contextual covariates
@@ -1225,9 +1284,12 @@ p_covariates <- function(input.trace, ddf){
   for(j in ddf$covariates$names) covtrace.labels[, j] <- ifelse(covtrace.labels[, j] == 0, NA, j)
   covtrace.labels <- covtrace.labels %>% 
     tidyr::unite("comb", ddf$covariates$names, na.rm = TRUE, remove = TRUE, sep = " + ")
+  
+  if(ddf$covariates$n > 1){
   covtrace.labels$comb <- ifelse(stringr::str_detect(pattern = "\\+", string = covtrace.labels$comb),
                                  covtrace.labels$comb, paste0(covtrace.labels$comb, " (only)"))
   covtrace.labels$comb <- ifelse(covtrace.labels$comb == " (only)", "No covariates", covtrace.labels$comb)
+  }
   
   # Dummy coding for each covariate combination
   dummy.covariates <- fastDummies::dummy_cols(covtrace.labels)
@@ -1245,42 +1307,37 @@ p_covariates <- function(input.trace, ddf){
     dplyr::mutate(monte_carlo = mcmcse::mcse(dplyr::pull(covtrace[, covariate]))$se) %>% 
     dplyr::mutate(lower = max(0, round(p - 1.98 * monte_carlo, 4)),
                   upper = min(1, round(p + 1.98 * monte_carlo, 4))) %>% 
-    dplyr::ungroup() %>% 
-    dplyr::mutate(covariate = paste0(covariate, " (overall)"))
+    dplyr::ungroup()
   
-  # Calculate posterior probabilities for specific covariate combinations
-  tab.combinations <- table(covtrace.labels) / nrow(covtrace.labels)
-  tab.combinations <- tibble::as_tibble(tab.combinations) %>% 
-    dplyr::rename(covariate = covtrace.labels, p = n) %>% 
-    dplyr::filter(!covariate == "No covariates") %>% 
-    dplyr::arrange(covariate) %>% 
-    dplyr::rowwise()  %>% 
-    dplyr::mutate(monte_carlo = mcmcse::mcse(dplyr::pull(dummy.covariates[, covariate]))$se) %>% 
-    dplyr::mutate(lower = max(0, round(p - 1.98 * monte_carlo, 4)),
-                  upper = min(1, round(p + 1.98 * monte_carlo, 4))) %>% 
-    dplyr::mutate(ind_order = ifelse(stringr::str_detect(string = covariate, pattern = "(only)"), 1, 99)) %>% 
-    dplyr::ungroup() %>% 
-    dplyr::arrange(ind_order, covariate) %>% 
-    dplyr::select(-ind_order)
-  # 
-  # tb <- purrr::map(.x = covgrid(),
-  #                  .f = ~{
-  #                    if(is.null(.x)){
-  #                      tabul <- table(covtrace$both)/nrow(input.trace)
-  #                    } else { tabul <- table(covtrace[, .x])/nrow(input.trace)}
-  #                    cov_table(input.table = tabul, covname = .x)
-  #                  }) %>% do.call(rbind, .)
-  # 
-  # 
-  # tb <- purrr::map(.x = append(as.list(brs$covariates$names), list(NULL)),
-  #                  .f = ~{
-  #                    if(is.null(.x)){
-  #                      tabul <- table(covtrace$both)/nrow(input.trace)
-  #                    } else { tabul <- table(covtrace[, .x])/nrow(input.trace)}
-  #                    cov_table(input.table = tabul, covname = .x)
-  #                  }) %>% do.call(rbind, .)
-  # 
-  tb <- dplyr::bind_rows(tab.overall, tab.combinations)
+  if(ddf$covariates$n > 1){
+    tab.overall <- tab.overall %>% 
+      dplyr::mutate(covariate = paste0(covariate, " (overall)"))
+  }
+  
+  if(ddf$covariates$n > 1){
+    
+    # Calculate posterior probabilities for specific covariate combinations
+    tab.combinations <- table(covtrace.labels) / nrow(covtrace.labels)
+    tab.combinations <- tibble::as_tibble(tab.combinations) %>% 
+      dplyr::rename(covariate = covtrace.labels, p = n) %>% 
+      dplyr::filter(!covariate %in% c("No covariates", "")) %>% 
+      dplyr::arrange(covariate) %>% 
+      dplyr::rowwise()  %>% 
+      dplyr::mutate(monte_carlo = mcmcse::mcse(dplyr::pull(dummy.covariates[, covariate]))$se) %>% 
+      dplyr::mutate(lower = max(0, round(p - 1.98 * monte_carlo, 4)),
+                    upper = min(1, round(p + 1.98 * monte_carlo, 4))) %>% 
+      dplyr::mutate(ind_order = ifelse(stringr::str_detect(string = covariate, pattern = "(only)"), 1, 99)) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::arrange(ind_order, covariate) %>% 
+      dplyr::select(-ind_order)
+    
+    tb <- dplyr::bind_rows(tab.overall, tab.combinations)
+    
+  } else {
+    
+    tb <- tab.overall
+  }
+  
   return(tb)
   
 }
