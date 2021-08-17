@@ -1045,6 +1045,50 @@ print.gvs <- function(gvs.dat){
 
 # Convenience ----------------------------------------------------------------
 
+export <- function(dat, reprex = TRUE){
+  
+  obj.n <- list(dat = deparse(substitute(dat)))
+  
+  # Create temp directory
+  out.dir <- file.path(getwd(), "tmp")
+  dir.create(out.dir, showWarnings = FALSE)
+
+  # Save objects
+  save(list = unlist(obj.n), file = file.path(out.dir, "tmp_data.rda"))
+  
+  if(reprex){
+    
+    
+    sink(file.path(out.dir, "tmp_file.R"))
+    writeLines(text = "library(espresso)")
+    writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")\n"))
+    writeLines(text = paste0("summary(", obj.n$dat, ")"))
+    sink()
+    
+  } else {
+    
+
+  sink(file.path(out.dir, "tmp_file.Rmd"))
+  
+  writeLines(text = "---")
+  writeLines(text = "title: \"espresso outputs\"")
+  writeLines(text = "output: html_document")
+  writeLines(text = "---")
+    
+  writeLines(text = " ```{r echo = TRUE, include = FALSE}")
+  writeLines(text = "library(espresso)")
+  writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")\n"))
+  writeLines(text = paste0("summary(", obj.n$dat, ")"))
+  writeLines(text = " ```")
+  sink()
+  
+  }
+  
+
+}
+
+# reprex::reprex(input = file.path(out.dir, "tmp_file.R"))
+
 # Rescale probability vector
 rescale_p <- function(p, default.value = 0.05){
   if(length(p) == 1){
