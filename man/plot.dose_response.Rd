@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{dose_response}(
   dr.object,
-  which.model = 1,
+  model.rank = 1,
   overlay = FALSE,
   colour.by = NULL,
   colour = NULL,
@@ -24,7 +24,7 @@
 \arguments{
 \item{dr.object}{Input object of class \code{dose_response}, as returned by \code{\link{compile_rjMCMC}}.}
 
-\item{which.model}{Integer indicating the ID of the model for which dose-response curves are to be plotted. The \code{\link{summary.dose_response}} function can be used to list model IDs, if necessary.}
+\item{model.rank}{Integer indicating the rank of the model for which dose-response curves are to be plotted. The model with highest posterior probability is given a rank of 1.}
 
 \item{overlay}{Logical. If \code{TRUE}, plots will be faceted by species (or species group). If \code{FALSE}, all curves will be overlaid on the same plot.}
 
@@ -95,5 +95,6 @@ plot(dr.object = doseR, colour.by = "group")
 \author{
 Phil J. Bouchet
 }
+\keyword{---------------------------------------------}
 \keyword{brs}
 \keyword{rjmcmc}

@@ -13,7 +13,6 @@
   model.ranks = TRUE,
   n.top = 10,
   covariate.prob = TRUE,
-  combine.chains = FALSE,
   rmd = FALSE
 )
 }
@@ -34,7 +33,7 @@
 
 \item{covariate.prob}{Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).}
 
-\item{combine.chains}{Logical. If \code{TRUE}, outputs are returned for each individual MCMC chain.}
+\item{rmd}{Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.}
 }
 \value{
 A detailed summary, printed to the R console.

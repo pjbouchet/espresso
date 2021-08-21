@@ -2,17 +2,24 @@
 % Please edit documentation in R/utils.R
 \name{create_report}
 \alias{create_report}
-\title{Print method for objects of class \code{gvs}}
+\title{Convenience function for generating a summary of results in R Markdown}
 \usage{
-create_report(outdir = getwd(), filename = "espresso_report", plot.height = 3)
+create_report(
+  outdir = getwd(),
+  filename = "espresso_report",
+  plot.height = 3,
+  model.ranks = 1
+)
 }
 \arguments{
-\item{outdir}{Output directory}
+\item{outdir}{Output directory.}
 
-\item{filename}{Output file name}
+\item{filename}{Output file name.}
 
-\item{plot.height}{Height of tile plots comparing species groupings}
+\item{plot.height}{Height of tile plots used for comparing species groupings.}
+
+\item{model.ranks}{Used to define which models to get dose-response curves for when \code{by.model = TRUE}.}
 }
 \description{
-Print method for objects of class \code{gvs}
+Convenience function for generating a summary of results in R Markdown
 }

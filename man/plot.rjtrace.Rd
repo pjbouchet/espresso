@@ -8,7 +8,7 @@
   rj.obj,
   param.name = NULL,
   covariates.incl = FALSE,
-  autocorr = FALSE,
+  autocorr = TRUE,
   individual = TRUE
 )
 }
