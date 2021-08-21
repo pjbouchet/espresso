@@ -3,6 +3,7 @@
 S3method(plot,dose_response)
 S3method(plot,gvs)
 S3method(plot,rjtrace)
+S3method(print,dose_response)
 S3method(print,gvs)
 S3method(print,rjtrace)
 S3method(summary,brsdata)
