@@ -741,9 +741,11 @@ print.rjtrace <- function(rj.obj){
 
 # Dose-response ----------------------------------------------------------------
 
-summary.dose_response <- function(dr.object){
+#' Print method for objects of class \code{dose_response}
+#' @export
+print.dose_response <- function(dr.object){
   if(!"dose_response" %in% class(dr.object)) stop("dr.object must be of class <dose_response>")
-  print(dr.object$mlist)
+  print(dr.object$ranks)
 }
 
 
@@ -1046,11 +1048,12 @@ print.gvs <- function(gvs.dat){
 # Convenience ----------------------------------------------------------------
 
 #' Convenience function for generating a summary of results in R Markdown
-#' @param outdir Output directory
-#' @param filename Output file name
-#' @param plot.height Height of tile plots comparing species groupings
+#' @param outdir Output directory.
+#' @param filename Output file name.
+#' @param plot.height Height of tile plots used for comparing species groupings.
+#' @param model.ranks Used to define which models to get dose-response curves for when \code{by.model = TRUE}.
 #' @export
-create_report <- function(outdir = getwd(), filename = "espresso_report", plot.height = 3){
+create_report <- function(outdir = getwd(), filename = "espresso_report", plot.height = 3, model.ranks = 1){
 
   obj.n <- sapply(X = ls(envir = .GlobalEnv), FUN = function(x) class(get(x))[1]) %>% unlist()
   obj.ind <- purrr::map(.x = obj.n, .f = ~ any(.x %in% c("brsdata", "rjtrace", "dose_response"))) %>% 
@@ -1086,7 +1089,7 @@ create_report <- function(outdir = getwd(), filename = "espresso_report", plot.h
   writeLines(text = ".hljs{color: #929292;}")
   writeLines(text = "```")
   
-  writeLines(text = "```{r, include = FALSE}")
+  writeLines(text = "```{r initial, include = FALSE}")
   writeLines(text = "library(espresso)")
   writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")"))
   writeLines(text = "```")
@@ -1096,7 +1099,7 @@ create_report <- function(outdir = getwd(), filename = "espresso_report", plot.h
   if(sum(obj.n == "brsdata") > 0){
     
     writeLines(text = "### Data")
-    writeLines(text = "```{r, class.output=\"scroll-100\"}")
+    writeLines(text = "```{r data, class.output=\"scroll-100\"}")
     writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata")], ")"))
     writeLines(text = "```")
     
@@ -1105,28 +1108,38 @@ create_report <- function(outdir = getwd(), filename = "espresso_report", plot.h
   if(sum(obj.n == "rjtrace") > 0){
     
     writeLines(text = "### MCMC")
-    writeLines(text = paste0("```{r, fig.height = ", plot.height, ", class.output=\"scroll-100\"}"))
+    writeLines(text = paste0("```{r mcmc, fig.height = ", plot.height, ", class.output=\"scroll-100\"}"))
     writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "rjtrace")], ", rmd = TRUE)"))
     writeLines(text = "```\n")
     
     writeLines(text = "### Trace")
-    writeLines(text = paste0("```{r}"))
+    writeLines(text = paste0("```{r trace}"))
     writeLines(text = paste0("plot(", names(obj.n)[which(obj.n == "rjtrace")], ")"))
-    writeLines(text = "```")
+    writeLines(text = "```\n")
     
   }
   
   if(sum(obj.n == "dose_response") > 0){
     
     writeLines(text = "### Dose-response")
-    writeLines(text = paste0("```{r, fig.height = ", plot.height, ", class.output=\"scroll-100\"}"))
-    writeLines(text = paste0("plot(", names(obj.n)[which(obj.n == "dose_responze")], ", rmd = TRUE)"))
-    writeLines(text = "```")
+    writeLines(text = paste0("```{r doseResponse, class.output=\"scroll-100\"}"))
     
+    for(oo in names(obj.n)[which(obj.n == "dose_response")]){
+      tmp <- get(oo)
+      if(tmp$by.model){
+        if(length(model.ranks) == 1){
+          writeLines(text = paste0("plot(", oo, ", model.rank = ", models.ranks, ")"))
+        } else {
+          for(j in model.ranks){writeLines(text = paste0("plot(", oo, ", model.rank = ", j, ")"))}
+        }
+      } else {
+        writeLines(text = paste0("plot(", oo, ")")) 
+      }
+    }
+    writeLines(text = "```\n")
   }
   
   sink()
-  
   rmarkdown::render(input = file.path(out.dir, paste0(filename, ".Rmd")), output_dir = outdir)
   unlink(out.dir, recursive = TRUE)
 
@@ -1318,9 +1331,32 @@ p_models <- function(input.trace,
 }
 
 # Function to create a tiled representation of model rankings using ggplot
-gg_model <- function(dat, rj.obj, colours, n.top, combine, no = 0){
+gg_model <- function(dat, 
+                     post.probs, 
+                     rj.obj, 
+                     colours, 
+                     n.top, 
+                     combine, 
+                     no = 0, 
+                     p.size = 4, 
+                     x.offset = 0.5, 
+                     x.margin = 2){
   
-  ggplot2::ggplot(data = dat, aes(x = x, y = y)) + 
+  # Probability values
+  if(combine){
+    p1 <- tibble::tibble(x = rep(max(dat$x) + x.offset, n.top),
+                         y = unique(dat$y), 
+                         label = post.probs)
+  } else {
+    p1 <- tibble::tibble(x = rep(max(dat$x) + x.offset, length(unique(dat$y))), 
+                         y = unique(dat$y), 
+                         label = post.probs)
+  }
+  
+  # Extra blank space
+  p2 <- p1 %>% dplyr::mutate(x = x + x.margin, label = "")
+  
+  out.plot <- ggplot2::ggplot(data = dat, aes(x = x, y = y)) + 
     ggplot2::geom_tile(aes(fill = as.factor(grouping)), col = "white", size = 0.25) +
     ggplot2::scale_fill_manual(values = colours) + 
     ggplot2::xlab("") +
@@ -1336,14 +1372,23 @@ gg_model <- function(dat, rj.obj, colours, n.top, combine, no = 0){
                    axis.title = element_text(size = 12, colour = "black"),
                    axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
                    axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 00, l = 0)),
-                   plot.margin = margin(t = 1, r = 1.5, b = 0.25, l = 1, "cm"),
+                   plot.margin = margin(t = 1, r = 1, b = 0.25, l = 1, "cm"),
                    legend.position = "top",
                    legend.title = element_blank(),
-                   legend.text = element_text(size = 12)) + 
+                   legend.text = element_text(size = 12),
+                   panel.background = element_rect(fill = "white")) + 
+    
+    # Annotation for posterior probabilities
+    ggplot2::geom_text(data = p1, aes(x = x , y = y, label = label), size = p.size, hjust = 0) +
+    ggplot2::geom_text(data = p2, aes(x = x , y = y, label = label), size = p.size) +
+    
     ggplot2::guides(fill = guide_legend(nrow = 1)) +
+    
     {if(!combine) ggplot2::theme(legend.position = "none",
                                  axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))} +
     {if(!combine) ggtitle(paste0("Rank: ", no)) }
+  
+  return(out.plot)
 }
 
 #' Posterior inclusion probabilities for contextual covariates
@@ -1430,6 +1475,19 @@ p_covariates <- function(input.trace, ddf){
   
 }
 
+gg_color_hue <- function(n) {
+  
+  # Custom palette - to match <bayesplot>
+  if(n == 1) col <-"#6497b1"
+  if(n == 2) col <-c("#6497b1", "#005b96")
+  if(n == 3) col <-c("#b3cde0", "#6497b1", "#005b96")
+  if(n > 3) col <- c("#d1e1ec", "#b3cde0", "#6497b1", "#005b96", "#03396c", "#011f4b")[1:n]
+  
+  # Original palette
+  hues <- seq(50, 300, length = n + 1)
+  col <- grDevices::hcl(h = hues, l = 70, c = 100)[1:n]
+  return(col)
+}
 
 MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 5000, 
             gvals = NULL, priors = NULL, post_zm = TRUE, PPO_out = FALSE, 
@@ -1558,19 +1616,6 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
       }
       graphics::par(mgp = c(2.5, 1, 0))
       
-      gg_color_hue <- function(n) {
-        
-        # Custom palette - to match <bayesplot>
-        if(n == 1) col <-"#6497b1"
-        if(n == 2) col <-c("#6497b1", "#005b96")
-        if(n == 3) col <-c("#b3cde0", "#6497b1", "#005b96")
-        if(n > 3) col <- c("#d1e1ec", "#b3cde0", "#6497b1", "#005b96", "#03396c", "#011f4b")[1:n]
-        
-        # Original palette
-        hues <- seq(50, 300, length = n + 1)
-        col <- grDevices::hcl(h = hues, l = 70, c = 100)[1:n]
-        return(col)
-      }
       colors <- gg_color_hue(n_chains)
       gg_cols <- grDevices::col2rgb(colors)/255
       YLIM <- ylim

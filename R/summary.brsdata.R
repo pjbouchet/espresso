@@ -74,6 +74,31 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     cat("\n")
   }
   
+  trials.summary <- tibble::tibble(species = dat.obj$species$trials, whale = dat.obj$whales$id) %>% 
+    dplyr::group_by(species, whale) %>% 
+    dplyr::count() %>% 
+    dplyr::ungroup()
+  
+  trials.tbl <- table(trials.summary$n) %>% 
+    tibble::enframe(.) %>% 
+    dplyr::rename(trials = name, N_ind = value) %>% 
+    dplyr::mutate("%" = round(N_ind / sum(dat.obj$whales$n), 2))
+  
+  print(trials.tbl)
+  cat("\n")
+  
+  # for(ns in seq_len(dat.obj$species$n)){
+  #   trials.tmp <- trials.summary %>% 
+  #     dplyr::filter(species == ns) %>% 
+  #     dplyr::pull(n) %>% 
+  #     table(.) %>% 
+  #     tibble::enframe() %>% 
+  #     dplyr::rename(trials = name, count = value) %>% 
+  #     dplyr::mutate(species = dat.obj$species$names[ns])
+  #   print(trials.tmp)
+  #   
+  # }
+  
   print(dat.obj$species$summary, n = 9999, na.print = "NA")
   
   cat("\n--------------------")

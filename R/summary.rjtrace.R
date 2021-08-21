@@ -6,7 +6,7 @@
 #' @export
 #' @param rj.obj Input rjMCMC object, as returned by \code{\link{trace_rjMCMC}}.
 #' @param covariate.prob Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).
-#' @param combine.chains Logical. If \code{TRUE}, outputs are returned for each individual MCMC chain.
+#' @param rmd Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.
 #' @inheritParams summary.gvs
 #' 
 #' @return A detailed summary, printed to the R console.
@@ -51,7 +51,6 @@ summary.rjtrace <- function(rj.obj,
                             model.ranks = TRUE,
                             n.top = 10, 
                             covariate.prob = TRUE,
-                            combine.chains = FALSE,
                             rmd = FALSE){
   
   options(tibble.width = Inf) 
@@ -110,11 +109,14 @@ summary.rjtrace <- function(rj.obj,
   }
   
   if(convergence){
+    
     if(coda::nchain(rj.obj$trace) > 1){
+      
       cat("\n--------------------")
       cat("\nCONVERGENCE ASSESSMENT\n")
       cat("--------------------\n")
       
+      # Gelman-Rubin diagnostic
       mctrace <- do.call(rbind, rj.obj$trace)
       
       # Excludes columns with a less than 10 unique value 
@@ -135,6 +137,12 @@ summary.rjtrace <- function(rj.obj,
           cat("Convergence: FALSE\n")}
         print(cvg)
       }
+      
+      # Running means plots for model ID
+      mcmcplots::rmeanplot(mcmcout = rj.obj$trace, parms = "model_ID", 
+                           plot.title = "", auto.layout = FALSE,
+                           col = gg_color_hue(coda::nchain(rj.obj$trace)))
+      
     }
   }
   
@@ -142,26 +150,29 @@ summary.rjtrace <- function(rj.obj,
     
     cat("\n--------------------")
     cat("\nCOVARIATES\n")
-    cat("--------------------\n")
+    cat("--------------------\n\n")
     
     if(rj.obj$config$covariate.select){
       
-      tb <- prob_covariates(obj = rj.obj, do.combine = combine.chains)
+      tb.combined <- prob_covariates(obj = rj.obj, do.combine = TRUE)
+      tb <- prob_covariates(obj = rj.obj, do.combine = FALSE)
       
-      if(combine.chains){
-        
-        cat("All chains (n = ", coda::nchain(rj.obj$trace), "):\n", sep = "")
-        print(tb)
+      # if(combine.chains){
+      
+      cat("--- All chains (n = ", coda::nchain(rj.obj$trace), ") --- \n", sep = "")
+      print(tb.combined)
+      cat("\n")
+      
+      # } else {
+      
+      cat("--- Individual chains ---\n", sep = "")
+      
+      for(nc in seq_len(coda::nchain(rj.obj$trace))){
+        cat("Chain ", nc, ":\n")
+        print(tb[[nc]])
         cat("\n")
-        
-      } else {
-        
-        for(nc in seq_len(coda::nchain(rj.obj$trace))){
-          cat("Chain ", nc, ":\n")
-          print(tb[[nc]])
-          cat("\n")
-        }
       }
+      # }
       
     } else {
       
@@ -174,7 +185,7 @@ summary.rjtrace <- function(rj.obj,
     
     cat("\n--------------------")
     cat("\nMODEL RANKINGS\n")
-    cat("--------------------\n")
+    cat("--------------------\n\n")
     
     if(rj.obj$config$model.select){
       
@@ -182,71 +193,118 @@ summary.rjtrace <- function(rj.obj,
                          n.top = n.top,
                          mlist = rj.obj$mlist, 
                          select = rj.obj$config$model.select,
-                         do.combine = combine.chains,
+                         do.combine = TRUE,
                          gvs = "gvs" %in% class(rj.obj))
       
-      if(combine.chains){
-        
-        cat("All chains (n = ", coda::nchain(rj.obj$trace), ")\n", sep = "")
-        if(!is.null(n.top)) cat("\nTop ", n.top, " models:\n")
-        print(head(res$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
-        cat("\n")
+      # if(combine.chains){
       
-        ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
-        gg.cols <- pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
-        m.matrix <- do.call(rbind, ggres$group)
-        
-        gg.matrix <- tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n), y = seq_len(n.top)) %>% 
-          dplyr::rowwise() %>% 
-          dplyr::mutate(grouping = m.matrix[y, x]) %>% 
-          dplyr::mutate(species = rj.obj$dat$species$names[y]) %>% 
-          dplyr::ungroup() %>% 
-          dplyr::mutate(y = n.top - y + 1)
-        
-        gg_model(dat = gg.matrix, rj.obj = rj.obj, colours = gg.cols, n.top = n.top, combine = TRUE)
-        
+      cat("--- All chains (n = ", coda::nchain(rj.obj$trace), ") --- \n", sep = "")
+      if(!is.null(n.top)) cat("\nTop ", n.top, " models:\n", sep = "")
+      print(head(res$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
+      cat("\n")
+      
+      ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
+      if(nrow(ggres) < n.top) n.top <- nrow(ggres)
+      gg.cols <- pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
+      m.matrix <- do.call(rbind, ggres$group)
+      
+      gg.matrix <- tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n), y = seq_len(n.top)) %>% 
+        dplyr::rowwise() %>% 
+        dplyr::mutate(grouping = m.matrix[y, x]) %>% 
+        dplyr::mutate(species = rj.obj$dat$species$names[x]) %>% 
+        dplyr::ungroup() %>% 
+        dplyr::mutate(y = n.top - y + 1)
+      
+      gg.combined <- gg_model(dat = gg.matrix, 
+               post.probs = round(res$model$m_prob$p, 3),
+               rj.obj = rj.obj, 
+               colours = gg.cols,
+               n.top = n.top, 
+               combine = TRUE, 
+               x.offset = 0.75,
+               x.margin = 1)
+      
+      # } else {
+      
+      res <- prob_models(input.obj = rj.obj, 
+                         n.top = n.top,
+                         mlist = rj.obj$mlist, 
+                         select = rj.obj$config$model.select,
+                         do.combine = FALSE,
+                         gvs = "gvs" %in% class(rj.obj))
+      
+      cat("--- Individual chains ---\n", sep = "")
+      
+      for(nc in seq_len(coda::nchain(rj.obj$trace))){
+        if(is.null(n.top)){
+          cat("Chain ", nc, ":\n", sep = "") 
+        } else {
+          cat("\nTop ", ifelse(nrow(res[[nc]]$model$m_prob) < n.top, nrow(res[[nc]]$model$m_prob), n.top), " models (chain ", nc, "):\n", sep = "")
+        }
+        print(head(res[[nc]]$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
+        cat("\n")
+      } # End for loop
+      
+      min.n <- min(purrr::map_dbl(.x = res, .f = ~nrow(.x$model$m_prob)))
+      if(min.n < n.top) warning(paste0("Fewer than ", n.top, " models available in some MCMC chains. n.top set to ", min.n))
+      
+      # Posterior probabilities for each ranked model across chains
+      pprobs <- purrr::map(.x = seq_len(min(c(min.n, n.top))), 
+                           .f = ~sapply(X = seq_len(coda::nchain(rj.obj$trace)),
+                                        function(d) res[[d]]$model$m_prob$p[.x]))
+      
+      # Species groupings
+      gg.res <- purrr::map(.x = res, 
+                           .f = ~{
+                             rtib <- dplyr::left_join(x = .x$model$m_prob[1:min(c(min.n, n.top)), ],  
+                                                      rj.obj$mlist[, c("model", "group")], by = "model")
+                             do.call(rbind, rtib$group)})
+      
+      gg.cols <- pals::brewer.paired(max(unlist(gg.res)))
+      
+      m.matrix <- lapply(X = seq_len(min(c(min.n, n.top))), 
+                         FUN = function(x) do.call(rbind, purrr::map(.x = gg.res, .f = ~.x[x, ])))
+      
+      gg.matrix <- purrr::map(.x = m.matrix,
+                              .f = ~{
+                                tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n),
+                                                   y = seq_len(rj.obj$mcmc$n.chains)) %>% 
+                                  dplyr::rowwise() %>% 
+                                  dplyr::mutate(grouping = .x[y, x]) %>% 
+                                  dplyr::mutate(species = rj.obj$dat$species$names[y]) %>% 
+                                  dplyr::ungroup() %>% 
+                                  dplyr::mutate(y = n.top - y + 1)})
+      
+      gg.tiles <- purrr::map(.x = seq_along(gg.matrix), 
+                             .f = ~gg_model(dat = gg.matrix[[.x]], 
+                                            post.probs = pprobs[[.x]],
+                                            colours = gg.cols, 
+                                            n.top = min(c(min.n, n.top)), 
+                                            rj.obj = rj.obj, 
+                                            combine = FALSE, 
+                                            p.size = 4,
+                                            x.offset = 1,
+                                            x.margin = 2,
+                                            no = .x))
+      
+      
+      if(!rmd){
+        print(gg.combined)
+        patchwork::wrap_plots(gg.tiles)
       } else {
+        print(gg.combined)
+        purrr::walk(.x = gg.tiles, .f = ~print(.x))
         
-        for(nc in seq_len(coda::nchain(rj.obj$trace))){
-          if(is.null(n.top)) cat("Chain ", nc, ":\n", sep = "") else
-            cat("\nTop ", n.top, " models (chain ", nc, "):\n", sep = "")
-          print(head(res[[nc]]$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
-          cat("\n")
-        } # End for loop
-          
-          gg.res <- purrr::map(.x = res, 
-             .f = ~{rtib <- dplyr::left_join(x = .x$model$m_prob,  
-                            rj.obj$mlist[, c("model", "group")], by = "model")
-          do.call(rbind, rtib$group)})
-          gg.cols <- pals::brewer.paired(max(unlist(gg.res)))
-          
-          m.matrix <- lapply(X = seq_len(n.top), 
-                           FUN = function(x) do.call(rbind, purrr::map(.x = gg.res, .f = ~.x[x, ])))
-
-          gg.matrix <- purrr::map(.x = m.matrix,
-                                  .f = ~{
-                                    tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n),
-                                                       y = seq_len(rj.obj$mcmc$n.chains)) %>% 
-                                      dplyr::rowwise() %>% 
-                                      dplyr::mutate(grouping = .x[y, x]) %>% 
-                                      dplyr::mutate(species = rj.obj$dat$species$names[y]) %>% 
-                                      dplyr::ungroup() %>% 
-                                      dplyr::mutate(y = n.top - y + 1)})
-          
-          gg.tiles <- purrr::map(.x = seq_along(gg.matrix), 
-                                 .f = ~gg_model(dat = gg.matrix[[.x]], colours = gg.cols, 
-                                                n.top = n.top, rj.obj = rj.obj, combine = FALSE, no = .x))
-          if(!rmd){
-            patchwork::wrap_plots(gg.tiles)
-          } else {
-            purrr::walk(.x = gg.tiles, .f = ~print(.x))
-
-          }
-
       }
+        
+      # }
     } else {
       
       cat("Model selection: FALSE\n")
     }
   }
+  
+
+  
+
 }
