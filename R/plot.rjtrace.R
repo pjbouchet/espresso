@@ -49,7 +49,7 @@
 plot.rjtrace <- function(rj.obj, 
                          param.name = NULL, 
                          covariates.incl = FALSE,
-                         autocorr = FALSE, 
+                         autocorr = TRUE, 
                          individual = TRUE){
   
   # Redo this in simpler way.
@@ -68,6 +68,8 @@ plot.rjtrace <- function(rj.obj,
   for(nc in 1:length(mcmc.trace)){
     colnames(mcmc.trace[[nc]])[which(startsWith(colnames(mcmc.trace[[1]]), prefix = "mu"))] <- 
       paste0("mu (", rj.obj$dat$species$names, ")")}
+  
+  if(is.null(param.name)) bpars <- character() else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
   
   if(is.null(param.name)){
     
@@ -161,8 +163,6 @@ plot.rjtrace <- function(rj.obj,
   }
   
   if(autocorr){
-    
-    if(is.null(param.name)) bpars <- character() else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
     bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
     }
   
