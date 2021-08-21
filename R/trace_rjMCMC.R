@@ -133,6 +133,24 @@ trace_rjMCMC <- function(rj.dat,
       colnames(mcmc.trace[[nc]])[mu.indices] <- paste0("mu.", rj.dat[[1]]$dat$species$names)
     }
   }
+  
+  #' ---------------------------------------------
+  # Model ranks
+  #' ---------------------------------------------
+
+  model.ranks <- purrr::map(.x = rj.dat, .f = "model")
+  for(nc in seq_along(model.ranks)){
+      if (burn > 0) model.ranks[[nc]] <- model.ranks[[nc]][-(1:burn)] # Remove burn-in
+      model.ranks[[nc]] <- model.ranks[[nc]][seq(from = 1, to = length(model.ranks[[nc]]), thin)]
+    }
+  
+  model.ranks <- do.call(c, model.ranks) %>% 
+    table(.) %>% 
+    tibble::enframe(.) %>% 
+    dplyr::mutate(rank = dplyr::min_rank(desc(value))) %>% 
+    dplyr::select(-value) %>% 
+    dplyr::arrange(rank) %>% 
+    dplyr::rename(model = name)
 
   #' ---------------------------------------------
   # Posterior medians
@@ -146,6 +164,21 @@ trace_rjMCMC <- function(rj.dat,
     tibble::rownames_to_column() %>% 
     dplyr::rename(param = rowname, pmed = V1) 
   
+  posterior.medians.by.model <- do.call(rbind, mcmc.trace) %>% 
+    tibble::as_tibble(., .name_repair = "minimal") %>% 
+    split(x = ., f = factor(.$model_ID)) %>% 
+    purrr::map(.x = ., .f = ~{
+      .x %>% 
+        dplyr::summarise(dplyr::across(where(is.numeric), ~median(.x))) %>% 
+        t() %>% 
+        as.data.frame() %>% 
+        tibble::rownames_to_column() %>% 
+        dplyr::rename(param = rowname, pmed = V1) 
+    })
+  
+  
+  names(posterior.medians.by.model) <- sapply(X = as.numeric(names(posterior.medians.by.model)), FUN = function(b) model.list[model.list$ID == b, ]$model)
+
   if(rj.dat[[1]]$dat$covariates$n > 0){
     
     for(nc in seq_len(length(mcmc.trace))){
@@ -213,8 +246,10 @@ trace_rjMCMC <- function(rj.dat,
               mcmc = mcmc.params, 
               accept = AR, 
               ess = ESS,
+              ranks = model.ranks,
               mlist = model.list,
               p.med = posterior.medians,
+              p.med.bymodel = posterior.medians.by.model,
               abbrev = rj.dat[[1]]$abbrev)
   
   class(res) <- c("rjtrace", class(res))
