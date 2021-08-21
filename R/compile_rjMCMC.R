@@ -113,8 +113,10 @@ compile_rjMCMC <- function(rj.object,
   #' ---------------------------------------------
   # Split trace by model ID
   #' ---------------------------------------------
-  
-  if(by.model) mcmc.list <- purrr::map(.x = unique(mcmc.trace$model_ID), 
+
+  m.order <- sapply(X = rj.object$ranks$model, FUN = function(a) rj.object$mlist[rj.object$mlist$model == a, ]$ID)
+    
+  if(by.model) mcmc.list <- purrr::map(.x = m.order, 
                                        .f = ~dplyr::filter(mcmc.trace, model_ID == .x)) else 
                                          mcmc.list <- list(mcmc.trace)
   
@@ -250,11 +252,7 @@ compile_rjMCMC <- function(rj.object,
                          out
                        })
   
-  if(by.model) output <- 
-    purrr::set_names(x = output, 
-                     nm =  sapply(X = unique(mcmc.trace$model_ID), 
-                                  FUN = function(m) rj.object$mlist[rj.object$mlist$ID == m, ]$model)) else 
-                                    output <- purrr::set_names(x = output, nm = "output")
+  if(by.model) output <- purrr::set_names(x = output, nm = names(m.order))
   
   output$dose.range <- dose.range
   output$cred.int <- credible.intervals
@@ -265,7 +263,9 @@ compile_rjMCMC <- function(rj.object,
                  abbrev = rj.object$abbrev,
                  by.model = by.model, 
                  mlist = rj.object$mlist, 
+                 ranks = rj.object$ranks,
                  p.med = rj.object$p.med,
+                 p.med.bymodel = rj.object$p.med.bymodel,
                  covariate = covariate,
                  covariate.values = covariate.values,
                  species = species)
