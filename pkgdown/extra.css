@@ -118,6 +118,13 @@ nav[data-toggle='toc'] .nav > .active > a, nav[data-toggle='toc'] .nav > .active
     background-color: #f0f7fd;
 }
 
+.logo {
+    height: 280px;
+    padding-top: 1em;
+    padding-left: 1em;
+    padding-bottom: 0.5em;
+}
+
 .update {
   padding: 10px 20px;
     font-size: 14.5px;

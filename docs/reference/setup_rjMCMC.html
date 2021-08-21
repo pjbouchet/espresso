@@ -38,6 +38,8 @@
 
 
 
+  <link href="../extra.css" rel="stylesheet">
+  
 
 <meta property="og:title" content="Set up the rjMCMC sampler — setup_rjMCMC" />
 <meta property="og:description" content="Set up a list object to hold the data from the MCMC sampler, and generate starting values for all model parameters. This function is called internally by run_rjMCMC." />
@@ -80,7 +82,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
       </span>
     </div>
 
@@ -124,6 +126,7 @@
   n.chains <span class='op'>=</span> <span class='fl'>3</span>,
   <span class='va'>p.split</span>,
   <span class='va'>p.merge</span>,
+  <span class='va'>moves</span>,
   <span class='va'>move.ratio</span>,
   <span class='va'>m</span>,
   do.update <span class='op'>=</span> <span class='cn'>FALSE</span>,

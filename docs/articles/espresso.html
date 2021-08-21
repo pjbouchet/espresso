@@ -11,7 +11,7 @@
 <script src="../bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
-<script src="../pkgdown.js"></script><link href="../pkgdown/extra.css" rel="stylesheet">
+<script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Getting started with espresso">
 <meta property="og:description" content="espresso">
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
@@ -34,7 +34,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
       </span>
     </div>
 
@@ -63,7 +63,7 @@
       <h1 data-toc-skip>Getting started with espresso</h1>
                         <h4 data-toc-skip class="author">Phil J. Bouchet, Catriona M Harris, Elizabeth E Henderson, Dina Sadykova, Len Thomas</h4>
             <address class="author_afil">
-      Centre for Research into Ecological &amp; Environmental Modelling, University of St Andrews<br><h4 data-toc-skip class="date">2021-08-20</h4>
+      Centre for Research into Ecological &amp; Environmental Modelling, University of St Andrews<br><h4 data-toc-skip class="date">2021-08-21</h4>
 
 
       <div class="hidden name"><code>espresso.Rmd</code></div>
@@ -107,9 +107,6 @@
 <span class="co"># Set knitr options</span>
 <span class="co">#'--------------------------------------------------------------------</span>
 <span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>echo <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<div class="update" style="font-size: 14.5px;   color:black;  border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>This is my update</p>
-</div>
 </div>
 <div id="overview" class="section level2">
 <h2 class="hasAnchor">
@@ -126,7 +123,7 @@
 </ul>
 <p>A flowchart of a typical <code>espresso</code> workflow is shown below.</p>
 <div class="figure">
-<img src="../../../../../Google%20Drive/Documents/git/espresso/vignettes/espresso_workflow.jpg" alt=""><p class="caption">Figure 1. Schematic representation of a typical <code>espresso</code> workflow. Package functions and object classes are indicated in coloured font.</p>
+<img src="../../vignettes/espresso_workflow.jpg" alt="" width="700"><p class="caption">Figure 1. Schematic representation of a typical <code>espresso</code> workflow. Package functions and object classes are indicated in coloured font.</p>
 </div>
 </div>
 <div id="data" class="section level2">
@@ -457,6 +454,13 @@
 ## Excluded (N = 2): Gg Ha
 ## Species groupings: FALSE
 ##
+## # A tibble: 3 × 3
+##   trials N_ind   `%`
+##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
+## 1 1      21      0.26
+## 2 2      29      0.36
+## 3 3      30      0.38
+##
 ## # A tibble: 5 × 8
 ##   species common_name             N_ind N_trials censored   mean    min   max
 ##   &lt;chr&gt;   &lt;chr&gt;                   &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
@@ -470,6 +474,12 @@
 ## COVARIATES
 ## --------------------
 ## No covariates</code></pre>
+<div id="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, August 20, 2021</p>
+</div>
+<blockquote>
+<p><strong>Note:</strong> Help files for S3 methods like <code>summary</code>, <code>plot</code> and <code>print</code> are accessed by combining the method name and the class of the R object to which they apply. For instance, the documentation for the data summary function can be viewed with: <code><a href="../reference/summary.brsdata.html">?summary.brsdata</a></code></p>
+</blockquote>
 </div>
 <div id="covariates" class="section level3">
 <h3 class="hasAnchor">
@@ -488,7 +498,7 @@
                    min.N <span class="op">=</span> <span class="fl">2</span>,
                    covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"behaviour"</span>, <span class="st">"range"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <blockquote>
-<p>Note that species names can be given using any combination of scientific name, common name, or unique identifier, as listed in <code>species_brs</code>.</p>
+<p><strong>Note:</strong> Species names can be given using any combination of scientific name, common name, or unique identifier, as listed in <code>species_brs</code>.</p>
 </blockquote>
 <p>The data summary now includes an overview of available covariates:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -514,6 +524,13 @@
 ## N = 6
 ## Excluded (N = 2): Gg Tt
 ## Species groupings: FALSE
+##
+## # A tibble: 3 × 3
+##   trials N_ind   `%`
+##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
+## 1 1      23      0.28
+## 2 2      29      0.35
+## 3 3      30      0.37
 ##
 ## # A tibble: 6 × 8
 ##   species common_name               N_ind N_trials censored   mean    min    max
@@ -592,6 +609,13 @@
 ##   &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;
 ## 1 Beaked_whales Bkd_w  Ha,Zc
 ##
+## # A tibble: 3 × 3
+##   trials N_ind   `%`
+##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
+## 1 1      23      0.28
+## 2 2      29      0.35
+## 3 3      30      0.37
+##
 ## # A tibble: 5 × 7
 ##   species N_ind N_trials censored   mean    min   max
 ##   &lt;chr&gt;   &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
@@ -644,6 +668,13 @@
 ## Excluded (N = 2): Gg Tt
 ## Species groupings: FALSE
 ##
+## # A tibble: 3 × 3
+##   trials N_ind   `%`
+##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
+## 1 1      23      0.28
+## 2 2      29      0.35
+## 3 3      30      0.37
+##
 ## # A tibble: 6 × 8
 ##   species common_name               N_ind N_trials censored   mean    min    max
 ##   &lt;chr&gt;   &lt;chr&gt;                     &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
@@ -678,7 +709,7 @@
 <a href="#overview-1" class="anchor" aria-hidden="true"></a>Overview</h3>
 <p>The (monophasic) Bayesian hierarchical dose-response model is fully described in <span class="citation"><a href="#ref-Miller2014" role="doc-biblioref">Miller <em>et al.</em></a> (<a href="#ref-Miller2014" role="doc-biblioref">2014</a>)</span> and <span class="citation"><a href="#ref-Antunes2014" role="doc-biblioref">Antunes <em>et al.</em></a> (<a href="#ref-Antunes2014" role="doc-biblioref">2014</a>)</span>, and is illustrated in Figure 2.</p>
 <div class="figure">
-<img src="../../../../../Google%20Drive/Documents/git/espresso/vignettes/rjmcmc_dag_monophasic.png" width="602" alt=""><p class="caption">Figure 2. <em>Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.</em></p>
+<img src="../../vignettes/rjmcmc_dag_monophasic.png" width="602" alt=""><p class="caption">Figure 2. <em>Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.</em></p>
 </div>
 <p>To discriminate between competing models, we treat the model <strong>itself</strong> as a parameter and form the joint posterior distribution over both parameters and models <span class="citation">(<a href="#ref-Oedekoven2014" role="doc-biblioref">Oedekoven <em>et al.</em> 2014</a>)</span>. Every iteration of the rjMCMC algorithm therefore entails two sequential steps:</p>
 <ol style="list-style-type: decimal">
@@ -715,6 +746,10 @@
 <blockquote>
 <p><strong>Note:</strong> When <code>model.select = FALSE</code>, the MCMC sampler will be constrained to the species groupings defined in the <code>brsdata</code> or <code>brsdata.grp</code> object, and will only estimate the parameters of the corresponding model, without allowing model selection. Likewise, <code>covariate.select = FALSE</code> will force the inclusion of all covariates defined using <code><a href="../reference/read_data.html">read_data()</a></code> or <code><a href="../reference/simulate_data.html">simulate_data()</a></code>.</p>
 </blockquote>
+<div style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, August 20, 2021</p>
+</div>
+<p>Other (optional) arguments can be passed to <code>configure_rjMCMC</code>, for instance to change move types, default values for proposal standard deviations in the MCMC sampler etc. Please consult the help documentation for details.</p>
 <p><code><a href="../reference/configure_rjMCMC.html">configure_rjMCMC()</a></code> performs three actions:</p>
 <ul>
 <li><p>It returns empirical estimates of the between-whale (φ) and within-whale between-exposure (σ) variation, which are needed to generate plausible starting values for the MCMC chains.</p></li>
@@ -753,6 +788,13 @@
 ##   name          abbrev species
 ##   &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;
 ## 1 Beaked_whales Bkd_w  Ha,Zc
+##
+## # A tibble: 3 × 3
+##   trials N_ind   `%`
+##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
+## 1 1      23      0.28
+## 2 2      29      0.35
+## 3 3      30      0.37
 ##
 ## # A tibble: 5 × 7
 ##   species N_ind N_trials censored   mean    min   max
@@ -816,22 +858,21 @@
 ## Clustering:
 ##
 ## [[1]]
-## # A tibble: 3 × 3
+## # A tibble: 2 × 3
 ##   model                         p p_scale
 ##   &lt;chr&gt;                     &lt;dbl&gt;   &lt;dbl&gt;
-## 1 (Bm,Pm)+(Gm,Bkd_w)+(Oo)    0.57    0.57
-## 2 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)  0.42    0.42
-## 3 (Bm,Oo,Pm)+(Gm,Bkd_w)      0.01    0.01
+## 1 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)  0.53    0.53
+## 2 (Bm,Pm)+(Gm,Bkd_w)+(Oo)    0.47    0.47
 ##
 ## [[2]]
 ## # A tibble: 5 × 3
 ##   cluster     p p_scale
 ##     &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
-## 1       1  0    0.02913
-## 2       2  0.24 0.2330
-## 3       3  0.3  0.2913
-## 4       4  0.43 0.4175
-## 5       5  0.03 0.02913</code></pre>
+## 1       1  0    0.05660
+## 2       2  0.16 0.1509
+## 3       3  0.32 0.3019
+## 4       4  0.46 0.4340
+## 5       5  0.06 0.05660</code></pre>
 </div>
 <div id="model-fitting" class="section level3">
 <h3 class="hasAnchor">
@@ -839,7 +880,7 @@
 <p>Now that initial setup is complete, we can proceed with model fitting. This step is designed to mirror a typical Bayesian modelling workflow in the <code>rjags</code> package <span class="citation">(<a href="#ref-Plummer2019" role="doc-biblioref">Plummer 2019</a>)</span>. The following call to <code><a href="../reference/run_rjMCMC.html">run_rjMCMC()</a></code> compiles the information given in <code>mydat.config</code>, creates the R data structures required to hold the MCMC samples, and runs the models:</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">rj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_rjMCMC.html">run_rjMCMC</a></span><span class="op">(</span>dat <span class="op">=</span> <span class="va">mydat.config</span>, n.chains <span class="op">=</span> <span class="fl">3</span>, n.burn <span class="op">=</span> <span class="fl">25000</span>, n.iter <span class="op">=</span> <span class="fl">100000</span><span class="op">)</span></code></pre></div>
-<p>For illustration purposes (and speed), we use three MCMC chains of 10,000 samples each, and a 1,000 step burn-in. These values are dependent on the context of each analysis, but should generally be much higher than this – typically, the higher the number of species (and thus the number of candidate models, when <code>model.selection = TRUE</code>), the longer the chains will need to be to achieve convergence.</p>
+<p>For illustration purposes (and speed!), we use three MCMC chains of 10,000 samples each, and a 1,000 step burn-in. These values are dependent on the context of each analysis, but should generally be much higher than this – typically, the higher the number of species (and thus the number of candidate models, when <code>model.selection = TRUE</code>), the longer the chains will need to be to achieve convergence.</p>
 <p>With five species in the dataset (namely, <code>Bm</code>, <code>Oo</code>, <code>Pm</code>, <code>Gm</code>, <code>Bkd_w</code>), the sampler will jump between 52 possible candidate models. Out of interest, these can be listed using the <code>listParts</code> function from the <code>partitions</code> package <span class="citation">(<a href="#ref-Hankin2006" role="doc-biblioref">Hankin 2006</a>)</span>.</p>
 <div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu">multicool</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/multicool/man/Bell.html" class="external-link">Bell</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="co"># Number of candidate models</span></code></pre></div>
@@ -915,57 +956,60 @@
 <h3 class="hasAnchor">
 <a href="#model-assessment" class="anchor" aria-hidden="true"></a>Model assessment</h3>
 <p>We need to make sure that the MCMC sampler produces a Markov chain that “converges” to the appropriate density (the posterior density) and that explores the parameter space (“mixes”) efficiently, i.e., that doesn’t reject or accept too many proposals. If too many proposals are rejected, we need many simulations to generate a sufficient number of parameter samples. If too many proposals are accepted, we don’t gain much information about the underlying distribution.</p>
+<div style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, 20 August, 2021</p>
+</div>
 <p>We start by extracting posterior samples from the <code>rjmcmc</code> object returned by <code><a href="../reference/run_rjMCMC.html">run_rjMCMC()</a></code>. This gives an object of class <code>&lt;rjtrace&gt;</code>.</p>
 <div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">rj.posterior</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/trace_rjMCMC.html">trace_rjMCMC</a></span><span class="op">(</span><span class="va">rj</span>, thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></code></pre></div>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] "rjtrace" "list"</code></pre>
-<p>Model convergence and mixing are commonly ascertained both (1) graphically, by inspecting trace plots and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package <code>coda</code> <span class="citation">(<a href="#ref-Plummer2006" role="doc-biblioref">Plummer <em>et al.</em> 2006</a>)</span>.</p>
-<p>Trace and density plots can be obtained using the <code>plot</code> method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy <a href="http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg" class="external-link">caterpillar</a>.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, individual <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-19-1.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-19-2.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-19-3.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-19-4.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-19-5.png" width="700"></p>
+<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, 20 August, 2021</p>
+</div>
 <blockquote>
-<p><strong>Note:</strong> Plots for specific parameters of interest can be generated using the <code>param.name</code> argument. If <code>individual = TRUE</code> separate density lines will be plotted for each chain.</p>
+<p><strong>Note:</strong> The <code>thin</code> argument is used to discard every k<sup>th</sup> value, where <code>thin = k</code>. This is mainly done to reduce autocorrelation in the MCMC chains and obtain a more representative sample of independent draws from the posterior. There is still some <a href="http://doingbayesiandataanalysis.blogspot.com/2011/11/thinning-to-reduce-autocorrelation.html" class="external-link">debate</a> around the merits of thinning chains in MCMC. However, it can be useful to deal with memory or time constraints in post-chain processing, i.e., for obtaining R objects of more manageable size after (very) long runs of the algorithm. The example above (<code>thin = 10</code>) is purely arbitrary. An appropriate value needs to be determined by inspection of the chain autocorrelation plots (see below), among other things.</p>
 </blockquote>
-<p>Another way to check for convergence is to look at the serial autocorrelation between MCMC samples. The lag-<span class="math inline">\(k\)</span> autocorrelation is the correlation between every sample and the sample <span class="math inline">\(k\)</span> steps before it. This autocorrelation should become smaller as <span class="math inline">\(k\)</span> increases, i.e., samples can be considered as independent. If, on the other hand, autocorrelation remains high for higher values of <span class="math inline">\(k\)</span>, this indicates a high degree of correlation between our samples and slow mixing.</p>
-<blockquote>
-<p><strong>Note:</strong> Autocorrelation plots an be obtained with <code>autocorr = TRUE</code>.</p>
-</blockquote>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="co"># Plot for the range covariate only</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, param.name <span class="op">=</span> <span class="st">"range"</span>, autocorr <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-20-1.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-2.png" width="700"></p>
-<p>The <code>summary</code> method also provides useful information for model checking, including:</p>
+<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, 20 August, 2021</p>
+</div>
+<p>In rjMCMC, there is little point in checking individual model parameters if the algorithm hasn’t converged to a stationary distribution for the between-model jumps. The recommended approach to model assessment therefore involves two stages:</p>
+<ol style="list-style-type: decimal">
+<li><p>First, assess the convergence of the rjMCMC sampler (between-model jumps). This is done by looking at <strong>(i)</strong> <strong>running means plots</strong> of the <code>model_ID</code> parameter (which should show chains plateau-ing around the same model (or set of models), <strong>(ii)</strong> <strong>tile plots</strong> of species groupings for top-ranked models (which should show similar grouping patterns and similar posterior probabilities across chains), and <strong>(iii)</strong> to some extent, <strong>density plots</strong> of model size.</p></li>
+<li><p>Second, assess the convergence of the Metropolis-Hastings sampler (within-model jumps). Here, convergence and mixing are commonly ascertained both (1) graphically, by inspecting e.g., trace plots of individual parameters and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package <code>coda</code> <span class="citation">(<a href="#ref-Plummer2006" role="doc-biblioref">Plummer <em>et al.</em> 2006</a>)</span>.</p></li>
+</ol>
+<p>The <code>summary</code> and <code>plot</code> methods provide all the information needed to perform the checks described above. Specifically, a run of <code>summary</code> returns:</p>
 <ul>
 <li><p>An overview of model run parameters (e.g., number of chains, chain lengths, burn-in, priors, move probabilities, etc.)</p></li>
 <li><p>Acceptance rates and effective sample sizes for each parameter</p></li>
 <li><p>A numerical assessment of model convergence using the Gelman-Rubin statistic (also known as the potential scale reduction factor). <strong>Scores in the 1.00–1.1 range</strong> are generally considered to indicate good convergence. <code>espresso</code> gives a breakdown of the estimated scores for each parameter, as well as an overall (multivariate) score that summarises convergence across all parameters.</p></li>
-<li><p>A table of posterior inclusion probabilities (PIPs) for contextual covariates, when covariate selection is enabled. Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).</p></li>
-<li><p>A table of posterior model probabilities and rankings, when model selection is enabled. Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).</p></li>
+<li><p>A table of posterior inclusion probabilities (PIPs) for contextual covariates, when covariate selection is enabled (for both individual chains, and all chains combined). Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).</p></li>
+<li><p>A table of posterior model probabilities and rankings, when model selection is enabled for both individual chains, and all chains combined). Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).</p></li>
+<li><p>Tile plots of species groupings for top ranking models for both individual chains, and all chains combined).</p></li>
+<li><p>A running means plot of the model_ID chains.</p></li>
 </ul>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span></code></pre></div>
 <pre><code>##
 ## ======================================================
 ## SUMMARY
 ## ======================================================
 ##
-## Iterations: 1010:11000
-## Thinning interval: 10
+## Iterations: 1001:11000
+## Thinning interval: 1
 ## Burn-in: 1,000
 ## Number of chains: 3
-## Sample size per chain: 1,000
-## Total sample size: 3,000
+## Sample size per chain: 10,000
+## Total sample size: 30,000
 ##
 ## Run times:
 ## # A tibble: 3 × 2
 ##   Chain   Time
 ##   &lt;chr&gt;   &lt;time&gt;
-## 1 Chain 1 19'06"
-## 2 Chain 2 19'02"
-## 3 Chain 3 19'06"
+## 1 Chain 1 28'11"
+## 2 Chain 2 27'25"
+## 3 Chain 3 27'19"
 ##
 ## --------------------
 ## MCMC
@@ -992,23 +1036,22 @@
 ## --------------------
 ## EFFECTIVE SAMPLE SIZES
 ## --------------------
-## # A tibble: 14 × 2
-##    parameter                 ESS
-##    &lt;chr&gt;                   &lt;dbl&gt;
-##  1 mu.Bm                  152.4
-##  2 mu.Gm                  413.4
-##  3 mu.Ha                  174.9
-##  4 mu.Oo                  200.6
-##  5 mu.Pm                  137.4
-##  6 mu.Zc                   80.63
-##  7 phi                     31.31
-##  8 sigma                   73.13
-##  9 behaviour_non-feeding  120.1
-## 10 range                  246.9
-## 11 model_ID               328.6
-## 12 model_size             464.3
-## 13 incl.behaviour         515.7
-## 14 incl.range            2043.
+## # A tibble: 13 × 2
+##    parameter                ESS
+##    &lt;chr&gt;                  &lt;dbl&gt;
+##  1 mu.Bm                  242.8
+##  2 mu.Gm                  373.8
+##  3 mu.Bkd_w               443.2
+##  4 mu.Oo                  240.0
+##  5 mu.Pm                  176.9
+##  6 phi                    164.5
+##  7 sigma                  484.8
+##  8 behaviour_non-feeding  160.3
+##  9 range                  162.5
+## 10 model_ID               449.7
+## 11 model_size             488.9
+## 12 incl.behaviour         546.8
+## 13 incl.range            3326.
 ##
 ## --------------------
 ## ACCEPTANCE RATES
@@ -1016,14 +1059,14 @@
 ## # A tibble: 3 × 13
 ##   chain   t.ij   mu.i    mu   phi sigma behaviour range split.merge datadriven.I
 ##   &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;       &lt;dbl&gt;        &lt;dbl&gt;
-## 1     1 0.3253 0.6369 0.117 0.168 0.177     0.177 0.004       0.034            0
-## 2     2 0.3255 0.6701 0.112 0.162 0.18      0.179 0.005       0.034            0
-## 3     3 0.3267 0.7273 0.133 0.186 0.173     0.185 0.004       0.04             0
+## 1     1 0.3253 0.7210 0.148 0.187 0.177     0.188 0.003       0.033            0
+## 2     2 0.3238 0.7390 0.149 0.196 0.181     0.185 0.003       0.034            0
+## 3     3 0.3258 0.7316 0.153 0.189 0.174     0.189 0.005       0.035            0
 ##   datadriven.II random cov.select
 ##           &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;
-## 1             0      0      0.235
-## 2             0      0      0.213
-## 3             0      0      0.184
+## 1             0      0      0.18
+## 2             0      0      0.2
+## 3             0      0      0.188
 ##
 ## --------------------
 ## CONVERGENCE ASSESSMENT
@@ -1032,116 +1075,149 @@
 ## Potential scale reduction factors:
 ##
 ##                       Point est. Upper C.I.
-## mu.Bm                       1.03       1.09
-## mu.Gm                       1.01       1.01
-## mu.Ha                       1.03       1.10
+## mu.Bm                       1.01       1.01
+## mu.Gm                       1.00       1.01
+## mu.Bkd_w                    1.00       1.01
 ## mu.Oo                       1.00       1.01
-## mu.Pm                       1.02       1.07
-## mu.Zc                       1.09       1.26
-## phi                         1.02       1.07
-## sigma                       1.02       1.06
-## behaviour_non-feeding       1.02       1.06
-## range                       1.00       1.00
-## model_ID                    1.00       1.01
-## model_size                  1.01       1.03
-## incl.behaviour              1.00       1.02
-## incl.range                  1.00       1.00
+## mu.Pm                       1.00       1.01
+## phi                         1.00       1.01
+## sigma                       1.00       1.00
+## behaviour_non-feeding       1.01       1.02
+## range                       1.01       1.03
+## model_ID                    1.00       1.00
+## model_size                  1.00       1.01
+## incl.behaviour              1.00       1.00
+## incl.range                  1.00       1.01
 ##
 ## Multivariate psrf
 ##
-## 1.1
-##
+## 1.01</code></pre>
+<p><img src="espresso_files/figure-html/unnamed-chunk-19-1.png" width="700"></p>
+<pre><code>##
 ## --------------------
 ## COVARIATES
 ## --------------------
+##
+## --- All chains (n = 3) ---
+## # A tibble: 5 × 5
+##   covariate                 p monte_carlo  lower  upper
+##   &lt;chr&gt;                 &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 behaviour (overall) 0.6508     0.02039  0.6104 0.6911
+## 2 range (overall)     0.04267    0.003504 0.0357 0.0496
+## 3 behaviour (only)    0.6344     0.01956  0.5956 0.6731
+## 4 range (only)        0.02627    0.002913 0.0205 0.032
+## 5 behaviour + range   0.0164     0.001329 0.0138 0.019
+##
+## --- Individual chains ---
 ## Chain  1 :
 ## # A tibble: 5 × 5
-##   covariate               p monte_carlo  lower  upper
-##   &lt;chr&gt;               &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.572    0.04561  0.4817 0.6623
-## 2 range (overall)     0.053    0.007088 0.039  0.067
-## 3 behaviour (only)    0.56     0.04420  0.4725 0.6475
-## 4 range (only)        0.041    0.006274 0.0286 0.0534
-## 5 behaviour + range   0.012    0.004219 0.0036 0.0204
+##   covariate                p monte_carlo  lower  upper
+##   &lt;chr&gt;                &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 behaviour (overall) 0.6585    0.03418  0.5908 0.7262
+## 2 range (overall)     0.0357    0.004681 0.0264 0.045
+## 3 behaviour (only)    0.6425    0.03052  0.5821 0.7029
+## 4 range (only)        0.0197    0.002980 0.0138 0.0256
+## 5 behaviour + range   0.016     0.002581 0.0109 0.0211
 ##
 ## Chain  2 :
 ## # A tibble: 5 × 5
-##   covariate               p monte_carlo  lower  upper
-##   &lt;chr&gt;               &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.612    0.03928  0.5342 0.6898
-## 2 range (overall)     0.059    0.009118 0.0409 0.0771
-## 3 behaviour (only)    0.598    0.04114  0.5165 0.6795
-## 4 range (only)        0.045    0.008440 0.0283 0.0617
-## 5 behaviour + range   0.014    0.003717 0.0066 0.0214
+##   covariate                p monte_carlo  lower  upper
+##   &lt;chr&gt;                &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 behaviour (overall) 0.6471    0.02423  0.5991 0.6951
+## 2 range (overall)     0.0492    0.007267 0.0348 0.0636
+## 3 behaviour (only)    0.6284    0.02489  0.5791 0.6777
+## 4 range (only)        0.0305    0.006008 0.0186 0.0424
+## 5 behaviour + range   0.0187    0.002469 0.0138 0.0236
 ##
 ## Chain  3 :
 ## # A tibble: 5 × 5
-##   covariate               p monte_carlo  lower  upper
-##   &lt;chr&gt;               &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.652    0.03925  0.5743 0.7297
-## 2 range (overall)     0.049    0.008604 0.032  0.066
-## 3 behaviour (only)    0.635    0.03743  0.5609 0.7091
-## 4 range (only)        0.032    0.007560 0.017  0.047
-## 5 behaviour + range   0.017    0.004090 0.0089 0.0251
+##   covariate                p monte_carlo  lower  upper
+##   &lt;chr&gt;                &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 behaviour (overall) 0.6467    0.03325  0.5809 0.7125
+## 2 range (overall)     0.0431    0.006319 0.0306 0.0556
+## 3 behaviour (only)    0.6322    0.03295  0.567  0.6974
+## 4 range (only)        0.0286    0.005110 0.0185 0.0387
+## 5 behaviour + range   0.0145    0.001957 0.0106 0.0184
 ##
 ##
 ## --------------------
 ## MODEL RANKINGS
 ## --------------------
 ##
-## Top 10 models (chain 1):
-## # A tibble: 10 × 6
-##       ID     p model                         monte_carlo  lower  upper
-##    &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                               &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-##  1    15 0.332 (Bm,Pm)+(Gm,Zc)+(Ha)+(Oo)        0.08075  0.1721 0.4919
-##  2    18 0.123 (Bm,Pm)+(Ha,Zc)+(Gm)+(Oo)        0.03102  0.0616 0.1844
-##  3    13 0.116 (Bm,Pm)+(Gm,Ha)+(Oo)+(Zc)        0.03657  0.0436 0.1884
-##  4    22 0.092 (Gm,Ha,Zc)+(Bm,Pm)+(Oo)          0.02936  0.0339 0.1501
-##  5    23 0.092 (Gm,Ha,Zc)+(Bm)+(Oo)+(Pm)        0.04730  0      0.1856
-##  6    16 0.076 (Bm,Pm)+(Gm)+(Ha)+(Oo)+(Zc)      0.05565  0      0.1862
-##  7    31 0.061 (Gm,Zc)+(Bm)+(Ha)+(Oo)+(Pm)      0.01718  0.027  0.095
-##  8    24 0.053 (Gm,Ha)+(Bm)+(Oo)+(Pm)+(Zc)      0.01295  0.0274 0.0786
-##  9    34 0.042 (Ha,Zc)+(Bm)+(Gm)+(Oo)+(Pm)      0.01171  0.0188 0.0652
-## 10    19 0.009 (Bm)+(Gm)+(Ha)+(Oo)+(Pm)+(Zc)    0.002942 0.0032 0.0148
+## --- All chains (n = 3) ---
+##
+## Top 10 models:
+## # A tibble: 6 × 6
+##      ID         p model                       monte_carlo  lower  upper
+##   &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     7 0.5564    (Bm,Pm)+(Gm,Bkd_w)+(Oo)       0.02170   0.5134 0.5994
+## 2    12 0.2361    (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)     0.02222   0.1921 0.2801
+## 3     8 0.1830    (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)     0.01778   0.1478 0.2182
+## 4     9 0.0236    (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)   0.003664  0.0163 0.0309
+## 5     5 0.0006333 (Bm,Oo)+(Gm,Bkd_w)+(Pm)       0.0005424 0      0.0017
+## 6     6 0.0002333 (Bm,Oo)+(Gm)+(Bkd_w)+(Pm)     0.0002026 0      0.0006
+##
+## --- Individual chains ---
+##
+## Top 6 models (chain 1):
+## # A tibble: 6 × 6
+##      ID      p model                       monte_carlo  lower  upper
+##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     7 0.5818 (Bm,Pm)+(Gm,Bkd_w)+(Oo)       0.03718   0.5082 0.6554
+## 2    12 0.2386 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)     0.03800   0.1634 0.3138
+## 3     8 0.1587 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)     0.02164   0.1159 0.2015
+## 4     9 0.0196 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)   0.007885  0.004  0.0352
+## 5     6 0.0007 (Bm,Oo)+(Gm)+(Bkd_w)+(Pm)     0.0007415 0      0.0022
+## 6     5 0.0006 (Bm,Oo)+(Gm,Bkd_w)+(Pm)       0.0005999 0      0.0018
 ##
 ##
-## Top 10 models (chain 2):
-## # A tibble: 10 × 6
-##       ID     p model                         monte_carlo  lower  upper
-##    &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                               &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-##  1    13 0.223 (Bm,Pm)+(Gm,Ha)+(Oo)+(Zc)        0.06124  0.1017 0.3443
-##  2    18 0.147 (Bm,Pm)+(Ha,Zc)+(Gm)+(Oo)        0.03150  0.0846 0.2094
-##  3    15 0.119 (Bm,Pm)+(Gm,Zc)+(Ha)+(Oo)        0.02998  0.0596 0.1784
-##  4    16 0.119 (Bm,Pm)+(Gm)+(Ha)+(Oo)+(Zc)      0.03439  0.0509 0.1871
-##  5    22 0.101 (Gm,Ha,Zc)+(Bm,Pm)+(Oo)          0.02592  0.0497 0.1523
-##  6    23 0.073 (Gm,Ha,Zc)+(Bm)+(Oo)+(Pm)        0.01872  0.0359 0.1101
-##  7    31 0.071 (Gm,Zc)+(Bm)+(Ha)+(Oo)+(Pm)      0.02966  0.0123 0.1297
-##  8    34 0.065 (Ha,Zc)+(Bm)+(Gm)+(Oo)+(Pm)      0.02347  0.0185 0.1115
-##  9    24 0.061 (Gm,Ha)+(Bm)+(Oo)+(Pm)+(Zc)      0.02389  0.0137 0.1083
-## 10    19 0.02  (Bm)+(Gm)+(Ha)+(Oo)+(Pm)+(Zc)    0.008073 0.004  0.036
+## Top 5 models (chain 2):
+## # A tibble: 5 × 6
+##      ID      p model                       monte_carlo  lower  upper
+##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     7 0.5566 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.03715  0.483  0.6302
+## 2    12 0.2424 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.03073  0.1816 0.3032
+## 3     8 0.1779 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.02601  0.1264 0.2294
+## 4     9 0.0218 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.005559 0.0108 0.0328
+## 5     5 0.0013 (Bm,Oo)+(Gm,Bkd_w)+(Pm)        0.001346 0      0.004
 ##
 ##
-## Top 10 models (chain 3):
-## # A tibble: 10 × 6
-##       ID     p model                         monte_carlo  lower  upper
-##    &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                               &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-##  1    13 0.196 (Bm,Pm)+(Gm,Ha)+(Oo)+(Zc)        0.04109  0.1146 0.2774
-##  2    15 0.164 (Bm,Pm)+(Gm,Zc)+(Ha)+(Oo)        0.03287  0.0989 0.2291
-##  3    22 0.152 (Gm,Ha,Zc)+(Bm,Pm)+(Oo)          0.03032  0.092  0.212
-##  4    18 0.116 (Bm,Pm)+(Ha,Zc)+(Gm)+(Oo)        0.02638  0.0638 0.1682
-##  5    23 0.1   (Gm,Ha,Zc)+(Bm)+(Oo)+(Pm)        0.02733  0.0459 0.1541
-##  6    31 0.084 (Gm,Zc)+(Bm)+(Ha)+(Oo)+(Pm)      0.01711  0.0501 0.1179
-##  7    16 0.074 (Bm,Pm)+(Gm)+(Ha)+(Oo)+(Zc)      0.01696  0.0404 0.1076
-##  8    34 0.054 (Ha,Zc)+(Bm)+(Gm)+(Oo)+(Pm)      0.02111  0.0122 0.0958
-##  9    24 0.05  (Gm,Ha)+(Bm)+(Oo)+(Pm)+(Zc)      0.02048  0.0094 0.0906
-## 10    19 0.008 (Bm)+(Gm)+(Ha)+(Oo)+(Pm)+(Zc)    0.004370 0      0.0167</code></pre>
-<p><img src="espresso_files/figure-html/unnamed-chunk-21-1.png" width="700"></p>
+## Top 4 models (chain 3):
+## # A tibble: 4 × 6
+##      ID      p model                       monte_carlo  lower  upper
+##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     7 0.5308 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.03663  0.4583 0.6033
+## 2    12 0.2273 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.03594  0.1561 0.2985
+## 3     8 0.2125 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.03369  0.1458 0.2792
+## 4     9 0.0294 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.008087 0.0134 0.0454</code></pre>
+<p><img src="espresso_files/figure-html/unnamed-chunk-19-2.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-19-3.png" width="700"></p>
 <blockquote>
 <p><strong>Note:</strong> A more compact version of the output summary can be obtained by hiding sections that are not of interest. This is done by setting the relevant argument to <code>FALSE</code> (see help files for details). For example, <code>accept.rate = FALSE</code> will hide summary of acceptance rates.</p>
 </blockquote>
+<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, 20 August, 2021</p>
+</div>
 <blockquote>
-<p><strong>Note:</strong> By default, <code>summary</code> will assess posterior probabilities separately for each chain. If convergence has been achieved, those estimates can be combined by setting <code>combine.chains = TRUE</code>.</p>
+<p><strong>Note:</strong> <code>n.top</code> sets the number of top-ranking models to display in the output. Values substantially greater than 10 (the default) may result in memory errors or long run times.</p>
 </blockquote>
+<blockquote>
+<p><strong>Note:</strong> The <code>combine.chains</code> argument is now deprecated. Instead, the <code>summary</code> method presents all outputs for individual chains and all chains combined in the same run.</p>
+</blockquote>
+<p>Trace and density plots can be obtained using the <code>plot</code> method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy <a href="http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg" class="external-link">caterpillar</a>. Running mean plots are also useful in identifying whether the means of the different chains converge to a similar value.</p>
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, individual <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/unnamed-chunk-20-1.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-2.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-3.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-4.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-5.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-6.png" width="700"></p>
+<blockquote>
+<p><strong>Note:</strong> Plots for specific parameters of interest can be generated using the <code>param.name</code> argument. If <code>individual = TRUE</code> separate density lines will be plotted for each chain.</p>
+</blockquote>
+<p>Another way to check for convergence is to look at the serial autocorrelation between MCMC samples. The lag-<span class="math inline">\(k\)</span> autocorrelation is the correlation between every sample and the sample <span class="math inline">\(k\)</span> steps before it. This autocorrelation should become smaller as <span class="math inline">\(k\)</span> increases, i.e., samples can be considered as independent. If, on the other hand, autocorrelation remains high for higher values of <span class="math inline">\(k\)</span>, this indicates a high degree of correlation between our samples and slow mixing.</p>
+<blockquote>
+<p><strong>Note:</strong> Autocorrelation plots can be obtained with <code>autocorr = TRUE</code> (this is now the default)</p>
+</blockquote>
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># Plot for the range covariate only</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, param.name <span class="op">=</span> <span class="st">"range"</span>, autocorr <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/unnamed-chunk-21-1.png" width="700"></p>
 </div>
 <div id="model-updates" class="section level3">
 <h3 class="hasAnchor">
@@ -1152,27 +1228,27 @@
 <div id="dose-response" class="section level2">
 <h2 class="hasAnchor">
 <a href="#dose-response" class="anchor" aria-hidden="true"></a>Dose-response</h2>
+<div id="by-species" class="section level3">
+<h3 class="hasAnchor">
+<a href="#by-species" class="anchor" aria-hidden="true"></a>By species</h3>
 <p>The <code><a href="../reference/compile_rjMCMC.html">compile_rjMCMC()</a></code> function computes posterior dose-response curves for each species (or <em>a priori</em> species grouping) from the parameter estimates of a fitted rjMCMC model. The output is an object of class <code>&lt;dose_response&gt;</code>, which can be passed to <code>plot</code> directly:</p>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">doseR</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span>
 <span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">doseR</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] "dose_response" "list"</code></pre>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span><span class="op">)</span></code></pre></div>
 <p><img src="espresso_files/figure-html/unnamed-chunk-22-1.png" width="700"></p>
-<blockquote>
-<p><strong>Note:</strong> When model selection is enabled (<code>model.select = TRUE</code>), dose-response curves are derived irrespective of model IDs, and therefore reflect model uncertainty. If dose-response functions are needed for a specific model of interest, then the <code>by.model</code> argument should be set to <code>TRUE</code>.</p>
-</blockquote>
 <blockquote>
 <p><strong>Note:</strong> By default, <code><a href="../reference/compile_rjMCMC.html">compile_rjMCMC()</a></code> calculates a range of posterior credible intervals, from 5% to 95%, in 5% increments. These default values can be overridden using the <code>credible.intervals</code> argument.</p>
 </blockquote>
 <p>Curves for covariates of interest can also be obtained by conditioning on a given species/species group. For example:</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">doseR.beh</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, covariate <span class="op">=</span> <span class="st">"behaviour"</span>, species <span class="op">=</span> <span class="st">"Oo"</span><span class="op">)</span>
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR.beh</span><span class="op">)</span></code></pre></div>
 <p><img src="espresso_files/figure-html/unnamed-chunk-23-1.png" width="700"></p>
 <p>For continuous covariates, such as whale-source range, curves can be generated for any</p>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">doseR.rge</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>,
                             covariate <span class="op">=</span> <span class="st">"range"</span>,
                             covariate.values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">10</span><span class="op">)</span>,
@@ -1181,21 +1257,58 @@
 <p><img src="espresso_files/figure-html/unnamed-chunk-24-1.png" width="700"></p>
 <p>Numerous additional options are available to refine plot aesthetics, including shading/colours, plot ordering, faceting layouts, and species labels. Some example visualisations are given below.</p>
 <p><u>Example 1</u>: Black and white colour scheme.</p>
-<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour <span class="op">=</span> <span class="st">"gray20"</span>, colour.median <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span></code></pre></div>
 <p><img src="espresso_files/figure-html/unnamed-chunk-25-1.png" width="700"></p>
 <p><u>Example 2</u>: Curves coloured by species/species groups and ordered from most to least sensitive.</p>
-<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour.by <span class="op">=</span> <span class="st">"species"</span>, order.by <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></code></pre></div>
 <p><img src="espresso_files/figure-html/unnamed-chunk-26-1.png" width="700"></p>
 <p><u>Example 3</u>: Scientific names in plot labels, posterior medians hidden, outer credible intervals outlined.</p>
-<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, scientific.name <span class="op">=</span> <span class="cn">TRUE</span>, show.p0_5 <span class="op">=</span> <span class="cn">FALSE</span>, outline.outer <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
 <p><img src="espresso_files/figure-html/unnamed-chunk-27-1.png" width="700"></p>
 <p><u>Example 4</u>: Plot overlay.</p>
-<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour.by <span class="op">=</span> <span class="st">"species"</span>, overlay <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
 <p><img src="espresso_files/figure-html/unnamed-chunk-28-1.png" width="700"></p>
+</div>
+<div id="by-model" class="section level3">
+<h3 class="hasAnchor">
+<a href="#by-model" class="anchor" aria-hidden="true"></a>By model</h3>
+<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, 20 August, 2021</p>
+</div>
+<p>When <code>model.select = TRUE</code>, dose-response curves are derived irrespective of model IDs (by default), and therefore reflect model uncertainty (see above). If dose-response functions are needed for a specific model of interest (e.g., the top-ranking model), then the <code>by.model</code> argument should be set to <code>TRUE</code>. This ensures that posterior estimates are extracted for each model separately.</p>
+<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">doseR</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, by.model <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p>Calls to <code>plot</code> then require an additional argument specifying the rank of the model to be plotted. By default, this is the model with highest posterior probability:</p>
+<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, model.rank <span class="op">=</span> <span class="fl">1</span>, order.by <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/unnamed-chunk-30-1.png" width="700"></p>
+<p>A reminder of model rankings can be obtained simply by printing the <code>&lt;dose_response&gt;</code>object to the console.</p>
+<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">doseR</span></code></pre></div>
+<pre><code>## # A tibble: 6 × 2
+##   model                        rank
+##   &lt;chr&gt;                       &lt;int&gt;
+## 1 (Bm,Pm)+(Gm,Bkd_w)+(Oo)         1
+## 2 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)       2
+## 3 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)       3
+## 4 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)     4
+## 5 (Bm,Oo)+(Gm,Bkd_w)+(Pm)         5
+## 6 (Bm,Oo)+(Gm)+(Bkd_w)+(Pm)       6</code></pre>
+</div>
+</div>
+<div id="sharing-results" class="section level2">
+<h2 class="hasAnchor">
+<a href="#sharing-results" class="anchor" aria-hidden="true"></a>Sharing results</h2>
+<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
+<p>Update: Fri, 20 Aug, 2021</p>
+</div>
+<p>The <code>create_report</code> function generates a self-contained <code>html</code> document that summarises the results of an analysis conducted with <code>espresso</code>. This is done by writing and rendering an RMarkdown (<code>.Rmd</code>) file behind the scenes, and makes it easy to share outputs with other users. <code>create_report</code> searches for objects of class <code>brsdata</code>, <code>rjtrace</code>, and <code>dose_response</code> and returns relevant plots and summaries as detailed in the previous sections of this vignette. The two main arguments are the output directory, <code>outdir</code>, and the output file name, <code>filename</code>. If these are not specified, the function will save the file as <code>espresso_report.html</code> in the current working directory. The argument <code>model.ranks</code> can be used to generate dose-response plots for several top ranking models - this only works when <code>by.model</code> was set to <code>TRUE</code> in <code>compile_rjMCMC</code>.</p>
+<div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="../reference/create_report.html">create_report</a></span><span class="op">(</span>outdir <span class="op">=</span> <span class="st">"path/to/directory"</span>, filename <span class="op">=</span> <span class="st">"file.name"</span><span class="op">)</span></code></pre></div>
 </div>
 <div id="references" class="section level2 unnumbered">
 <h2 class="hasAnchor">
