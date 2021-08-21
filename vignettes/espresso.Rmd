@@ -326,8 +326,6 @@ We need to make sure that the MCMC sampler produces a Markov chain that "converg
 Update: Fri, 20 August, 2021
 :::
 
-#### Protocol
-
 We start by extracting posterior samples from the `rjmcmc` object returned by `run_rjMCMC()`. This gives an object of class `<rjtrace>`.
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
