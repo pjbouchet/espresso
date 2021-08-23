@@ -16,8 +16,8 @@ dtnorm <- function(x, location = 0, scale = 1, log = FALSE, L = -Inf, U = Inf) {
   d <- dnorm(x, location, scale, log = TRUE)
   denom <- log(pnorm(U, location, scale) - pnorm(L, location, scale))
   d <- d - denom
-  d[(x < L) | (x > U)] <- -100000 # When input quantile is outside bounds
-  d[is.infinite(d)] <- -100000 # When input location is outside bounds
+  d[(x < L) | (x > U)] <- -Inf # When input quantile is outside bounds
+  d[is.infinite(d)] <- -Inf # When input location is outside bounds
   if(!log) d <- exp(d)
   return(d)
 }
@@ -501,7 +501,7 @@ proposal_rj <- function(rj.obj, jump, iter) {
   if(jump$type == 1){
     
     u <- rnorm(n = length(unique(jump$model$id)), mean = 0, sd = rj.obj$config$prop$dd)
-    rj.means <- mean_data(rj.obj = rj.obj, model.id = jump$model$id) + u[jump$model$id]
+    rj.means <- median_data(rj.obj = rj.obj, model.id = jump$model$id) + u[jump$model$id]
     g_u <- NULL
     
     # Cluster and Random moves
@@ -665,15 +665,21 @@ propdens_rj <- function(rj.obj, param, jump, iter) {
     # Bootstrap moves
   } else if (jump$type == 1) {
     
-    loglik.norm.forward <- dnorm(x = unique(param$u[jump$model$id]), mean = 0, 
-                                 sd = rj.obj$config$prop$dd, log = TRUE)
+    loglik.norm.forward <- dnorm(x = param$u,
+                                 # x = unique(param$u[jump$model$id]), 
+                                 mean = 0, 
+                                 sd = rj.obj$config$prop$dd, 
+                                 log = TRUE)
+    
     if (any(abs(loglik.norm.forward) == Inf)) loglik.norm.forward <- -100000
     loglik.norm.forward <- sum(loglik.norm.forward)
     
-    loglik.norm.backward <- dnorm(x = mean_data(rj.obj = rj.obj,
-                                                model.id = rj.obj$mlist[[rj.obj$current.model]]),
-                                  mean = unique(rj.obj$mu[iter - 1, ]), 
-                                  sd = rj.obj$config$prop$dd, log = TRUE)
+    loglik.norm.backward <- dnorm(x = unique(median_data(rj.obj = rj.obj,
+                                                model.id = rj.obj$mlist[[rj.obj$current.model]])) - 
+                                    unique(rj.obj$mu[iter - 1, ]),
+                                  mean = 0, 
+                                  sd = rj.obj$config$prop$dd,
+                                  log = TRUE)
     
     if (any(abs(loglik.norm.backward) == Inf)) loglik.norm.backward <- -100000
     loglik.norm.backward <- sum(loglik.norm.backward)
@@ -2154,17 +2160,20 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
     }
   }
 
-mean_data <- function(rj.obj, model.id){
+median_data <- function(rj.obj, model.id){
+  
   purrr::map_dbl(.x = model.id, 
                  .f = ~{
                    
                    input.data <- tibble::tibble(species = rj.obj$dat$species$trials,
+                                                ID = model.id[rj.obj$dat$species$trials],
                                                 y = rj.obj$dat$obs$y_ij,
                                                 censored = rj.obj$dat$obs$censored,
                                                 rc = rj.obj$dat$obs$Rc,
                                                 lc = rj.obj$dat$obs$Lc)
                    
-                   sp.data <- input.data %>% dplyr::filter(species == .x)
+                   sp.data <- input.data %>% 
+                     dplyr::filter(ID == .x)
                    
                    if(all(is.na(sp.data$y))){
                      
@@ -2179,7 +2188,7 @@ mean_data <- function(rj.obj, model.id){
                    
                    } else {
                    
-                     mean(sp.data$y, na.rm = TRUE) }})
+                     median(sp.data$y, na.rm = TRUE) }})
 }
 
 relabel <- function(vec){
