@@ -9,7 +9,7 @@ configure_rjMCMC(
   model.select = TRUE,
   covariate.select = FALSE,
   proposal.mh = list(t.ij = 10, mu.i = 10, mu = 7, phi = 10, sigma = 10),
-  proposal.rj = list(dd = 1, cov = 7),
+  proposal.rj = list(dd = 10, cov = 7),
   prior.covariates = c(0, 30),
   p.split = 0.5,
   p.merge = 0.5,
