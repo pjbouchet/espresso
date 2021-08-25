@@ -123,7 +123,7 @@
 </ul>
 <p>A flowchart of a typical <code>espresso</code> workflow is shown below.</p>
 <div class="figure">
-<img src="https://github.com/pjbouchet/espresso/blob/main/vignettes/espresso_workflow.jpg" alt="" width="700"><p class="caption">Figure 1. Schematic representation of a typical <code>espresso</code> workflow. Package functions and object classes are indicated in coloured font.</p>
+<img src="https://raw.githubusercontent.com/pjbouchet/espresso/main/vignettes/espresso_workflow.jpg" alt="" width="700"><p class="caption">Figure 1. Schematic representation of a typical <code>espresso</code> workflow. Package functions and object classes are indicated in coloured font.</p>
 </div>
 </div>
 <div id="data" class="section level2">
@@ -709,7 +709,7 @@
 <a href="#overview-1" class="anchor" aria-hidden="true"></a>Overview</h3>
 <p>The (monophasic) Bayesian hierarchical dose-response model is fully described in <span class="citation"><a href="#ref-Miller2014" role="doc-biblioref">Miller <em>et al.</em></a> (<a href="#ref-Miller2014" role="doc-biblioref">2014</a>)</span> and <span class="citation"><a href="#ref-Antunes2014" role="doc-biblioref">Antunes <em>et al.</em></a> (<a href="#ref-Antunes2014" role="doc-biblioref">2014</a>)</span>, and is illustrated in Figure 2.</p>
 <div class="figure">
-<img src="https://github.com/pjbouchet/espresso/blob/main/vignettes/rjmcmc_dag_monophasic.png" width="602" alt=""><p class="caption">Figure 2. <em>Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.</em></p>
+<img src="https://raw.githubusercontent.com/pjbouchet/espresso/main/vignettes/rjmcmc_dag_monophasic.png" width="602" alt=""><p class="caption">Figure 2. <em>Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.</em></p>
 </div>
 <p>To discriminate between competing models, we treat the model <strong>itself</strong> as a parameter and form the joint posterior distribution over both parameters and models <span class="citation">(<a href="#ref-Oedekoven2014" role="doc-biblioref">Oedekoven <em>et al.</em> 2014</a>)</span>. Every iteration of the rjMCMC algorithm therefore entails two sequential steps:</p>
 <ol style="list-style-type: decimal">
