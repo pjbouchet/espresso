@@ -106,7 +106,7 @@ trace_rjMCMC <- function(rj.dat,
     
     # Number of groupings
     rj.dat[[j]]$model_size <- sapply(X = rj.dat[[j]]$model, 
-                                     FUN = function(b) n_groups(rj.dat[[j]]$mlist[[b]]),
+                                     FUN = function(b) nb_groups(rj.dat[[j]]$mlist[[b]]),
                                      USE.NAMES = FALSE)
     
     if(rj.dat[[j]]$dat$covariates$n > 0){
