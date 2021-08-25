@@ -113,7 +113,7 @@ likelihood <- function(rj.obj,
   }
   
   # Log-likelihoods
-  if(!lprod) loglikelihood <- list() else loglikelihood <- numeric(length = 2 + n_groups(model)) 
+  if(!lprod) loglikelihood <- list() else loglikelihood <- numeric(length = 2 + nb_groups(model)) 
   
   if(all(par.name %in% "t.ij") | RJ){
     LL.1 <- dnorm(x = params$y.ij, mean = params$t.ij, sd = rj.obj$dat$obs$sd, log = TRUE)
@@ -157,7 +157,7 @@ likelihood <- function(rj.obj,
   
   if(all(par.name %in% c("mu.i", "mu", "phi")) | RJ){
 
-    LL.3 <- sapply(X = 1:n_groups(model), 
+    LL.3 <- sapply(X = 1:nb_groups(model), 
                    FUN = function(p){
                      dtnorm(
                        x = params$mu.i[model[rj.obj$dat$species$id] == p],
@@ -186,10 +186,10 @@ likelihood <- function(rj.obj,
       
       if(is.list(LL.3)) LL.3 <- sapply(LL.3, sum) else LL.3 <- colSums(LL.3)
       
-      if (n_groups(model) == 1) {
-        loglikelihood[2 + seq_len(n_groups(model))] <- sum(LL.3)
+      if (nb_groups(model) == 1) {
+        loglikelihood[2 + seq_len(nb_groups(model))] <- sum(LL.3)
       } else {
-        loglikelihood[2 + seq_len(n_groups(model))] <- LL.3
+        loglikelihood[2 + seq_len(nb_groups(model))] <- LL.3
       }
     }
   }
@@ -301,7 +301,7 @@ propose_jump <- function(rj.obj, move.type) {
         
         # Randomly select a number of groups
         new.cluster <- sample(x = rj.obj$config$clust[[2]]$cluster, size = 1, 
-                              replace = TRUE, prob = rj.obj$config$clust[[2]]$p)  
+                              replace = TRUE, prob = rj.obj$config$clust[[2]]$p_scale)  
         
         # Generate a random grouping with this number of clusters - must be different to the current model
         new.model <- numeric(rj.obj$dat$species$n)
@@ -319,12 +319,12 @@ propose_jump <- function(rj.obj, move.type) {
       # A Stirling number of the second kind (or Stirling partition number) is the
       # number of ways to partition a set of n objects into k <non-empty> subsets.
       p.jump <- c(
-        rj.obj$config$clust[[2]][rj.obj$config$clust[[2]]$cluster == new.cluster, ]$p *
-          (1 / multicool::Stirling2(n = rj.obj$dat$species$n, k = new.cluster)),
+        rj.obj$config$clust[[2]][rj.obj$config$clust[[2]]$cluster == new.cluster, ]$p_scale *
+          (1 / copula::Stirling2(n = rj.obj$dat$species$n, k = new.cluster)),
         
-        rj.obj$config$clust[[2]][rj.obj$config$clust[[2]]$cluster == n_groups(vec = rj.obj$mlist[[rj.obj$current.model]]), ]$p *
-          (1 / (multicool::Stirling2(n = rj.obj$dat$species$n, 
-                                     k = n_groups(vec = rj.obj$mlist[[rj.obj$current.model]]))))
+        rj.obj$config$clust[[2]][rj.obj$config$clust[[2]]$cluster == nb_groups(vec = rj.obj$mlist[[rj.obj$current.model]]), ]$p_scale *
+          (1 / (copula::Stirling2(n = rj.obj$dat$species$n, 
+                                     k = nb_groups(vec = rj.obj$mlist[[rj.obj$current.model]]))))
       )
       
       J <- 1 
@@ -332,7 +332,7 @@ propose_jump <- function(rj.obj, move.type) {
       # Random
     } else if (move.type == 3) {
       
-      model.space <- multicool::Bell(rj.obj$dat$species$n) - 1
+      model.space <- numbers::bell(rj.obj$dat$species$n) - 1
       
       keep.going <- TRUE
       while (keep.going) {
@@ -346,9 +346,9 @@ propose_jump <- function(rj.obj, move.type) {
     }
     
     n <- N_groups(rj.obj = rj.obj, vec = new.model)
-    if (n_groups(new.model) > n_groups(rj.obj$mlist[[rj.obj$current.model]])) split.merge <- 1 
-    if (n_groups(new.model) < n_groups(rj.obj$mlist[[rj.obj$current.model]])) split.merge <- 2
-    if (n_groups(new.model) == n_groups(rj.obj$mlist[[rj.obj$current.model]])) split.merge <- 0
+    if (nb_groups(new.model) > nb_groups(rj.obj$mlist[[rj.obj$current.model]])) split.merge <- 1 
+    if (nb_groups(new.model) < nb_groups(rj.obj$mlist[[rj.obj$current.model]])) split.merge <- 2
+    if (nb_groups(new.model) == nb_groups(rj.obj$mlist[[rj.obj$current.model]])) split.merge <- 0
     
     species.from <- lapply(X = unique(rj.obj$mlist[[rj.obj$current.model]]),
                            FUN = function(x) which(rj.obj$mlist[[rj.obj$current.model]] == x))
@@ -507,7 +507,7 @@ proposal_rj <- function(rj.obj, jump, iter) {
     # Cluster and Random moves
   } else if (jump$type %in% c(2, 3)) {
     
-    rj.means <- sapply(X = 1:n_groups(jump$model$id), 
+    rj.means <- sapply(X = 1:nb_groups(jump$model$id), 
                        FUN = function(m) runif(n = 1, min = rj.obj$dat$param$bounds["mu", 1],
                                                max = rj.obj$dat$param$bounds["mu", 2]))[jump$model$id]
     g_u <- u <- NULL
@@ -2211,7 +2211,7 @@ vec_to_model <- function(input.vector, sp.names){
     purrr::map(.x = ., .f = ~paste0(.x, collapse = "+")) %>% do.call(c, .)
 }
 
-n_groups <- function(vec){
+nb_groups <- function(vec){
   length(unique(vec))
 }
 

@@ -114,7 +114,7 @@ plot.dose_response <- function(dr.object,
   
   # Number of colours
   if(dr.object$by.model){
-    n.colours <- n_groups(unlist(dr.object$mlist$group[dr.object$mlist$model == dr.object$ranks$model[model.rank]]))
+    n.colours <- nb_groups(unlist(dr.object$mlist$group[dr.object$mlist$model == dr.object$ranks$model[model.rank]]))
   } else {
   n.colours <- dr.object$dat[[model.rank]]$posterior %>% 
     dplyr::filter(param == "median") %>% 

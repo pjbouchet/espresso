@@ -223,7 +223,7 @@ setup_rjMCMC <- function(rj.input,
           mean(sp.data$y, na.rm = TRUE)
         }})
     
-    rj$mu[1, ] <- mu.start + sapply(X = seq_len(n_groups(vec = mu.start)), FUN = function(x){
+    rj$mu[1, ] <- mu.start + sapply(X = seq_len(nb_groups(vec = mu.start)), FUN = function(x){
       rtnorm(n = 1, location = 0, scale = 5, 
              L = rj.input$param$bounds["mu", 1] - unique(mu.start)[x],
              U = rj.input$param$bounds["mu", 2] - unique(mu.start)[x])})[sapply(X = rj.input$config$boot[[rj$current.model]], FUN = function(x){which(unique(rj.input$config$boot[[rj$current.model]]) == x)})]
