@@ -16,8 +16,8 @@ dtnorm <- function(x, location = 0, scale = 1, log = FALSE, L = -Inf, U = Inf) {
   d <- dnorm(x, location, scale, log = TRUE)
   denom <- log(pnorm(U, location, scale) - pnorm(L, location, scale))
   d <- d - denom
-  d[(x < L) | (x > U)] <- -Inf # When input quantile is outside bounds
-  d[is.infinite(d)] <- -Inf # When input location is outside bounds
+  d[(x < L) | (x > U)] <- -100000 # When input quantile is outside bounds
+  d[is.infinite(d)] <- -100000 # When input location is outside bounds
   if(!log) d <- exp(d)
   return(d)
 }
@@ -1377,7 +1377,8 @@ gg_model <- function(dat,
     ggplot2::theme(axis.text = element_text(size = 12, colour = "black"),
                    axis.title = element_text(size = 12, colour = "black"),
                    axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-                   axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 00, l = 0)),
+                   axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 00, l = 0), 
+                                               angle = 90, vjust = 0.5, hjust = 0.5),
                    plot.margin = margin(t = 1, r = 1, b = 0.25, l = 1, "cm"),
                    legend.position = "top",
                    legend.title = element_blank(),
@@ -1390,8 +1391,7 @@ gg_model <- function(dat,
     
     ggplot2::guides(fill = guide_legend(nrow = 1)) +
     
-    {if(!combine) ggplot2::theme(legend.position = "none",
-                                 axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))} +
+    {if(!combine) ggplot2::theme(legend.position = "none")} +
     {if(!combine) ggtitle(paste0("Rank: ", no)) }
   
   return(out.plot)

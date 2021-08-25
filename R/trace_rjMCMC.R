@@ -147,7 +147,7 @@ trace_rjMCMC <- function(rj.dat,
   model.ranks <- do.call(c, model.ranks) %>% 
     table(.) %>% 
     tibble::enframe(.) %>% 
-    dplyr::mutate(rank = dplyr::min_rank(desc(value))) %>% 
+    dplyr::mutate(rank = dplyr::min_rank(dplyr::desc(value))) %>% 
     dplyr::select(-value) %>% 
     dplyr::arrange(rank) %>% 
     dplyr::rename(model = name)
