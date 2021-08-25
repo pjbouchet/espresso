@@ -3,12 +3,18 @@
 #' Simulate cetacean responses to Navy sonar exposure, as in behavioural response studies (BRSs).
 #'
 #' @export
+#' @param biphasic Logical. If TRUE, will simulate data from a biphasic dose-response functional form.
 #' @param n.species Number of species.
 #' @param n.whales Number of individuals. Can be specified as a vector of length \code{n.species}, allowing for uneven samples sizes across species, or as an integer multiple of \code{n.species} for equal sample sizes across species.
 #' @param max.trials Maximum number of exposures per individual. Each animal is exposed \code{x} times, with \code{x} taken as a random draw from a Uniform distribution between 1 and \code{max.trials}.
 #' @param covariates Contextual covariates and their associated coefficients. Must be supplied as a named list, in which the baseline levels of factor covariates are given a coefficient of zero.
 #' @param mu Mean response threshold(s) for each species.
 #' @param phi Between-whale variance in response thresholds.
+#' @param nu Mean response thresholds from the context-dependent and dose-dependent mixtures in a biphasic model. Must be a list of length two, where each element is a vector of length \code{n.species}.
+#' @param tau Scale parameters associated with \code{nu}. Must be a vector of length two.
+#' @param psi Probability of exhibiting a context-dependent response, expressed on a probit scale.
+#' @param omega Variance in \code{psi}.
+#' @param alpha Upper bound on the context-dependent response threshold, which corresponds to the lower bound of the dose-dependent threshold. Must be a vector of length \code{n.species}.
 #' @param sigma Within-whale between-exposure variance in response thresholds.
 #' @param Lc Left-censoring interval. Values of the minimum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Lc}.
 #' @param Rc Right-censoring interval. Values of the maximum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Rc}.
@@ -34,8 +40,10 @@
 #' \dontrun{
 #' library(espresso)
 #' 
-#' # Simulate data for two species (no censoring)
-#' mydat <- simulate_data(n.species = 2,
+#' # Simulate data for two species 
+#' # (no censoring, monophasic functional form)
+#' mydat <- simulate_data(biphasic = FALSE,
+#'                        n.species = 2,
 #'                        n.whales = 16,
 #'                        max.trials = 3,
 #'                        covariates = list(exposed = c(0, 5), range = 0.5),
@@ -45,18 +53,41 @@
 #'                        Lc = c(60, 65),
 #'                        Rc = c(214, 215),
 #'                        seed = 58697)
+#'                        
+#' # Simulate data for three species 
+#' # (right- and left-censoring, biphasic functional form)
+#' mydat <- simulate_data(biphasic = TRUE,
+#'                        n.species = 3,
+#'                        n.whales = c(10, 5, 8),
+#'                        max.trials = 3,
+#'                        alpha = c(125, 140, 139),
+#'                        nu = list(c(98, 110, 105), c(149, 165, 152)),
+#'                        tau = c(20, 20),
+#'                        psi = 0.5,
+#'                        omega = 1,
+#'                        Lc = c(60, 70),
+#'                        Rc = c(165, 195),
+#'                        seed = 58697)
+#'                        
 #' }
 #' @keywords brs gvs rjmcmc dose-response                      
 
-simulate_data <- function(n.species = 2, 
+simulate_data <- function(biphasic = FALSE,
+                          n.species = 2, 
                           n.whales = 20, 
                           max.trials = 3,
                           covariates = NULL,
                           mu = NULL, 
                           phi = NULL,
                           sigma = NULL,
+                          nu = NULL,
+                          tau = NULL,
+                          psi = 0.5,
+                          omega = 1,
+                          alpha = NULL,
                           range.dB = c(60, 215),
                           range.var = c(0, 45),
+                          range.biphasic = list(alpha = c(110, 160), omega = c(0, 5), tau = c(0, 20)),
                           Lc = c(65, 75),
                           Rc = c(190, 195),
                           obs.sd = 2.5,
@@ -79,23 +110,27 @@ simulate_data <- function(n.species = 2,
   
   if (!is.null(covariates)) {
     covariate.names <- names(covariates)
-    # which.cov <- allcov[which(allcov %in% which.cov)]
     n.covariates <- length(covariates)
   } else {
     covariate.names <- NULL
     which.cov <- n.covariates <- 0
   }
   
-  if (is.null(mu) | is.null(phi) | is.null(sigma)) stop("Some parameters are missing.")
   if (max.trials < 1) stop("One or more trials required.")
   if (length(n.whales) == 1 & !sum(n.whales) %% n.species == 0) stop("Arguments must match.")
-  if (length(n.whales) > 1 & !length(n.whales) == length(mu)) stop("Arguments must match.")
-  if (any(mu < range.dB[1]) | any(mu > range.dB[2]) |
-      any(phi < range.var[1]) | any(phi > range.var[2]) |
-      any(sigma < range.var[1]) | any(sigma > range.var[2])) {
-    stop("Parameter out of bounds.")
+
+  if(!biphasic) {  
+    if (length(n.whales) > 1 & !length(n.whales) == length(mu)) stop("Arguments must match.")
+    if (is.null(mu) | is.null(phi) | is.null(sigma)) stop("Some parameters are missing.") 
+    if (any(mu < range.dB[1]) | any(mu > range.dB[2]) |
+        any(phi < range.var[1]) | any(phi > range.var[2]) |
+        any(sigma < range.var[1]) | any(sigma > range.var[2])) {
+      stop("Parameter out of bounds.")
+    }
   }
   if (!length(Rc) == 2) stop("Rc must be a vector of length 2.")
+  if(any(Rc > range.dB[2])) stop("Rc out of range.")
+  if(any(Rc < range.dB[1])) stop("Rc out of range.")
   if (n.covariates > 4) stop("Only four covariates are allowed: <exposed>, <sonar>, <behaviour>, and <range>.")
   
   if(!is.null(covariates) & !"list" %in% class(covariates)) stop("Erroneous format for input covariates.")
@@ -108,6 +143,20 @@ simulate_data <- function(n.species = 2,
       if (cc %in% c("sonar", "behaviour") & covariates[[cc]][1] > 0)
         stop(paste0("Wrong parameter input for <", cc, "> covariate."))
     }
+  }
+  
+  if(biphasic){
+    if (n.species > 1 & !n.species == length(nu[[1]])) stop("Arguments must match.")
+    if (n.species > 1 & !n.species == length(nu[[2]])) stop("Arguments must match.")
+    if(any(nu[[1]] > nu[[2]])) stop(paste0("Wrong parameter input for <nu>."))
+    if(any(tau < 0)) stop("Non-positive integer in variance parameter <tau>")
+    if(any(alpha < nu[[1]]) | any(alpha > nu[[2]])) stop("Alpha must be greater than nu[1] and lesser than nu[2].")
+    if(!length(alpha) == n.species) stop(paste0("Wrong parameter input for <alpha>."))
+    if(sum(purrr::map2_lgl(.x = alpha, .y = nu[[1]], .f = ~ .x < .y)) > 0) stop("<alpha> and <nu> do not match.")
+    if(sum(purrr::map2_lgl(.x = alpha, .y = nu[[2]], .f = ~ .x > .y)) > 0) stop("<alpha> and <nu> do not match.")
+    if(any(is.null(nu), is.null(tau), is.null(psi), is.null(omega), is.null(alpha))) stop("Missing parameters.")
+    if(length(psi) > 1) stop(paste0("<psi> must be of length 1."))
+    if(length(omega) > 1) stop(paste0("<omega> must be of length 1."))
   }
   
   #' ---------------------------------------------
@@ -132,9 +181,9 @@ simulate_data <- function(n.species = 2,
   
   # Covariates
   if(n.covariates > 0){
-    
     covariate.types <- list(exposed = "f", sonar = "f", behaviour = "f", range = "d")
-    covariate.types <- covariate.types[covariate.names] %>% unlist()}
+    covariate.types <- covariate.types[covariate.names] %>% unlist()
+  }
   
   # Lower bounds for model parameters
   lower.bound <- list(
@@ -153,6 +202,18 @@ simulate_data <- function(n.species = 2,
     mu.i = range.dB[2],
     phi = range.var[2],
     sigma = range.var[2])
+  
+  if(biphasic){
+    lower.bound$nu <- range.dB[1]
+    lower.bound$alpha <- range.biphasic$alpha[1]
+    lower.bound$tau <- range.biphasic$tau[1]
+    lower.bound$omega <- range.biphasic$omega[1]
+    
+    upper.bound$nu <- range.dB[2]
+    upper.bound$alpha <- range.biphasic$alpha[2]
+    upper.bound$tau <- range.biphasic$tau[2]
+    upper.bound$omega <- range.biphasic$omega[2]
+  }
   
   for(j in seq_len(n.covariates)) lower.bound[covariate.names[j]] <- -Inf
   for(j in seq_len(n.covariates)) upper.bound[covariate.names[j]] <- Inf
@@ -173,17 +234,7 @@ simulate_data <- function(n.species = 2,
   # Simulate data
   #' ---------------------------------------------
   
-  mu.i <- rtnorm(n = n.whales, location = rep(mu, n.per.species), 
-                 scale = phi, L = lower.bound$mu.i, U = upper.bound$mu.i)
-  
-  # Contextual covariates: 
-  # History of exposure (factor, 2 levels)
-  # Sonar signal frequency (factor, 2 levels)
-  # Behavioural mode (factor, 3 levels)
-  # Range (continuous)
-  
   if(n.covariates > 0){
-    
     
     covariates.list <- list(
       exposed = purrr::map(
@@ -234,22 +285,81 @@ simulate_data <- function(n.species = 2,
     
   }
   
-  mu.ij <- mu.i[whale.id]
+  # Monophasic functional form
   
-  if(n.covariates > 0) {
+  if(!biphasic){
     
-    if(any(covariate.names == "exposed")) mu.ij <-  mu.ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "exposed"])), FUN = function(fl){dummy.cov[["exposed"]][, fl] * covariates[["exposed"]][fl]}))
+    mu.i <- rtnorm(n = n.whales, location = rep(mu, n.per.species), 
+                   scale = phi, L = lower.bound$mu.i, U = upper.bound$mu.i)
     
-    if(any(covariate.names == "sonar")) mu.ij <-  mu.ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "sonar"])), FUN = function(fl){dummy.cov[["sonar"]][, fl] * covariates[["sonar"]][fl]}))
+    # Contextual covariates: 
+    # History of exposure (factor, 2 levels)
+    # Sonar signal frequency (factor, 2 levels)
+    # Behavioural mode (factor, 3 levels)
+    # Range (continuous)
+  
+    mu.ij <- mu.i[whale.id]
     
-    if(any(covariate.names == "behaviour")) mu.ij <-  mu.ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "behaviour"])), FUN = function(fl){dummy.cov[["behaviour"]][, fl] * covariates[["behaviour"]][fl]}))
+    if(n.covariates > 0) {
+      
+      if(any(covariate.names == "exposed")) mu.ij <-  mu.ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "exposed"])), FUN = function(fl){dummy.cov[["exposed"]][, fl] * covariates[["exposed"]][fl]}))
+      if(any(covariate.names == "sonar")) mu.ij <-  mu.ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "sonar"])), FUN = function(fl){dummy.cov[["sonar"]][, fl] * covariates[["sonar"]][fl]}))
+      if(any(covariate.names == "behaviour")) mu.ij <-  mu.ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "behaviour"])), FUN = function(fl){dummy.cov[["behaviour"]][, fl] * covariates[["behaviour"]][fl]}))
+      if(any(covariate.names == "range")) mu.ij <-  mu.ij + covariates.df[, "range"] * covariates[["range"]] 
+      
+    }
     
-    if(any(covariate.names == "range")) mu.ij <-  mu.ij + covariates.df[, "range"] * covariates[["range"]] 
+    t.ij <- rtnorm(n = n.trials, location = mu.ij, scale = sigma, L = lower.bound$mu, U = upper.bound$mu)
+    y_ij <- rnorm(n = n.trials, mean = t.ij, sd = obs.sd)
+    
+  } else { # Biphasic functional form
+    
+    psi_i <- rnorm(n = n.whales, mean = psi, sd = omega) 
+    psi_ij <- psi_i[whale.id]
+    
+    if(n.covariates > 0){
+      
+      # Translate to probit scale
+      covariates.biphasic <- 
+        purrr::map(.x = covariate.names,
+                   .f = ~{sapply(X = seq_along(covariates[[.x]]),
+                          FUN = function(ind){if(ind %in% fL[[.x]]$index){
+                           qnorm(pnorm(covariates[[.x]][ind], 
+                                       mean = priors[[.x]][1], sd = priors[[.x]][2]), mean = 0, sd = 1) 
+                                   } else {
+                                     0 
+                                   }} )}) %>% purrr::set_names(., covariate.names)
+      
+      if(any(covariate.names == "exposed")) psi_ij <-  psi_ij + covariates.df[, "exposed"] * covariates.biphasic[["exposed"]] 
+      
+      if(any(covariate.names == "sonar")) psi_ij <-  psi_ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "sonar"])), FUN = function(fl){dummy.cov[["sonar"]][, fl] * covariates.biphasic[["sonar"]][fl]}))
+      
+      if(any(covariate.names == "behaviour")) psi_ij <-  psi_ij + Reduce(f = "+", lapply(X = seq_len(nlevels(covariates.df[, "behaviour"])), FUN = function(fl){dummy.cov[["behaviour"]][, fl] * covariates.biphasic[["behaviour"]][fl]}))
+      
+      if(any(covariate.names == "range")) psi_ij <-  psi_ij + covariates.df[, "range"] * covariates.biphasic[["range"]] 
+      
+      pi_ij <- pnorm(q = psi_ij)
+      
+    } else {
+      
+      # No covariates
+      pi_ij <- pnorm(q = psi_i[whale.id])  
+      
+    }
+
+    # Choose which part of the dose-response curve each whale responds to, with prob pi_ij
+    k_ij <- (1 - rbinom(n = n.trials, size = 1, prob = pi_ij)) + 1
+    
+    # Simulate for each trial the value of the lower and upper mixture components
+    mu_ij <- matrix(data = 0, nrow = n.trials, ncol = 2)
+    mu_ij[, 1] <- rtnorm(n = n.trials, location =  nu[[1]][species.id[whale.id]], scale = tau[1], L = param.bounds["nu", 1], U = alpha)
+    mu_ij[, 2] <- rtnorm(n = n.trials, location =  nu[[2]][species.id[whale.id]], scale = tau[2], L = alpha, U = param.bounds["nu", 2])
+    
+    t_ij <- numeric(n.trials)
+    for (u in 1:n.trials) t_ij[u] <- mu_ij[u, k_ij[u]]
+    y_ij <- rnorm(n = n.trials, mean = t_ij, sd = obs.sd)
     
   }
-  
-  t.ij <- rtnorm(n = n.trials, location = mu.ij, scale = sigma, L = lower.bound$mu, U = upper.bound$mu)
-  y_ij <- rnorm(n = n.trials, mean = t.ij, sd = obs.sd)
   
   #' ---------------------------------------------
   # Left- and right-censoring
@@ -295,6 +405,9 @@ simulate_data <- function(n.species = 2,
   #' ---------------------------------------------
   
   res <- list(
+    
+    biphasic = biphasic,
+    
     # Species
     species = list(names = sp.names,
                    groups = NULL,
@@ -322,13 +435,18 @@ simulate_data <- function(n.species = 2,
                Rc.range = Rc,
                prec = measurement.precision,
                sd = obs.sd),
-    # Parameters
+    
     param = list(sim = simulation,
                  bounds = param.bounds,
-                 dose.range = range.dB,
-                 mu = mu,
-                 phi = phi,
-                 sigma = sigma))
+                 dose.range = range.dB))
+  
+  if(!biphasic){
+    res$param <- append(res$param, list(mu = mu, phi = phi, sigma = sigma))
+  } else {
+    res$param <- append(res$param, 
+                  list(nu = nu, tau = tau, psi = psi, 
+                  omega = omega, alpha = alpha))
+  }
   
   if(n.covariates > 0) {
     
@@ -340,10 +458,11 @@ simulate_data <- function(n.species = 2,
                                   dummy = dummy.cov))
     
     names(res$covariates$coefs) <- covariate.names
-    
-    res$covariates$fL <- sapply(X = covariate.names, 
-                                FUN = function(x) factor_levels(covname = x, dat = res$covariates$df), 
-                                simplify = FALSE, USE.NAMES = TRUE)
+    res$covariates$fL <- fL
+    if(biphasic) res$covariates$biphasic <- covariates.biphasic
+    # sapply(X = covariate.names, 
+    #                             FUN = function(x) factor_levels(covname = x, dat = res$covariates$df), 
+    #                             simplify = FALSE, USE.NAMES = TRUE)
     
   }
   

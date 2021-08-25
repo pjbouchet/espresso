@@ -5,6 +5,7 @@
 \title{Generate a simulated dataset}
 \usage{
 simulate_data(
+  biphasic = FALSE,
   n.species = 2,
   n.whales = 20,
   max.trials = 3,
@@ -12,8 +13,14 @@ simulate_data(
   mu = NULL,
   phi = NULL,
   sigma = NULL,
+  nu = NULL,
+  tau = NULL,
+  psi = 0.5,
+  omega = 1,
+  alpha = NULL,
   range.dB = c(60, 215),
   range.var = c(0, 45),
+  range.biphasic = list(alpha = c(110, 160), omega = c(0, 5), tau = c(0, 20)),
   Lc = c(65, 75),
   Rc = c(190, 195),
   obs.sd = 2.5,
@@ -22,6 +29,8 @@ simulate_data(
 )
 }
 \arguments{
+\item{biphasic}{Logical. If TRUE, will simulate data from a biphasic dose-response functional form.}
+
 \item{n.species}{Number of species.}
 
 \item{n.whales}{Number of individuals. Can be specified as a vector of length \code{n.species}, allowing for uneven samples sizes across species, or as an integer multiple of \code{n.species} for equal sample sizes across species.}
@@ -36,9 +45,21 @@ simulate_data(
 
 \item{sigma}{Within-whale between-exposure variance in response thresholds.}
 
+\item{nu}{Mean response thresholds from the context-dependent and dose-dependent mixtures in a biphasic model. Must be a list of length two, where each element is a vector of length \code{n.species}.}
+
+\item{tau}{Scale parameters associated with \code{nu}. Must be a vector of length two.}
+
+\item{psi}{Probability of exhibiting a context-dependent response, expressed on a probit scale.}
+
+\item{omega}{Variance in \code{psi}.}
+
+\item{alpha}{Upper bound on the context-dependent response threshold, which corresponds to the lower bound of the dose-dependent threshold. Must be a vector of length \code{n.species}.}
+
 \item{range.dB}{Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.}
 
 \item{range.var}{Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2.}
+
+\item{range.biphasic}{Permissible range for the variance term(s) of the biphasic model, alpha, omega, and tau. Must be a named list of length three.}
 
 \item{Lc}{Left-censoring interval. Values of the minimum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Lc}.}
 
@@ -70,8 +91,10 @@ Simulate cetacean responses to Navy sonar exposure, as in behavioural response s
 \dontrun{
 library(espresso)
 
-# Simulate data for two species (no censoring)
-mydat <- simulate_data(n.species = 2,
+# Simulate data for two species 
+# (no censoring, monophasic functional form)
+mydat <- simulate_data(biphasic = FALSE,
+                       n.species = 2,
                        n.whales = 16,
                        max.trials = 3,
                        covariates = list(exposed = c(0, 5), range = 0.5),
@@ -81,6 +104,22 @@ mydat <- simulate_data(n.species = 2,
                        Lc = c(60, 65),
                        Rc = c(214, 215),
                        seed = 58697)
+                       
+# Simulate data for three species 
+# (right- and left-censoring, biphasic functional form)
+mydat <- simulate_data(biphasic = TRUE,
+                       n.species = 3,
+                       n.whales = c(10, 5, 8),
+                       max.trials = 3,
+                       alpha = c(125, 140, 139),
+                       nu = list(c(98, 110, 105), c(149, 165, 152)),
+                       tau = c(20, 20),
+                       psi = 0.5,
+                       omega = 1,
+                       Lc = c(60, 70),
+                       Rc = c(165, 195),
+                       seed = 58697)
+                       
 }
 }
 \seealso{

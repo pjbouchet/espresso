@@ -16,6 +16,7 @@ read_data(
     "MFAS CAS"),
   range.dB = c(60, 215),
   range.var = c(0, 45),
+  range.biphasic = list(alpha = c(110, 160), omega = c(0, 5), tau = c(0, 20)),
   obs.sd = 2.5,
   verbose = TRUE
 )
@@ -38,6 +39,8 @@ read_data(
 \item{range.dB}{Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.}
 
 \item{range.var}{Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2.}
+
+\item{range.biphasic}{Permissible range for the variance term(s) of the biphasic model, alpha, omega, and tau. Must be a named list of length three.}
 
 \item{obs.sd}{Measurement uncertainty (expressed as a standard deviation in received levels), in dB re 1μPa.}
 

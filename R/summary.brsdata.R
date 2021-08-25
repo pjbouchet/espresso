@@ -38,7 +38,10 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   cat("======================================================\n")
   
   cat("\nSimulation:", dat.obj$param$sim)
+  if(dat.obj$param$sim) cat("\nFunctional form:", ifelse(dat.obj$biphasic, "Biphasic", "Monophasic"))
   if(!dat.obj$param$sim) cat("\nData file:", dat.obj$param$data.file)
+  
+  
   
   cat("\n\n--------------------")
   cat("\nOBSERVATIONS\n")

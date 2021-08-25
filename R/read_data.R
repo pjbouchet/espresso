@@ -36,6 +36,7 @@
 #' @param exclude.sonar Character vector specifying which sonar signals should be excluded.
 #' @param range.dB Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date. 
 #' @param range.var Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2. 
+#' @param range.biphasic Permissible range for the variance term(s) of the biphasic model, alpha, omega, and tau. Must be a named list of length three.
 #' @param obs.sd Measurement uncertainty (expressed as a standard deviation in received levels), in dB re 1μPa.
 #' @param verbose Logical. Whether to print or suppress warning messages.
 #' 
@@ -81,6 +82,7 @@ read_data <- function(file = NULL,
                                         "HF ALARM CAS", "MFAS CAS"),
                       range.dB = c(60, 215), 
                       range.var = c(0, 45),
+                      range.biphasic = list(alpha = c(110, 160), omega = c(0, 5), tau = c(0, 20)),
                       obs.sd = 2.5,
                       verbose = TRUE){
   
@@ -389,7 +391,9 @@ read_data <- function(file = NULL,
     nu = range.dB[1],
     phi = range.var[1], 
     sigma = range.var[1],
-    tau = range.var[1])
+    alpha = range.biphasic$alpha[1],
+    tau = range.biphasic$tau[1],
+    omega = range.biphasic$omega[1])
   
   upper.bound <- list(
     y.ij = range.dB[2],
@@ -399,7 +403,9 @@ read_data <- function(file = NULL,
     nu = range.dB[2],
     phi = range.var[2],
     sigma = range.var[2],
-    tau = range.var[2])
+    alpha = range.biphasic$alpha[2],
+    tau = range.biphasic$tau[2],
+    omega = range.biphasic$omega[2])
   
   for(j in seq_len(n.covariates)) lower.bound[covariate.names[j]] <- -Inf
   for(j in seq_len(n.covariates)) upper.bound[covariate.names[j]] <- Inf
@@ -440,6 +446,10 @@ read_data <- function(file = NULL,
                                 
                               } else { covariates.df[, .x, drop = FALSE] }}) %>% 
       purrr::set_names(., covariate.names)
+    
+    fL <- sapply(X = covariate.names, 
+          FUN = function(x) factor_levels(covname = x, dat = covariates.df), 
+          simplify = FALSE, USE.NAMES = TRUE)
     
   } # End if n.covariates
   
@@ -530,13 +540,8 @@ read_data <- function(file = NULL,
                  dose.range = range.dB))
   
   if(n.covariates > 0) {
-    res$covariates <- append(res$covariates, 
-                             list(df = covariates.df,
-                                  dummy = dummy.cov))
-    
-    res$covariates$fL <- sapply(X = covariate.names, 
-                                FUN = function(x) factor_levels(covname = x, dat = res$covariates$df), 
-                                simplify = FALSE, USE.NAMES = TRUE)
+    res$covariates <- append(res$covariates, list(df = covariates.df, dummy = dummy.cov))
+    res$covariates$fL <- fL
     
   }
   
