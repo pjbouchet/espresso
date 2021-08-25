@@ -674,9 +674,9 @@ propdens_rj <- function(rj.obj, param, jump, iter) {
     if (any(abs(loglik.norm.forward) == Inf)) loglik.norm.forward <- -100000
     loglik.norm.forward <- sum(loglik.norm.forward)
     
-    loglik.norm.backward <- dnorm(x = unique(median_data(rj.obj = rj.obj,
-                                                model.id = rj.obj$mlist[[rj.obj$current.model]])) - 
-                                    unique(rj.obj$mu[iter - 1, ]),
+    loglik.norm.backward <- dnorm(x = median_data(rj.obj = rj.obj,
+                                                model.id = rj.obj$mlist[[rj.obj$current.model]]) - 
+                                    rj.obj$mu[iter - 1, ],
                                   mean = 0, 
                                   sd = rj.obj$config$prop$dd,
                                   log = TRUE)
