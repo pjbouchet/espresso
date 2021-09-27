@@ -190,9 +190,10 @@ run_rjMCMC <- function(dat,
                                          dplyr::mutate(p_scale = rescale_p(p))
                                        }
                                        
-                                       if(rj$config$function.select & rj$phase[i - 1] == 1){
+                                       if(rj$phase[i - 1] == 1){
                                        rj$mu[i, ] <- new.params$out$mu}
-                                       if(rj$config$function.select & rj$phase[i - 1] == 2){
+                                       
+                                       if(rj$phase[i - 1] == 2){
                                        rj$nu[i, ,] <- t(new.params$out$nu)
                                        rj$alpha[i, ] <- new.params$out$alpha}
                                         
@@ -205,9 +206,9 @@ run_rjMCMC <- function(dat,
                                      } else { # If proposal not accepted
                                        
                                        rj$model[i] <- rj$current.model <- rj$model[i - 1]
-                                       if(rj$config$function.select | rj$phase[i - 1] == 1){
+                                       if(rj$phase[i - 1] == 1){
                                        rj$mu[i, ] <- rj$mu[i - 1, ]}
-                                       if(rj$config$function.select | rj$phase[i - 1] == 2){
+                                       if(rj$phase[i - 1] == 2){
                                        rj$nu[i, ,] <- rj$nu[i - 1, ,]
                                        rj$alpha[i, ] <- rj$alpha[i - 1, ]
                                        }
@@ -1361,7 +1362,7 @@ run_rjMCMC <- function(dat,
                                  } # End if biphasic
                                    
                                  if(any(!rj$iter == i)) stop("Mismatched iteration count")
-                                 
+                                 if(sum(rj$alpha[i, ]) == 0 ) stop("Zero")
                                } # End RJMCMC
                                
                                rj

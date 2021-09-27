@@ -19,6 +19,8 @@ compile_rjMCMC(
 \arguments{
 \item{rj.object}{Input rjMCMC object of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}.}
 
+\item{phase}{Dose-response functional form: monophasic (1) or biphasic (2).}
+
 \item{by.model}{Logical. If \code{TRUE}, the function subsets posterior parameter estimates to produce separate dose-response curves for each candidate model.}
 
 \item{n.top}{Number of top-ranking models to generate curves for when \code{by.model = TRUE}.}

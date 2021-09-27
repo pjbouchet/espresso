@@ -1251,7 +1251,6 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
         pval <- rbind(rnorm(n = N, mean = unique(m1), sd = rj.obj$config$prop$mh[[param.name]]),
               rnorm(n = N, mean = unique(m2), sd = rj.obj$config$prop$mh[[param.name]]))
         
-        
       } else {
         
         m1 <- m[,1]
