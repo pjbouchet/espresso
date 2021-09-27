@@ -61,6 +61,7 @@ rj <- run_rjMCMC(dat = mydat.config,
 Phil J. Bouchet
 }
 \keyword{------------------------------}
+\keyword{-----------------------------------------------------}
 \keyword{---------------------------------------------------------------------}
 \keyword{brs}
 \keyword{dose-response}

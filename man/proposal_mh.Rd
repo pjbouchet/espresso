@@ -4,9 +4,11 @@
 \alias{proposal_mh}
 \title{Proposal for within-model jumps}
 \usage{
-proposal_mh(rj.obj, param.name, iter, seed = NULL)
+proposal_mh(rj.obj, param.name, seed = NULL)
 }
 \arguments{
+\item{rj.obj}{RJ object.}
+
 \item{param.name}{Parameter name.}
 
 \item{seed}{Random seed. Only used for testing purposes.}

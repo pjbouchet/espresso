@@ -27,7 +27,7 @@
 
 \item{model.ranks}{Logical. If \code{TRUE}, returns a summary of posterior model probabilities and associated model rankings.}
 
-\item{n.top}{Number of top-ranking models to display when \code{model.ranks = TRUE}. Defaults to \code{NULL}, which lists all models.}
+\item{n.top}{Number of top-ranking models to display when \code{model.ranks = TRUE}.}
 }
 \value{
 A detailed summary, printed to the R console.

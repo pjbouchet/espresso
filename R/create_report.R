@@ -45,13 +45,13 @@
 #' }
 #' @keywords brs dose-response rjmcmc
 
-create_report <- function(outdir = getwd(), 
-                          filename = "espresso_report", 
-                          plot.height = 3, 
+create_report <- function(outdir = getwd(),
+                          filename = "espresso_report",
+                          plot.height = 3,
                           model.ranks = 1){
   
   obj.n <- sapply(X = ls(envir = .GlobalEnv), FUN = function(x) class(get(x))[1]) %>% unlist()
-  obj.ind <- purrr::map(.x = obj.n, .f = ~ any(.x %in% c("brsdata", "rjtrace", "dose_response"))) %>% 
+  obj.ind <- purrr::map(.x = obj.n, .f = ~ any(.x %in% c("brsdata", "brsdata.grp", "rjtrace", "dose_response"))) %>% 
     unlist()
   obj.n <- obj.n[obj.ind]
   
@@ -91,11 +91,16 @@ create_report <- function(outdir = getwd(),
   
   writeLines(text = "## Results {.tabset}") # Interactive tabs
   
-  if(sum(obj.n == "brsdata") > 0){
+  if(sum(obj.n == "brsdata") > 0 | sum(obj.n == "brsdata.grp") > 0){
     
-    writeLines(text = "### Data")
+    writeLines(text = "### Data (original)")
+    writeLines(text = "Original")
     writeLines(text = "```{r data, class.output=\"scroll-100\"}")
     writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata")], ")"))
+    writeLines(text = "```")
+    writeLines(text = "### Data (grouped)")
+    writeLines(text = "```{r data_grouped, class.output=\"scroll-100\"}")
+    writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata.grp")], ")"))
     writeLines(text = "```")
     
   }
@@ -109,7 +114,7 @@ create_report <- function(outdir = getwd(),
     
     writeLines(text = "### Trace")
     writeLines(text = paste0("```{r trace}"))
-    writeLines(text = paste0("plot(", names(obj.n)[which(obj.n == "rjtrace")], ")"))
+    writeLines(text = paste0("plot(", names(obj.n)[which(obj.n == "rjtrace")], ", autocorr = TRUE)"))
     writeLines(text = "```\n")
     
   }

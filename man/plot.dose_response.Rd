@@ -8,17 +8,21 @@
   dr.object,
   model.rank = 1,
   overlay = FALSE,
+  do.facet = TRUE,
   colour.by = NULL,
   colour = NULL,
   colour.median = NULL,
-  order.by = "species",
+  order.by = "response",
   show.p0_5 = TRUE,
   rotate.y = FALSE,
   all.credint = FALSE,
   scientific.name = FALSE,
   common.name = FALSE,
   overwrite.abbrev = TRUE,
-  outline.outer = FALSE
+  outline.outer = FALSE,
+  do.save = FALSE,
+  file.format = "pdf",
+  ...
 )
 }
 \arguments{
@@ -26,7 +30,9 @@
 
 \item{model.rank}{Integer indicating the rank of the model for which dose-response curves are to be plotted. The model with highest posterior probability is given a rank of 1.}
 
-\item{overlay}{Logical. If \code{TRUE}, plots will be faceted by species (or species group). If \code{FALSE}, all curves will be overlaid on the same plot.}
+\item{overlay}{Logical. If \code{TRUE}, all curves will be overlaid on the same plot.}
+
+\item{do.facet}{Logical. If \code{TRUE}, plots will be faceted by species (or species group).}
 
 \item{colour.by}{Curves can be coloured by species group (\code{colour.by = "group"}) or by individual species (\code{colour.by = "species"}), or can use a single colour scheme (the default, \code{colour.by = NULL}).}
 
@@ -49,9 +55,17 @@
 \item{overwrite.abbrev}{Logical. If \code{TRUE}, overwrites abbreviated names for species grouped \emph{a priori} using \code{\link{create_groups}}.}
 
 \item{outline.outer}{Logical. If \code{TRUE}, outline the outermost credible interval bounds.}
+
+\item{do.save}{Logical. Whether to save plots on disk.}
+
+\item{file.format}{Output file format.}
+
+\item{...}{Additional arguments as passed to \link{\code{ggplot::ggsave}}.}
+
+\item{file.dir}{Path to the output directory. This defaults to the current working directory. Only used when \code{do.save = TRUE}.}
 }
 \description{
-Plot \code{dose_response} curves. objects produced by \code{\link{compile_rjMCMC}}.
+Plot \code{dose_response} curve objects produced by \code{\link{compile_rjMCMC}}.
 }
 \examples{
 \dontrun{

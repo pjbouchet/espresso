@@ -1,11 +1,12 @@
 #' Dose-response curves
 #'
-#' Plot \code{dose_response} curves. objects produced by \code{\link{compile_rjMCMC}}.
+#' Plot \code{dose_response} curve objects produced by \code{\link{compile_rjMCMC}}.
 #'
 #' @export
 #' @param dr.object Input object of class \code{dose_response}, as returned by \code{\link{compile_rjMCMC}}.
 #' @param model.rank Integer indicating the rank of the model for which dose-response curves are to be plotted. The model with highest posterior probability is given a rank of 1.
-#' @param overlay Logical. If \code{TRUE}, plots will be faceted by species (or species group). If \code{FALSE}, all curves will be overlaid on the same plot.
+#' @param overlay Logical. If \code{TRUE}, all curves will be overlaid on the same plot.
+#' @param do.facet Logical. If \code{TRUE}, plots will be faceted by species (or species group).
 #' @param colour.by Curves can be coloured by species group (\code{colour.by = "group"}) or by individual species (\code{colour.by = "species"}), or can use a single colour scheme (the default, \code{colour.by = NULL}).
 #' @param colour Used to overwrite the \code{colour.by} argument, if desired.
 #' @param colour.median Colour to use for the posterior median. Overwrites the \code{colour.by} argument.
@@ -17,6 +18,11 @@
 #' @param common.name Logical. If \code{TRUE}, use species' common names in plot titles.
 #' @param overwrite.abbrev Logical. If \code{TRUE}, overwrites abbreviated names for species grouped *a priori* using \code{\link{create_groups}}.
 #' @param outline.outer Logical. If \code{TRUE}, outline the outermost credible interval bounds.
+#' @param do.save Logical. Whether to save plots on disk.
+#' @param file.format Character. File format for output plots on disk. Can be one of \code{png}, \code{jpeg}, \code{tiff} or \code{pdf}. Only used when \code{do.save = TRUE}.
+#' @param file.dir Path to the output directory. This defaults to the current working directory. Only used when \code{do.save = TRUE}.
+#' @param ... Additional arguments as passed to \link{\code{ggplot::ggsave}}.
+#' 
 #' 
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{compile_rjMCMC}}
@@ -61,17 +67,21 @@
 plot.dose_response <- function(dr.object,
                                model.rank = 1,
                                overlay = FALSE,
+                               do.facet = TRUE,
                                colour.by = NULL,
                                colour = NULL,
                                colour.median = NULL,
-                               order.by = "species", # or "response"
+                               order.by = "response", # or "species"
                                show.p0_5 = TRUE,
                                rotate.y = FALSE,
                                all.credint = FALSE,
                                scientific.name = FALSE,
                                common.name = FALSE,
                                overwrite.abbrev = TRUE,
-                               outline.outer = FALSE){
+                               outline.outer = FALSE,
+                               do.save = FALSE,
+                               file.format = "pdf",
+                               ...){
   
   #' ---------------------------------------------
   # Initialisation
@@ -169,7 +179,6 @@ plot.dose_response <- function(dr.object,
       dplyr::filter(model == model.name) %>% 
       dplyr::pull(group) %>%
       unlist()
-    
     }
   
   #' ---------------------------------------------
@@ -214,10 +223,32 @@ plot.dose_response <- function(dr.object,
   # Posterior medians for each group
   if(dr.object$by.model) posterior.medians.grp <- dr.object$p.med.bymodel[[model.name]] else posterior.medians.grp <- dr.object$p.med
   
+  if(dr.object$phase == 1){
   posterior.medians.grp <- posterior.medians.grp %>% 
     dplyr::filter(stringr::str_detect(param, "mu")) %>% 
     dplyr::rename(grp = param) %>% 
     dplyr::mutate(grp = gsub(pattern = "mu.", replacement = "", grp))
+  } else {
+    posterior.medians.grp <- posterior.medians.grp %>%
+      dplyr::rowwise() %>%
+      dplyr::mutate(word.count = sum(c(grepl("nu", param)))) %>%
+      dplyr::ungroup() %>%
+      dplyr::filter(word.count > 0) %>%
+      dplyr::select(-word.count) %>%
+      dplyr::rename(grp = param) %>% 
+      dplyr::rowwise() %>% 
+      dplyr::mutate(nu = ifelse(grepl("lower", grp), "lower", "upper")) %>% 
+      dplyr::mutate(grp = gsub(pattern = "nu.lower.", replacement = "", grp)) %>% 
+      dplyr::mutate(grp = gsub(pattern = "nu.upper.", replacement = "", grp)) %>% 
+      dplyr::mutate(grp = as.numeric(grp)) %>% 
+      tidyr::pivot_wider(., names_from = nu, values_from = pmed) %>% 
+      dplyr::arrange(lower) %>% 
+      dplyr::mutate(pmed = paste0(round(lower, 2), " / ", round(upper, 2))) %>% 
+      dplyr::select(-lower, -upper)
+      # dplyr::group_by(grp) %>% 
+      # dplyr::summarise(pmed = paste0(round(pmed, 2), collapse = " / ")) %>% 
+      # dplyr::ungroup()
+  }
   
   if(!is.null(covariate)){
     
@@ -232,19 +263,21 @@ plot.dose_response <- function(dr.object,
     
     posterior.medians <- posterior.medians.covar %>% 
       dplyr::mutate(pmed = posterior.medians.grp$pmed) %>% 
-      dplyr::arrange(pmed.cov + pmed) %>% 
+      {if(dr.object$phase == 1) dplyr::arrange(pmed.cov + pmed) else dplyr::arrange(., pmed.cov)} %>% 
       dplyr::mutate(rank = 1:dplyr::n()) %>% 
       dplyr::mutate(grp = dr.object$species) %>% 
-      dplyr::rename(parcov = param)
+      dplyr::rename(parcov = param) %>% 
+      tibble::as_tibble() %>% 
+      {if(dr.object$phase == 1) . else dplyr::mutate(., grp = as.numeric(grp))}
     
     if(!is.null(covariate.values)) posterior.medians <- posterior.medians %>% 
-      slice(rep(1:n(), each = length(covariate.values))) %>% 
+      dplyr::slice(rep(1:dplyr::n(), each = length(covariate.values))) %>% 
       dplyr::mutate(parcov = covariate.values)
     
   } else {
     
     posterior.medians <- posterior.medians.grp %>% 
-      dplyr::arrange(pmed) %>% 
+      {if(dr.object$phase == 1) dplyr::arrange(pmed) else .} %>% 
       dplyr::mutate(rank = 1:dplyr::n())
   }
   
@@ -308,12 +341,9 @@ plot.dose_response <- function(dr.object,
   } else {
     median.list <- median.list %>% 
       dplyr::left_join(x = ., y = posterior.medians, by = "grp")
-      # dplyr::left_join(x = ., y = posterior.medians, c("colgrp" = "grp"))
     interval.list <- interval.list %>% 
       dplyr::left_join(x = ., y = posterior.medians, by = "grp")
-      # dplyr::left_join(x = ., y = posterior.medians, c("colgrp" = "grp"))
     }
-  
   
   #' ---------------------------------------------
   # Species labels
@@ -363,7 +393,8 @@ plot.dose_response <- function(dr.object,
     } else {
       
       species.list <- species.list %>% 
-        dplyr::filter(new_code %in% unique(c(dr.obj$output$posterior$species, unlist(dr.object$sp.groups))))
+        dplyr::filter(new_code %in% unique(c(dr.obj$output$posterior$species,
+                                             unlist(dr.object$sp.groups))))
       
       species.list <- species.list[, c(which.name, "new_code")]
       names(species.list)[which(names(species.list) == which.name)] <- "label"
@@ -386,6 +417,11 @@ plot.dose_response <- function(dr.object,
       median.list <- dplyr::left_join(x = median.list, y = species.list, by = c("species" = "new_code"))
       interval.list <- dplyr::left_join(x = interval.list, y = species.list, by = c("species" = "new_code"))
     }
+    
+  } else {
+    
+    median.list$label <- median.list$species
+    interval.list$label <- interval.list$species
     
   }
   
@@ -412,13 +448,17 @@ plot.dose_response <- function(dr.object,
       
       median.list <- median.list %>% 
         dplyr::rowwise() %>% 
-        dplyr::mutate(colgrp = paste0(parcov, " ", word, " (", 
-                                      round(pmed + ifelse(!is.null(covariate.values), pmed.cov * parcov, pmed.cov), 1), " dB)")) %>% 
+        {if(dr.object$phase == 1) 
+        dplyr::mutate(., colgrp = paste0(parcov, " ", word, " (", 
+        round(pmed + ifelse(!is.null(covariate.values), pmed.cov * parcov, pmed.cov), 1), " dB)"))
+          else dplyr::mutate(., colgrp = paste(parcov, word)) } %>% 
         dplyr::ungroup()
       
       interval.list <- interval.list %>% 
         dplyr::rowwise() %>% 
-        dplyr::mutate(colgrp = paste0(parcov, " ", word, " (", round(pmed + ifelse(!is.null(covariate.values), pmed.cov * parcov, pmed.cov), 1), " dB)")) %>% 
+        {if(dr.object$phase == 1) 
+        dplyr::mutate(., colgrp = paste0(parcov, " ", word, " (", round(pmed + ifelse(!is.null(covariate.values), pmed.cov * parcov, pmed.cov), 1), " dB)")) 
+          else dplyr::mutate(., colgrp = paste(parcov, word)) } %>% 
         dplyr::ungroup()
       
     } else {
@@ -427,16 +467,14 @@ plot.dose_response <- function(dr.object,
         dplyr::rowwise() %>% 
         dplyr::mutate(grp = paste0(ifelse(is.sim, "Species ", " "),
                                    ifelse(is.null(covariate), grp, label),
-                                   # ifelse(!is.null(covariate), species, label),
-                                   " (", round(pmed, 1), " dB)"))  %>% 
+                                   " (", ifelse(is.numeric(pmed), round(pmed, 1), pmed), " dB)"))  %>% 
         dplyr::ungroup()
       
       interval.list <- interval.list %>% 
         dplyr::rowwise() %>% 
         dplyr::mutate(grp = paste0(ifelse(is.sim, "Species ", " "),
                                    ifelse(is.null(covariate), grp, label),
-                                   # ifelse(!is.null(covariate), species, label),
-                                   " (", round(pmed, 1), " dB)")) %>% 
+                                   " (", ifelse(is.numeric(pmed), round(pmed, 1), pmed), " dB)")) %>% 
         dplyr::ungroup()
     }
     
@@ -522,7 +560,7 @@ plot.dose_response <- function(dr.object,
         gplot <- gplot +
           geom_polygon(data = gdat %>% dplyr::filter(quant == max(plot.quants)),
                        aes(x = x, y = y, colour = colgrp), fill = "transparent", linetype = "dashed") +
-          {if(!overlay) facet_wrap(~ colgrp) }
+          {if(!overlay & do.facet) facet_wrap(~ colgrp) }
       } else {
         if(all.credint){
           gplot <- gplot +
@@ -533,7 +571,12 @@ plot.dose_response <- function(dr.object,
             geom_polygon(data = gdat %>% dplyr::filter(quant == max(plot.quants)),
                          aes(x = x, y = y, colour = grp), fill = "transparent", linetype = "dashed")
         }
-        gplot <- gplot + {if(!overlay) facet_wrap(~ grp) }
+        # Facet plots
+        if(!overlay & do.facet) { gplot <- gplot + facet_wrap(~ grp) }
+        
+        # Output plots separately
+        if(!overlay & !do.facet){ gplot <- gplot + ggforce::facet_wrap_paginate(~ grp, ncol = 1, nrow = 1) }
+       
       }
     }
     
@@ -548,14 +591,16 @@ plot.dose_response <- function(dr.object,
       {if(!is.null(colour.median)) geom_line(data = mdat, 
                                              aes(x = x, y = y, group = colgrp), 
                                              colour = colour.median) } +
-      { if(!overlay) facet_wrap(~ colgrp) }
+      { if(!overlay & do.facet) facet_wrap(~ colgrp) }
     
   } else {
+    
     gplot <- gplot +
       {if(colour.by == "group") geom_line(data = mdat, aes(x = x, y = y, colour = colgrp)) } +
       {if(colour.by == "species") geom_line(data = mdat, aes(x = x, y = y, colour = grp)) } +
       {if(!is.null(colour.median)) geom_line(data = mdat, aes(x = x, y = y), colour = colour.median) } +
-      {if(!overlay) facet_wrap(~ grp) }
+      {if(!overlay & do.facet) facet_wrap(~ grp) } +
+      {if(!overlay & !do.facet) ggforce::facet_wrap_paginate(~ grp, nrow = 1, ncol = 1) }
   }
   
   gplot <- gplot +
@@ -571,6 +616,26 @@ plot.dose_response <- function(dr.object,
     theme(plot.title = element_text(size = 12, vjust = 5, face = "bold"),
           plot.subtitle = element_text(size = 11, vjust = 5))
   
-  print(gplot)
+  if(!overlay & !do.facet){
+    for(page in 1:ggforce::n_pages(gplot)){
+      p_save <- gplot +
+        facet_wrap_paginate(~ grp, ncol = 1, nrow = 1, page = page)
+      
+      if(do.save){
+        suppressMessages(ggplot2::ggsave(filename = paste0("dose_response (page ", page, ").", file.format), 
+                                         device = file.format, plot = p_save, ...))
+      } else {
+        print(p_save) 
+      }
+      
+    }
+  } else {
+    if(do.save){
+      suppressMessages(ggplot2::ggsave(filename = paste0("dose_response.", file.format), 
+                                       device = file.format, plot = gplot, ...))
+    } else {
+      print(gplot) 
+      }
+  }
   
 }

@@ -6,6 +6,7 @@
 #' @param rj.obj rjMCMC trace object of class \code{rjtrace}.
 #' @param covariates.incl Logical. If \code{TRUE}, the trace is filtered to only retain posterior estimates obtained when the contextual covariates were included in the model. Only relevant when \code{covariate.select = TRUE} in \code{\link{configure_rjMCMC}}.
 #' @inheritParams plot.gvs
+#' @import ggplot2
 #' 
 #' @details Adapted from Casey Youngflesh's function \code{\link[MCMCvis]{MCMCtrace}}.
 #' 
@@ -49,7 +50,7 @@
 plot.rjtrace <- function(rj.obj, 
                          param.name = NULL, 
                          covariates.incl = FALSE,
-                         autocorr = TRUE, 
+                         autocorr = TRUE,
                          individual = TRUE){
   
   # Redo this in simpler way.
@@ -65,11 +66,73 @@ plot.rjtrace <- function(rj.obj,
   #' ---------------------------------------------
   mcmc.trace <- rj.obj$trace
   
-  for(nc in 1:length(mcmc.trace)){
-    colnames(mcmc.trace[[nc]])[which(startsWith(colnames(mcmc.trace[[1]]), prefix = "mu"))] <- 
-      paste0("mu (", rj.obj$dat$species$names, ")")}
+  if(rj.obj$config$function.select | rj.obj$config$biphasic){
+    nu.indices <- grep(pattern = "nu.", x = colnames(mcmc.trace[[1]]))
+    tau.indices <- grep(pattern = "tau.", x = colnames(mcmc.trace[[1]]))
+    alpha.indices <- grep(pattern = "alpha.", x = colnames(mcmc.trace[[1]]))
+    all.indices <- c(nu.indices, alpha.indices)
+  }
+  if(rj.obj$config$function.select | !rj.obj$config$biphasic) {
+    mu.indices <- grep(pattern = "mu.", x = colnames(mcmc.trace[[1]]))
+  }
   
-  if(is.null(param.name)) bpars <- character() else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
+  cov.names <- purrr::map2(.x = names(rj.obj$dat$covariates$fL), 
+                           .y = purrr::map(.x = rj.obj$dat$covariates$fL, "Lnames"),
+                           .f = ~{if(!is.null(.y)) paste0(.x, "_", .y[2:length(.y)])}) %>% 
+    purrr::compact() %>% 
+    do.call(c, .)
+  
+  cov.indices <- which(colnames(mcmc.trace[[1]]) %in% cov.names)
+                         
+  for(nc in seq_len(length(mcmc.trace))){
+    
+    colnames(mcmc.trace[[nc]])[cov.indices] <-
+      gsub(pattern = "_", replacement = " (", x = colnames(mcmc.trace[[nc]])[cov.indices])
+    
+    colnames(mcmc.trace[[nc]])[cov.indices] <- paste0(colnames(mcmc.trace[[nc]])[cov.indices], ")")
+    
+    if(rj.obj$config$function.select | rj.obj$config$biphasic){
+      
+      colnames(mcmc.trace[[nc]])[nu.indices] <-
+        gsub(pattern = ".lower.", replacement = " (lower) ", x = colnames(mcmc.trace[[nc]])[nu.indices])
+      colnames(mcmc.trace[[nc]])[nu.indices] <-
+        gsub(pattern = ".upper.", replacement = " (upper) ", x = colnames(mcmc.trace[[nc]])[nu.indices])
+      colnames(mcmc.trace[[nc]])[tau.indices] <-
+        gsub(pattern = ".lower", replacement = " (lower)", x = colnames(mcmc.trace[[nc]])[tau.indices])
+      colnames(mcmc.trace[[nc]])[tau.indices] <-
+        gsub(pattern = ".upper", replacement = " (upper)", x = colnames(mcmc.trace[[nc]])[tau.indices])
+      colnames(mcmc.trace[[nc]])[alpha.indices] <-
+        gsub(pattern = "alpha.", replacement = "alpha ", x = colnames(mcmc.trace[[nc]])[alpha.indices])
+      
+      for(j in rj.obj$dat$species$names){
+      colnames(mcmc.trace[[nc]])[all.indices] <-
+        gsub(pattern = j, replacement = paste0("(", j, ")"), x = colnames(mcmc.trace[[nc]])[all.indices])
+      }
+      
+    }
+    
+    if (rj.obj$config$function.select | !rj.obj$config$biphasic) {
+      
+      colnames(mcmc.trace[[nc]])[mu.indices] <-
+        gsub(pattern = "mu.", replacement = "mu  ", x = colnames(mcmc.trace[[nc]])[mu.indices])
+      
+      for(j in rj.obj$dat$species$names){
+        colnames(mcmc.trace[[nc]])[mu.indices] <-
+          gsub(pattern = j, replacement = paste0("(", j, ")"), x = colnames(mcmc.trace[[nc]])[mu.indices])
+      }
+    }
+  }
+  
+  # for(nc in 1:length(mcmc.trace)){
+  #   colnames(mcmc.trace[[nc]])[which(startsWith(colnames(mcmc.trace[[1]]), prefix = "mu"))] <- 
+  #     paste0("mu (", rj.obj$dat$species$names, ")")}
+  
+  if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]])
+  if(!rj.obj$config$model.select) mpars <- mpars[!mpars %in% c("model_size", "model_ID")]
+  if(!rj.obj$config$covariate.select) mpars <- mpars[!mpars %in% paste0("incl.", rj.obj$dat$covariates$names)]
+  if(!rj.obj$config$function.select) mpars <- mpars[!mpars %in% "phase"]
+  
+  if(is.null(param.name)) bpars <- mpars else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
   
   if(is.null(param.name)){
     
@@ -84,10 +147,27 @@ plot.rjtrace <- function(rj.obj,
                iter = rj.obj$mcmc$n.iter, 
                pdf = FALSE, 
                ind = individual,
-               params = "all")
+               params = mpars)
       
-    if(autocorr) bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
-      
+      if(autocorr){
+        
+        ac.plot <- bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+        
+        ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
+          ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
+          ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
+          ggplot2::facet_wrap(ggplot2::vars(Parameter), ncol = 5) + 
+          ggplot2::scale_colour_manual(values = gg_color_hue(n = length(mcmc.trace))) +
+          ggplot2::theme(axis.text = element_text(size = 10, colour = "black"),
+                axis.title = element_text(size = 10, colour = "black"),
+                axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+                axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+                plot.margin = margin(t = 0.15, r = 1, b = 0.15, l = 0.15, "cm"),
+                legend.position = "top",
+                legend.text = element_text(size = 11)) + 
+          ggplot2::labs(colour = "Chain", y = "Autocorrelation")
+        
+      }
     }
     
     
@@ -98,6 +178,7 @@ plot.rjtrace <- function(rj.obj,
       unlist()
     
     mcmc.trace <- mcmc.trace[, pn, drop = FALSE]
+    mpars <- colnames(mcmc.trace[[1]])
     
     if(any(param.name %in% rj.obj$dat$covariates$names) & covariates.incl){
       
@@ -111,7 +192,7 @@ plot.rjtrace <- function(rj.obj,
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
-                 params = "all")
+                 params = mpars)
       
     }
     
@@ -119,7 +200,6 @@ plot.rjtrace <- function(rj.obj,
   
   
   if(do.filter){
-    
     
     cov.cols <- purrr::map(.x = param.name[param.name %in% rj.obj$dat$covariates$names],
                            .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))))
@@ -155,15 +235,29 @@ plot.rjtrace <- function(rj.obj,
                iter = rj.obj$mcmc$n.iter, 
                pdf = FALSE, 
                ind = individual,
-               params = "all")
+               params = mpars)
     
     purrr::walk2(.x = cov.trace.final,
                  .y = cov.n,
-                 .f = ~MCMC_trace(.x,  iter = .y, pdf = FALSE, ind = individual, params = "all"))
+                 .f = ~MCMC_trace(.x,  iter = .y, pdf = FALSE, ind = individual, params = mpars))
   }
   
   if(autocorr){
-    bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+    ac.plot <- bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+
+    ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
+      ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
+      ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
+      ggplot2::facet_wrap(ggplot2::vars(Parameter), ncol = 5) + 
+      ggplot2::scale_colour_manual(values = gg_color_hue(length(mcmc.trace))) +
+      ggplot2::theme(axis.text = element_text(size = 10, colour = "black"),
+            axis.title = element_text(size = 10, colour = "black"),
+            axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+            axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+            plot.margin = margin(t = 0.15, r = 1, b = 0.15, l = 0.15, "cm"),
+            legend.position = "top",
+            legend.text = element_text(size = 11)) + 
+      ggplot2::labs(colour = "Chain", y = "Autocorrelation")
     }
   
 }

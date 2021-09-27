@@ -8,6 +8,7 @@ simulate_data(
   biphasic = FALSE,
   n.species = 2,
   n.whales = 20,
+  min.trials = 1,
   max.trials = 3,
   covariates = NULL,
   mu = NULL,
@@ -18,9 +19,8 @@ simulate_data(
   psi = 0.5,
   omega = 1,
   alpha = NULL,
-  range.dB = c(60, 215),
-  range.var = c(0, 45),
-  range.biphasic = list(alpha = c(110, 160), omega = c(0, 5), tau = c(0, 20)),
+  Npriors = c(0, 30),
+  dose.range = c(60, 215),
   Lc = c(65, 75),
   Rc = c(190, 195),
   obs.sd = 2.5,
@@ -35,7 +35,9 @@ simulate_data(
 
 \item{n.whales}{Number of individuals. Can be specified as a vector of length \code{n.species}, allowing for uneven samples sizes across species, or as an integer multiple of \code{n.species} for equal sample sizes across species.}
 
-\item{max.trials}{Maximum number of exposures per individual. Each animal is exposed \code{x} times, with \code{x} taken as a random draw from a Uniform distribution between 1 and \code{max.trials}.}
+\item{min.trials}{Minimum number of exposures per individual. Each animal is exposed \code{x} times, with \code{x} taken as a random draw from a discrete Uniform distribution bounded by \code{min.trials} and \code{max.trials}.}
+
+\item{max.trials}{Maximum number of exposures per individual.}
 
 \item{covariates}{Contextual covariates and their associated coefficients. Must be supplied as a named list, in which the baseline levels of factor covariates are given a coefficient of zero.}
 
@@ -45,7 +47,7 @@ simulate_data(
 
 \item{sigma}{Within-whale between-exposure variance in response thresholds.}
 
-\item{nu}{Mean response thresholds from the context-dependent and dose-dependent mixtures in a biphasic model. Must be a list of length two, where each element is a vector of length \code{n.species}.}
+\item{nu}{Mean response thresholds from the context-dependent and dose-dependent mixtures in a biphasic model. Must be a list of length \code{n.species}, where each element is a vector of length two.}
 
 \item{tau}{Scale parameters associated with \code{nu}. Must be a vector of length two.}
 
@@ -55,11 +57,7 @@ simulate_data(
 
 \item{alpha}{Upper bound on the context-dependent response threshold, which corresponds to the lower bound of the dose-dependent threshold. Must be a vector of length \code{n.species}.}
 
-\item{range.dB}{Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.}
-
-\item{range.var}{Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2.}
-
-\item{range.biphasic}{Permissible range for the variance term(s) of the biphasic model, alpha, omega, and tau. Must be a named list of length three.}
+\item{dose.range}{Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.}
 
 \item{Lc}{Left-censoring interval. Values of the minimum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Lc}.}
 
@@ -112,7 +110,7 @@ mydat <- simulate_data(biphasic = TRUE,
                        n.whales = c(10, 5, 8),
                        max.trials = 3,
                        alpha = c(125, 140, 139),
-                       nu = list(c(98, 110, 105), c(149, 165, 152)),
+                       nu = list(c(98, 149), c(110, 165), c(105,152)),
                        tau = c(20, 20),
                        psi = 0.5,
                        omega = 1,

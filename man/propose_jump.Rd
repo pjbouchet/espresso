@@ -4,7 +4,7 @@
 \alias{propose_jump}
 \title{Proposal for between-model jumps}
 \usage{
-propose_jump(rj.obj, move.type)
+propose_jump(rj.obj, move.type, phase)
 }
 \arguments{
 \item{move.type}{Type of between-model jump. (0): split/merge, (1): Bootstrap, (2): Cluster, (3): Random}

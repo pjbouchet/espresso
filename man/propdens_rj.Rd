@@ -4,12 +4,16 @@
 \alias{propdens_rj}
 \title{Proposal densities for between-model jumps}
 \usage{
-propdens_rj(rj.obj, param, jump, iter)
+propdens_rj(rj.obj, param, jump, phase)
 }
 \arguments{
+\item{rj.obj}{Input object.}
+
 \item{param}{Parameter values.}
 
 \item{jump}{Proposed between-model jump.}
+
+\item{phase}{Monophasic (1) or biphasic (2).}
 }
 \description{
 Proposal densities for between-model jumps

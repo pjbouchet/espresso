@@ -6,6 +6,7 @@
 #' @export
 #' @param rj.obj Input rjMCMC object, as returned by \code{\link{trace_rjMCMC}}.
 #' @param covariate.prob Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).
+#' @param ff.prob Logical. If \code{TRUE}, returns a summary of posterior probabilities for each functional form (monophasic vs. biphasic).
 #' @param rmd Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.
 #' @inheritParams summary.gvs
 #' 
@@ -51,6 +52,7 @@ summary.rjtrace <- function(rj.obj,
                             model.ranks = TRUE,
                             n.top = 10, 
                             covariate.prob = TRUE,
+                            ff.prob = TRUE,
                             rmd = FALSE){
   
   options(tibble.width = Inf) 
@@ -58,17 +60,21 @@ summary.rjtrace <- function(rj.obj,
   options(pillar.subtle = TRUE)
   options(pillar.sigfig = 4)
   
+  if(!rj.obj$config$model.select) model.ranks <- FALSE
+  if(!rj.obj$config$covariate.select) covariate.prob <- FALSE
+  if(!rj.obj$config$function.select) ff.prob <- FALSE
+  
   cat("\n======================================================\n")
   cat("SUMMARY\n")
   cat("======================================================\n\n")
   
-  cat("Iterations:", format(rj.obj$mcmc$iter.rge, big.mark = ","), "\n")
-  cat("Thinning interval:", rj.obj$mcmc$thin, "\n")
+  cat("Total iterations:", format(rj.obj$mcmc$tot.iter, big.mark = ","), "\n")
   cat("Burn-in:", format(rj.obj$mcmc$n.burn, big.mark = ","), "\n")
+  cat("Thinning interval:", rj.obj$mcmc$thin, "\n")
+  cat("Iterations:", format(rj.obj$mcmc$iter.rge, big.mark = ","), "\n")
   cat("Number of chains:", rj.obj$mcmc$n.chains, "\n")
-  size.per.chain <- rj.obj$mcmc$n.iter / rj.obj$mcmc$thin
-  cat("Sample size per chain:", format(size.per.chain, big.mark = ","), "\n")
-  cat("Total sample size:", format(size.per.chain * rj.obj$mcmc$n.chains, big.mark = ","), "\n\n")
+  cat("Sample size per chain:", format(rj.obj$mcmc$n.iter, big.mark = ","), "\n")
+  cat("Total sample size:", format(rj.obj$mcmc$n.iter * rj.obj$mcmc$n.chains, big.mark = ","), "\n\n")
   cat("Run times:\n")
   print(rj.obj$mcmc$run_time)
   
@@ -77,12 +83,10 @@ summary.rjtrace <- function(rj.obj,
   cat("--------------------\n")
   
   cat("Priors:\n\n")
-  cat("μ: Uniform", paste0("[", paste0(rj.obj$dat$param$bounds["mu", ], collapse = "-"), "]"), "\n")
-  cat("φ: Uniform", paste0("[", paste0(rj.obj$dat$param$bounds["phi", ], collapse = "-"), "]"), "\n")
-  cat("σ: Uniform", paste0("[", paste0(rj.obj$dat$param$bounds["sigma", ], collapse = "-"), "]"), "\n")
-  for(cc in rj.obj$dat$covariates$names){
-  cat(paste0(cc, ":"), "Normal", paste0("(", paste0(rj.obj$config$prior[[cc]], collapse = ", "), ")"), "\n")
+  for(pp in 1:nrow(rj.obj$config$priors)){
+    cat(rownames(rj.obj$config$priors)[pp], ": ", rj.obj$config$priors$prior[pp], " (", rj.obj$config$priors$lower_or_mean[pp], ", ", rj.obj$config$priors$upper_or_SD[pp], ")\n", sep = "")
   }
+    
   cat("\n")
   cat("p(split):", rj.obj$mcmc$move$prob[1], "\n")
   cat("p(merge):", rj.obj$mcmc$move$prob[2], "\n")
@@ -105,7 +109,13 @@ summary.rjtrace <- function(rj.obj,
     cat("\nACCEPTANCE RATES\n")
     cat("--------------------\n")
     
-    print(rj.obj$accept)
+    AR <- rj.obj$accept %>% 
+      dplyr::select(chain, param, AR, label) %>% 
+      dplyr::arrange(label, param) %>% 
+      dplyr::select(-label) %>% 
+      tidyr::pivot_wider(names_from = param, values_from = AR)
+    
+    print(AR)
   }
   
   if(convergence){
@@ -138,10 +148,12 @@ summary.rjtrace <- function(rj.obj,
         print(cvg)
       }
       
+      if(rj.obj$config$model.select){
       # Running means plots for model ID
       mcmcplots::rmeanplot(mcmcout = rj.obj$trace, parms = "model_ID", 
                            plot.title = "", auto.layout = FALSE,
                            col = gg_color_hue(coda::nchain(rj.obj$trace)))
+      }
       
     }
   }
@@ -181,6 +193,29 @@ summary.rjtrace <- function(rj.obj,
     
   }
   
+  if(ff.prob){
+    
+    cat("\n--------------------")
+    cat("\nFUNCTIONAL FORMS\n")
+    cat("--------------------\n\n")
+    
+    if(rj.obj$config$function.select){
+      
+      tb.combined <- prob_form(obj = rj.obj, do.combine = TRUE) %>% 
+        .[["est"]] %>% 
+        dplyr::bind_cols(tibble::tibble(chain = "all"), .)
+      tb <- prob_form(obj = rj.obj, do.combine = FALSE)
+      
+      tb.out <- purrr::map(.x = tb, "est") %>% 
+        do.call(rbind, .) %>% 
+        dplyr::bind_cols(tibble::tibble(chain = as.character(1:rj.obj$mcmc$n.chains)), .) %>% 
+        dplyr::bind_rows(., tb.combined)
+
+    } else {
+      cat("Funcational form selection: FALSE\n")
+    }
+  }
+  
   if(model.ranks){
     
     cat("\n--------------------")
@@ -205,7 +240,7 @@ summary.rjtrace <- function(rj.obj,
       
       ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
       if(nrow(ggres) < n.top) n.top <- nrow(ggres)
-      gg.cols <- pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
+      gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::parula(max(unlist(ggres$group))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
       m.matrix <- do.call(rbind, ggres$group)
       
       gg.matrix <- tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n), y = seq_len(n.top)) %>% 
@@ -219,7 +254,7 @@ summary.rjtrace <- function(rj.obj,
                post.probs = round(res$model$m_prob$p, 3),
                rj.obj = rj.obj, 
                colours = gg.cols,
-               n.top = n.top, 
+               n.top = n.top,
                combine = TRUE, 
                x.offset = 0.75,
                x.margin = 1)
@@ -260,7 +295,7 @@ summary.rjtrace <- function(rj.obj,
                                                       rj.obj$mlist[, c("model", "group")], by = "model")
                              do.call(rbind, rtib$group)})
       
-      gg.cols <- pals::brewer.paired(max(unlist(gg.res)))
+      gg.cols <- if(max(unlist(gg.res)) <=2) pals::parula(max(unlist(gg.res))) else pals::brewer.paired(max(unlist(gg.res)))
       
       m.matrix <- lapply(X = seq_len(min(c(min.n, n.top))), 
                          FUN = function(x) do.call(rbind, purrr::map(.x = gg.res, .f = ~.x[x, ])))
@@ -277,7 +312,7 @@ summary.rjtrace <- function(rj.obj,
       
       gg.tiles <- purrr::map(.x = seq_along(gg.matrix), 
                              .f = ~gg_model(dat = gg.matrix[[.x]], 
-                                            post.probs = pprobs[[.x]],
+                                            post.probs = round(pprobs[[.x]], 3),
                                             colours = gg.cols, 
                                             n.top = min(c(min.n, n.top)), 
                                             rj.obj = rj.obj, 
@@ -303,8 +338,5 @@ summary.rjtrace <- function(rj.obj,
       cat("Model selection: FALSE\n")
     }
   }
-  
-
-  
 
 }

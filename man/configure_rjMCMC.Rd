@@ -8,12 +8,16 @@ configure_rjMCMC(
   dat,
   model.select = TRUE,
   covariate.select = FALSE,
-  proposal.mh = list(t.ij = 10, mu.i = 10, mu = 7, phi = 10, sigma = 10),
-  proposal.rj = list(dd = 10, cov = 7),
-  prior.covariates = c(0, 30),
+  function.select = TRUE,
+  biphasic = FALSE,
+  proposal.mh = list(t.ij = 10, mu.i = 10, mu = 7, phi = 3, sigma = 1, nu = 5, tau = 5,
+    alpha = 1, mu.ij = 5, psi = 1, omega = 0.5, psi.i = 2, k.ij = 0.5),
+  proposal.rj = list(rj = 5, dd = 10, cov = 7),
+  priors = list(covariates = c(0, 30), sigma = c(0, 45), phi = c(0, 45), omega = c(0,
+    2), tau = c(0, 45), psi = c(0, 1)),
   p.split = 0.5,
   p.merge = 0.5,
-  moves = 0:3,
+  moves = 0,
   move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
   m = 100,
   bootstrap = TRUE,
@@ -27,17 +31,21 @@ configure_rjMCMC(
 
 \item{covariate.select}{Logical. Set to \code{TRUE} to allow contextual covariates to drop out of the model.}
 
+\item{function.select}{Logical. Set to \code{TRUE} to evaluate support for dose-response functional forms (monophasic vs. biphasic).}
+
+\item{biphasic}{Logical. Specifies which functional form to impose. Monophasic dose-response curves are returned when \code{biphasic = FALSE}. This argument is ignored when \code{function.select = TRUE}.}
+
 \item{proposal.mh}{Named list specifying the standard deviations of the proposal distributions used in the Metropolis-Hastings sampler.}
 
 \item{proposal.rj}{Named list specifying the standard deviations of the proposal distributions used in the reversible jump sampler. Must contain two elements: \code{mu} for response thresholds, and \code{cov} for covariates.}
 
-\item{prior.covariates}{Mean and standard deviation of the Normal prior placed on covariates. At present, the same prior is applied to all covariates.}
+\item{priors}{Named list giving the means and standard deviations for Normal priors and the lower and upper bounds for Uniform priors. Relevant parameters for the monophasic model are as follows: \code{sigma} (Uniform), \code{phi} (Uniform). Parameters for the biphasic model include: \code{alpha} (Uniform), \code{omega} (Uniform), \code{tau} (Uniform), \code{psi} (Normal). Normal priors are placed on contextual \code{covariates}.}
 
 \item{p.split}{Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}.}
 
 \item{p.merge}{Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
 
-\item{moves}{Integer indicating which between-model moves to implement. 0 = split/merge, 1 = data driven Type I, 2 = data driven Type II, 3 = random. Useful for testing purposes.}
+\item{moves}{Integer indicating which between-model moves to implement. 0 = split/merge, 1 = data driven Type I, 2 = data driven Type II, 3 = random.}
 
 \item{move.ratio}{Relative proportion of calls to data-driven (type I and II) and independence samplers.}
 
@@ -84,10 +92,11 @@ summary(mydat)
 mydat.config <- configure_rjMCMC(dat = mydat,
                                  model.select = TRUE,
                                  covariate.select = FALSE,
+                                 function.select = FALSE,
                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
                                                     mu = 7, phi = 10, sigma = 10),
                                  proposal.rj = list(dd = 20, cov = 7),
-                                 prior.covariates = c(0, 30),
+                                 priors = list(covariates = c(0, 30), psi = c(0, 10)),
                                  n.rep = 100)
 summary(mydat.config)
 }

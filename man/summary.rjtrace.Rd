@@ -13,6 +13,7 @@
   model.ranks = TRUE,
   n.top = 10,
   covariate.prob = TRUE,
+  ff.prob = TRUE,
   rmd = FALSE
 )
 }
@@ -29,9 +30,11 @@
 
 \item{model.ranks}{Logical. If \code{TRUE}, returns a summary of posterior model probabilities and associated model rankings.}
 
-\item{n.top}{Number of top-ranking models to display when \code{model.ranks = TRUE}. Defaults to \code{NULL}, which lists all models.}
+\item{n.top}{Number of top-ranking models to display when \code{model.ranks = TRUE}.}
 
 \item{covariate.prob}{Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).}
+
+\item{ff.prob}{Logical. If \code{TRUE}, returns a summary of posterior probabilities for each functional form (monophasic vs. biphasic).}
 
 \item{rmd}{Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.}
 }

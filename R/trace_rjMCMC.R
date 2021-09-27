@@ -69,15 +69,26 @@ trace_rjMCMC <- function(rj.dat,
     if(burn > rj.dat[[1]]$mcmc$n.iter) stop("Burn-in cannot exceed number of iterations.")
   } else {
     if(is.null(burn)) burn <- mcmc.params$n.burn else mcmc.params$n.burn <- burn
-    mcmc.params$n.iter <- mcmc.params$tot.iter - burn
+    mcmc.params$n.iter <- (mcmc.params$tot.iter - burn) / thin
     mcmc.params$iter.rge <- paste0(mcmc.params$n.burn + thin, ":", mcmc.params$tot.iter)
   }
 
   mcmc.params$thin <- thin
   
   # Define model parameters
-  params <- c("mu", "phi", "sigma", covariate.names, "model_ID", "model_size")
-  if(rj.dat[[1]]$dat$covariates$n > 0) params <- c(params, "include.covariates")
+  if(rj.dat[[1]]$config$function.select){
+    params <- c("mu", "phi", "sigma", "alpha", "nu", "tau", "omega", "psi")
+  } else {
+  if(rj.dat[[1]]$config$biphasic){
+    params <- c("alpha", "nu", "tau", "omega", "psi")
+  } else {
+    params <- c("mu", "phi", "sigma")}
+  }
+  
+  if(rj.dat[[1]]$dat$covariates$n > 0) params <- c(params, covariate.names)
+  params <- c(params, "include.covariates")
+  params <- c(params,  "model_ID", "model_size")
+  params <- c(params,  "phase")
   
   run_times <- purrr::map(.x = 1:length(rj.dat), .f = ~rj.dat[[.x]]$run_time) %>% 
     purrr::set_names(x = ., nm = paste0("Chain ", 1:length(rj.dat))) %>% 
@@ -95,42 +106,60 @@ trace_rjMCMC <- function(rj.dat,
     dplyr::distinct() %>% 
     dplyr::rename(model = name, group = value) %>% 
     dplyr::arrange(model) %>% 
-    tibble::rowid_to_column("ID")
+    tibble::rowid_to_column("ID") %>% 
+    dplyr::rowwise() %>% 
+    dplyr::mutate(N = nb_groups(unlist(group))) %>% 
+    dplyr::ungroup()
+  
+  model.l <- as.list(model.list$ID) %>% purrr::set_names(x = ., nm = model.list$model)
+  model.g <- as.list(model.list$N) %>% purrr::set_names(x = ., nm = model.list$model)
   
   for(j in 1:mcmc.params$n.chains){
-    
-    # Model IDs
-    rj.dat[[j]]$model_ID <- sapply(X = rj.dat[[j]]$model, 
-                                   FUN = function(a) model.list[model.list$model == a, ]$ID,
-                                   USE.NAMES = FALSE)
-    
-    # Number of groupings
-    rj.dat[[j]]$model_size <- sapply(X = rj.dat[[j]]$model, 
-                                     FUN = function(b) nb_groups(rj.dat[[j]]$mlist[[b]]),
-                                     USE.NAMES = FALSE)
-    
+    rj.dat[[j]]$model_ID <- unname(unlist(model.l[rj.dat[[j]]$model])) # Model IDs
+    rj.dat[[j]]$model_size <- unname(unlist(model.g[rj.dat[[j]]$model])) # Number of groupings
     if(rj.dat[[j]]$dat$covariates$n > 0){
-    colnames(rj.dat[[j]]$include.covariates) <- paste0("incl.", colnames(rj.dat[[j]]$include.covariates))
+      colnames(rj.dat[[j]]$include.covariates) <- paste0("incl.", colnames(rj.dat[[j]]$include.covariates))
     }
-    
   }
-  
+    
   #' ---------------------------------------------
   # Extract parameters and burn / thin
   #' ---------------------------------------------
+
   mcmc.trace <- purrr::map(.x = seq_len(length(rj.dat)),
-                           .f = ~do.call(cbind, rj.dat[[.x]][params]))
+                           .f = ~{
+                             tmp <- rj.dat[[.x]][params]
+                             for(ii in seq_along(tmp)){
+                               if(!is.null(dim(tmp[[ii]]))) {   
+                                 if(length(dim(tmp[[ii]])) > 2){
+                                 tmp[[ii]] <- matrix(tmp[[ii]], 
+                                                     nrow = dim(tmp[[ii]])[1], 
+                                                     ncol = prod(dim(tmp[[ii]])[2], dim(tmp[[ii]])[3]),
+                                                     dimnames = list(NULL,
+                                as.vector(outer(dimnames(tmp[[ii]])[[3]], 
+                                                dimnames(tmp[[ii]])[[2]], FUN = "paste0"))))
+                                 }
+                               } else {
+                                 tmp[[ii]] <- matrix(tmp[[ii]], ncol = 1, dimnames = list(NULL, names(tmp)[ii]))
+                               } 
+                             }
+                             do.call(cbind, tmp)
+                           })
   
-  mu.indices <- grep(pattern = "mu.", x = colnames(mcmc.trace[[1]]))
+  if(rj.dat[[1]]$config$biphasic){
+    nu.indices <- grep(pattern = "nu.", x = colnames(mcmc.trace[[1]]))
+    tau.indices <- grep(pattern = "tau.", x = colnames(mcmc.trace[[1]]))
+  } else {
+    mu.indices <- grep(pattern = "mu.", x = colnames(mcmc.trace[[1]]))
+  }
   
-  # Discard burn-in and thin chain if desired
+  # Discard burn-in and thin chain(s) if desired
   for(nc in seq_len(length(mcmc.trace))){
     if (is.data.frame(mcmc.trace[[nc]]) || is.matrix(mcmc.trace[[nc]])) {
       if (burn > 0) mcmc.trace[[nc]] <- mcmc.trace[[nc]][-(1:burn), ] # Remove burn-in
       if(is.vector(mcmc.trace[[nc]])) mcmc.trace[[nc]] <- matrix(data = mcmc.trace[[nc]], ncol = 1)
       # Thin if needed
       mcmc.trace[[nc]] <- mcmc.trace[[nc]][seq(from = 1, to = nrow(mcmc.trace[[nc]]), thin), ]
-      colnames(mcmc.trace[[nc]])[mu.indices] <- paste0("mu.", rj.dat[[1]]$dat$species$names)
     }
   }
   
@@ -153,6 +182,16 @@ trace_rjMCMC <- function(rj.dat,
     dplyr::rename(model = name)
 
   #' ---------------------------------------------
+  # Functional forms
+  #' ---------------------------------------------
+  
+  # rj.phase <- purrr::map(.x = rj.dat, .f = "phase")
+  # for(nc in seq_along(rj.phase)){
+  #   if (burn > 0) rj.phase[[nc]] <- rj.phase[[nc]][-(1:burn)] # Remove burn-in
+  #   rj.phase[[nc]] <- rj.phase[[nc]][seq(from = 1, to = length(rj.phase[[nc]]), thin)]
+  # }
+  
+  #' ---------------------------------------------
   # Posterior medians
   #' ---------------------------------------------
   
@@ -164,6 +203,7 @@ trace_rjMCMC <- function(rj.dat,
     tibble::rownames_to_column() %>% 
     dplyr::rename(param = rowname, pmed = V1) 
   
+  if(rj.dat[[1]]$config$model.select){
   posterior.medians.by.model <- do.call(rbind, mcmc.trace) %>% 
     tibble::as_tibble(., .name_repair = "minimal") %>% 
     split(x = ., f = factor(.$model_ID)) %>% 
@@ -175,27 +215,24 @@ trace_rjMCMC <- function(rj.dat,
         tibble::rownames_to_column() %>% 
         dplyr::rename(param = rowname, pmed = V1) 
     })
-  
-  
   names(posterior.medians.by.model) <- sapply(X = as.numeric(names(posterior.medians.by.model)), FUN = function(b) model.list[model.list$ID == b, ]$model)
-
+  } else {
+    posterior.medians.by.model <- list(posterior.medians) %>% 
+      purrr::set_names(x = ., nm = model.list$model)
+  }
+  
+  # Remove baseline levels of factor covariates
   if(rj.dat[[1]]$dat$covariates$n > 0){
-    
     for(nc in seq_len(length(mcmc.trace))){
-      
-      # Remove baseline levels of factor covariates
       baseline.lvls <- 
         colnames(mcmc.trace[[nc]])[intersect(x = purrr::map(.x = paste0(rj.dat[[1]]$dat$covariates$names, "_"),
                                                             .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[nc]])))) %>% do.call(c, .),
                                              y = which(as.integer(colSums(mcmc.trace[[nc]]) == 0)==1))]
       mcmc.trace[[nc]] <- mcmc.trace[[nc]][, !colnames(mcmc.trace[[nc]]) %in% baseline.lvls]
     } # End for loop
-    
   } else {
-    
     for(nc in seq_len(length(mcmc.trace))){
       mcmc.trace[[nc]] <- mcmc.trace[[nc]][, !colnames(mcmc.trace[[nc]])=="beta"]} # End for loop
-    
   } # End if
   
   
@@ -211,26 +248,101 @@ trace_rjMCMC <- function(rj.dat,
   #' ---------------------------------------------
   # Acceptance rates
   #' ---------------------------------------------
-  AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), .f = ~rj.dat[[.x]]["accept"])
-  # mcmc.params$move$m <- mcmc.params$move$m[burn:mcmc.params$tot.iter]
   mcmc.params$move$m <- table(mcmc.params$move$m[burn:mcmc.params$tot.iter])
   names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
+
+  pars.mono <- c("t.ij", "mu","mu.i", "phi", "sigma", 
+                 paste0("mono.move.", rj.dat[[1]]$config$move$moves), "to.biphasic")
   
-  AR <- purrr::map(.x = AR, .f = ~acceptance_rate(AR.obj = .x, rj.obj = rj.dat, mp = mcmc.params)) %>% 
-    tibble::enframe(.) %>% 
-    tidyr::unnest_wider(value) %>% 
-    tidyr::unnest_wider(accept) %>% 
-    dplyr::rename(chain = name) %>% 
-    dplyr::rowwise() %>% 
-    dplyr::mutate(t.ij = mean(t.ij), mu.i = mean(mu.i)) %>% 
+  pars.bi <- c("alpha", "nu", "tau", "omega", "mu.ij.1", "mu.ij.2", "psi.i", "k.ij",
+               paste0("bi.move.", rj.dat[[1]]$config$move$moves), "to.monophasic")
+  
+  if(rj.dat[[1]]$dat$covariates$n > 0){
+    
+    cov.tbl <- purrr::map(.x = seq_len(mcmc.params$n.chains),
+                          .f = ~{
+                            tibble::tibble(param = rj.dat[[1]]$dat$covariates$names,
+                                           phase = NA, n.iter = NA) %>% 
+      dplyr::rowwise() %>% 
+        dplyr::mutate(n.iter = dplyr::case_when(
+          param %in% rj.dat[[.x]]$dat$covariates$names ~
+            sum(rj.dat[[.x]]$include.covariates[, paste0("incl.", param)]),
+          TRUE ~ mcmc.params$n.iter))}) 
+    
+    if(rj.dat[[1]]$config$covariate.select){
+      cov.tbl <- purrr::map(.x = cov.tbl, 
+                            .f = ~dplyr::bind_rows(.x, 
+              tibble::tibble(param = "covariates", phase = NA, n.iter = mcmc.params$n.iter)))
+    }
+    
+  }
+  
+  AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), 
+                   .f = ~{
+                     
+            move.phase <- cbind(rj.dat[[.x]]$mcmc$move$m[(mcmc.params$n.burn + 1):mcmc.params$tot.iter], 
+                                rj.dat[[.x]]$phase[(mcmc.params$n.burn + 1):mcmc.params$tot.iter])
+                     
+                     ncount <- dplyr::bind_rows(
+  tibble::tibble(param = pars.mono, phase = 1),
+  tibble::tibble(param = pars.bi, phase = 2)) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(n.iter = dplyr::case_when(
+    grepl(pattern = "mono.move.0", x = param) ~ sum(move.phase[, 1] == 0 & move.phase[, 2] == 1),
+    grepl(pattern = "mono.move.1", x = param) ~ sum(move.phase[, 1] == 1 & move.phase[, 2] == 1),
+    grepl(pattern = "mono.move.2", x = param) ~ sum(move.phase[, 1] == 2 & move.phase[, 2] == 1),
+    grepl(pattern = "mono.move.3", x = param) ~ sum(move.phase[, 1] == 3 & move.phase[, 2] == 1),
+    grepl(pattern = "bi.move.0", x = param) ~ sum(move.phase[, 1] == 0 & move.phase[, 2] == 2),
+    grepl(pattern = "bi.move.1", x = param) ~ sum(move.phase[, 1] == 1 & move.phase[, 2] == 2),
+    grepl(pattern = "bi.move.2", x = param) ~ sum(move.phase[, 1] == 2 & move.phase[, 2] == 2),
+    grepl(pattern = "bi.move.3", x = param) ~ sum(move.phase[, 1] == 3 & move.phase[, 2] == 2),
+    grepl(pattern = "to.biphasic", x = param) ~ sum(move.phase[, 2] == 1),
+    grepl(pattern = "to.monophasic", x = param) ~ sum(move.phase[, 2] == 2),
+    TRUE ~ sum(move.phase[, 2] == phase)
+  )) %>%
+  dplyr::ungroup() %>% 
+  {if(rj.dat[[1]]$dat$covariates$n > 0) dplyr::bind_rows(., cov.tbl[[.x]]) else .}
+  
+                     rj.dat[[.x]]["accept"] %>% 
+                       purrr::flatten(.) %>% 
+                       tibble::enframe() %>% 
+                       dplyr::mutate(chain = .x) %>% 
+                       tidyr::unnest(cols = c(value)) %>% 
+                       dplyr::rename(param = name) %>% 
+                       dplyr::group_by(chain, param) %>% 
+                       dplyr::summarise(value = round(mean(value), 0), .groups = 'keep') %>% 
+                       dplyr::ungroup() %>% 
+                       dplyr::left_join(., y = ncount, by = "param") %>% 
+                       dplyr::mutate(AR = value / n.iter)
+                     
+                   })
+  
+  AR <- do.call(dplyr::bind_rows, AR)
+  AR <- AR %>% dplyr::rowwise() %>% 
+    dplyr::mutate(label = dplyr::case_when(
+      grepl("mono.move.0", param) ~ 2,
+      grepl("mono.move.1", param) ~ 2,
+      grepl("mono.move.2", param) ~ 2,
+      grepl("mono.move.3", param) ~ 2,
+      grepl("bi.move.0", param) ~ 2,
+      grepl("bi.move.1", param) ~ 2,
+      grepl("bi.move.2", param) ~ 2,
+      grepl("bi.move.3", param) ~ 2,
+      grepl("move.covariates", param) ~ 2,
+      TRUE ~ 1)) %>% 
+    dplyr::mutate(param = dplyr::case_when(
+      grepl("mono.move.0", param) ~ "split/merge (mono)",
+      grepl("mono.move.1", param) ~ "data driven I (mono)",
+      grepl("mono.move.2", param) ~ "data driven II (mono)",
+      grepl("mono.move.3", param) ~ "random (mono)",
+      grepl("bi.move.0", param) ~ "split/merge (bi)",
+      grepl("bi.move.1", param) ~ "data driven I (bi)",
+      grepl("bi.move.2", param) ~ "data driven II (bi)",
+      grepl("bi.move.3", param) ~ "random (bi)",
+      grepl("move.covariates", param) ~ "covariates",
+  TRUE ~ param)) %>% 
     dplyr::ungroup()
-  
-  if("move.0" %in% names(AR)) names(AR)[which(names(AR) == "move.0")] <- "split.merge"
-  if("move.1" %in% names(AR)) names(AR)[which(names(AR) == "move.1")] <- "datadriven.I"
-  if("move.2" %in% names(AR)) names(AR)[which(names(AR) == "move.2")] <- "datadriven.II"
-  if("move.3" %in% names(AR)) names(AR)[which(names(AR) == "move.3")] <- "random"
-  if("move.covariates" %in% names(AR)) names(AR)[which(names(AR) == "move.covariates")] <- "cov.select"
-  
+      
   #' ---------------------------------------------
   # Effective sample sizes
   #' ---------------------------------------------
@@ -238,6 +350,14 @@ trace_rjMCMC <- function(rj.dat,
     tibble::enframe(.) %>% 
     dplyr::rename(parameter = name, ESS = value)
   
+  if(!rj.dat[[1]]$config$model.select) 
+    ESS <- ESS %>% dplyr::filter(!parameter %in% c("model_ID", "model_size"))
+  
+  if(!rj.dat[[1]]$config$covariate.select) 
+    ESS <- ESS %>% dplyr::filter(!stringr::str_detect(parameter, "incl."))
+  
+  if(!rj.dat[[1]]$config$function.select) 
+    ESS <- ESS %>% dplyr::filter(!parameter == "phase")
   
   # Return output as a named list
   res <- list(dat = rj.dat[[1]]$dat,

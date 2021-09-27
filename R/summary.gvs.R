@@ -9,7 +9,7 @@
 #' @param convergence Logical. If \code{TRUE}, assesses convergence using the multivariate potential scale reduction factor (Gelman-Rubin statistic), as implemented in \code{\link[coda]{gelman.diag}}.
 #' @param gelman.rubin Threshold for determining convergence based on the Gelman-Rubin statistic. Defaults to \code{1.1}.
 #' @param model.ranks Logical. If \code{TRUE}, returns a summary of posterior model probabilities and associated model rankings.
-#' @param n.top Number of top-ranking models to display when \code{model.ranks = TRUE}. Defaults to \code{NULL}, which lists all models.
+#' @param n.top Number of top-ranking models to display when \code{model.ranks = TRUE}.
 #' 
 #' @return A detailed summary, printed to the R console.
 #' @import mclust

@@ -41,8 +41,6 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   if(dat.obj$param$sim) cat("\nFunctional form:", ifelse(dat.obj$biphasic, "Biphasic", "Monophasic"))
   if(!dat.obj$param$sim) cat("\nData file:", dat.obj$param$data.file)
   
-  
-  
   cat("\n\n--------------------")
   cat("\nOBSERVATIONS\n")
   cat("--------------------\n")
@@ -89,19 +87,7 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   
   print(trials.tbl)
   cat("\n")
-  
-  # for(ns in seq_len(dat.obj$species$n)){
-  #   trials.tmp <- trials.summary %>% 
-  #     dplyr::filter(species == ns) %>% 
-  #     dplyr::pull(n) %>% 
-  #     table(.) %>% 
-  #     tibble::enframe() %>% 
-  #     dplyr::rename(trials = name, count = value) %>% 
-  #     dplyr::mutate(species = dat.obj$species$names[ns])
-  #   print(trials.tmp)
-  #   
-  # }
-  
+
   print(dat.obj$species$summary, n = 9999, na.print = "NA")
   
   cat("\n--------------------")
@@ -143,20 +129,22 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
         cat("-- ", cc, " --\n")
         cat("[min]: ", c.min, "\n[mean]: ", c.mean, "\n[max]: ", c.max, "\n", sep = "")
         cat("[NA]: n = ", c.miss, "\n\n", sep = "")
-        cat("\n")
       }
     }
     
     
   }
   
-  if("sonar" %in% dat.obj$covariates$names){
+  if(!dat.obj$param$sim){
     
-    cat("\n--------------------")
-    cat("\nSONAR GROUPINGS\n")
-    cat("--------------------\n")
-    
-    print(dat.obj$covariates$signal.types, na.print = "NA")
+    if("sonar" %in% dat.obj$covariates$names){
+      
+      cat("\n--------------------")
+      cat("\nSONAR GROUPINGS\n")
+      cat("--------------------\n")
+      
+      print(dat.obj$covariates$signal.types, na.print = "NA")
+    }
   }
   
   if(sum(is.na(dat.obj$covariates$df)) > 0) {
@@ -170,36 +158,33 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     cat("--------------------\n\n")
     
     cat("Model selection:", dat.obj$config$model.select, "\n")
-    cat("Covariate selection:", dat.obj$config$covariate.select, "\n\n")
-    
+    cat("Covariate selection:", dat.obj$config$covariate.select, "\n")
+    cat("Functional form selection:", dat.obj$config$function.select, "\n\n")
+    if(!dat.obj$config$function.select){
+      cat("Functional form:", ifelse(dat.obj$config$biphasic, "Biphasic", "Monophasic"), "\n\n")
+    }
+
     cat("Variance estimates:", paste0(round(dat.obj$config$var, 1), " (", names(dat.obj$config$var), ")", collapse = "; "), "\n")
     
-    cat("\nProposal standard deviations:\n\n")
+    cat("\n-- Proposals --\n\n")
     prop.df <- tibble::enframe(dat.obj$config$prop$mh) %>% 
       tidyr::unnest(cols = c(value)) %>% 
       dplyr::rename(param = name, SD = value) %>% 
       dplyr::mutate(step = "MH") %>% 
-      dplyr::bind_rows(., tibble::tibble(param = "data-driven", 
-                                         SD = dat.obj$config$prop$dd, 
+      dplyr::bind_rows(., tibble::tibble(param = c("split-merge", "data-driven"), 
+                                         SD = c(dat.obj$config$prop$rj, dat.obj$config$prop$dd), 
                                          step = "RJ"))
     print(prop.df, na.print = "NA")
-    
-    cat("\n")
-    cat("Priors:\n\n")
-    cat("μ: Uniform", paste0("(", paste0(dat.obj$param$bounds["mu", ], collapse = "; "), ")"), "\n")
-    cat("φ: Uniform", paste0("(", paste0(dat.obj$param$bounds["phi", ], collapse = "; "), ")"), "\n")
-    cat("σ: Uniform", paste0("(", paste0(dat.obj$param$bounds["sigma", ], collapse = "; "), ")"), "\n")
-    
-    for(cc in dat.obj$dat$covariates$names){
-      cat(paste0(cc, ":"), "Normal", paste0("(", paste0(dat.obj$config$prior[[cc]], collapse = "; "), ")"), "\n")
-    }
-    
     cat("\n")
     cat("p(split):", dat.obj$config$move$prob[1], "\n")
     cat("p(merge):", dat.obj$config$move$prob[2], "\n")
     cat("\n")
     
-    cat("\nClustering:\n\n")
+    cat("\n")
+    cat("-- Priors --\n\n")
+    print(dat.obj$config$priors)
+    
+    cat("\n-- Clustering --\n\n")
     print(dat.obj$config$clust, na.print = "NA")
     
     

@@ -39,164 +39,263 @@ rtnorm <- function(n, location, scale, L, U){
   
 }
 
+d_binom <- function(x, size, prob, log){
+  d <- dbinom(x = x, size = size, prob = prob, log = log)
+  d[is.infinite(d)] <- -100000 # To avoid Inf that cause numerical issues
+  return(d)
+}
+
 # Likelihood --------------------------------------------------------------
 
 #' Likelihood
 #'
-#' Calculate log-likelihoods required by the rjMCMC sampler.
+#' Calculate the log-likelihood of a monophasic dose-response model, as required by the rjMCMC sampler.
 #' 
+#' @param biphasic Logical. Indicates the type of model for which likelihoods should be calculated.
+#' @param param.name Paramter name. Ignored if \code{values} is specified.
 #' @param rj.obj rjMCMC object.
-#' @param iter Current iteration.
-#' @param model Model ID number.
+#' @param model Integer vector determining species groupings for the model of interest.
 #' @param values List of proposed values, if available.
-#' @param include.cov Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.
-#' @param param Paramter name. Ignored if \code{values} is specified.
+#' @param included.cov Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.
 #' @param RJ Logical. If \code{TRUE}, returns the likelihoods associated with between-model jumps. If \code{FALSE}, returns the likelihoods associated with the update step of the Metropolis sampler.
 #' @param lprod If \code{TRUE}, returns the product of individual likelihoods. 
 
-likelihood <- function(rj.obj,
-                       iter,
-                       model, 
-                       values = list(), 
-                       include.cov = NULL, 
+likelihood <- function(biphasic = FALSE,
                        param.name = NULL, 
+                       rj.obj,
+                       model, 
+                       values = NULL, 
+                       included.cov = NULL, 
                        RJ = FALSE, 
                        lprod = TRUE){
   
-  # Define model parameters
-  # Must be in the order in which they are updated within the MCMC sampler
-  model.parameters <- c("y.ij", "t.ij", "sigma", rj.obj$dat$covariates$names, "mu.i", "mu", "phi")
-  not.covariates <- c("y.ij", "t.ij", "sigma", "mu.i", "mu", "phi")
-  
-  if (length(values) > 0) {
-    par.name <- names(values)
-  } else {
-    if (is.null(param.name)) par.name <- "" else par.name <- param.name
-  }
-  
-  # Check inputs are correct
-  if (all(!par.name == "" & !par.name %in% model.parameters)) stop("Parameter(s) not found.")
-  if (!RJ & length(values) == 0 & is.null(param.name)) stop("Must provide parameter name.")
-  
-  # Determine correct indices to retrieve to relevant parameter values 
-  iteration <- rep(iter - 1, times = length(model.parameters))
-  iter.ind <- which(model.parameters %in% as.character(par.name))
-  iter.ind <- ifelse(length(iter.ind) == 0, 1, iter.ind)
-  if (!RJ) iteration[(1:iter.ind) - 1] <- iter
-  if (!RJ | !is.null(include.cov)) iteration[which(model.parameters == "mu")] <- iter
-  
-  # When updating covariates in MH step
-  if (!RJ & is.null(include.cov) & all(!par.name %in% not.covariates)) 
-    iteration[which(model.parameters %in% rj.obj$dat$covariates$names)] <- iter
-  
-  # Function to extract the right parameter values
-  extract_pars <- function(m){
-    x <- rj.obj[[m]]
-    if("matrix" %in% class(x)) x <- x[iteration[which(model.parameters == m)], ] else 
-      x <- x[iteration[which(model.parameters == m)]]}
-  
-  
-  # Extract parameter values
-  params <- lapply(X = model.parameters, FUN = extract_pars)
-  names(params) <- model.parameters
-  
-  if (any(!par.name == "")) params[names(values)] <- values[]
-  
-  # include.cov is used to update covariate values
-  if (!is.null(include.cov)){
-    if (sum(include.cov) == 0) params$include.covariates <- "None" else 
-      params$include.covariates <- names(include.cov[include.cov == 1])
-  } else { # if include.cov is NULL
-    if(RJ) whichrow <- iter - 1 else whichrow <- iter
-    include.cov <- rj.obj$include.covariates[whichrow, ]
-    params$include.covariates <- names(include.cov[include.cov == 1])
-  }
-  
   # Log-likelihoods
-  if(!lprod) loglikelihood <- list() else loglikelihood <- numeric(length = 2 + nb_groups(model)) 
+  loglikelihood <- 0
   
-  if(all(par.name %in% "t.ij") | RJ){
-    LL.1 <- dnorm(x = params$y.ij, mean = params$t.ij, sd = rj.obj$dat$obs$sd, log = TRUE)
-    if(!lprod) loglikelihood <- append(loglikelihood, list(LL.1)) else loglikelihood[1] <- sum(LL.1)}
-  
-  if(all(par.name %in% c("t.ij", "sigma", "mu.i", rj.obj$dat$covariates$names)) | RJ){
+  if(!biphasic){
     
-    LL.2 <- dtnorm(
-      x = params$t.ij,
-      location = Reduce("+", append(
-        list(params$mu.i[rj.obj$dat$whales$id]),
-        lapply(
-          X = params$include.covariates,
-          FUN = function(k) {
-            if (k == "None") {
-              0
-            } else {
-              apply(t(t(rj.obj$dat$covariates$dummy[[k]]) * params[[k]]), 1, sum)
+    # MONOPHASIC
+    
+    if(any(param.name == "t.ij") | RJ){
+      LL.1 <- dnorm(x = rj.obj$dat$obs$y_ij, 
+                    mean = if(any(param.name == "t.ij") & !is.null(values)) values$t.ij else
+                      rj.obj$t.ij[rj.obj$iter["t.ij"],], 
+                    sd = rj.obj$dat$obs$sd, 
+                    log = TRUE)
+      # Censored data have a likelihood of 1 (0 on log scale) if t.ij > Rc or < Lc
+      # which we've made sure is the case by only proposing values of t.ij that meet these criteria
+      LL.1[is.na(LL.1)] <- 0 
+      if(lprod) LL.1 <- sum(LL.1)
+      loglikelihood <- loglikelihood + LL.1
+    }
+    
+    if(any(param.name %in% c("t.ij", "sigma", "mu.i", rj.obj$dat$covariates$names)) | RJ){
+      
+      if(rj.obj$dat$covariates$n > 0){
+        
+        if(is.null(included.cov)) included.cov <- rj.obj$include.covariates[rj.obj$iter["covariates"], ]
+        
+        if (sum(included.cov) == 0) {
+          covnames <- "nil"
+          cov.effects <- 0
+        } else {
+          included.cov <- included.cov[included.cov == 1]
+          covvalues <- do.call(c, purrr::map(
+            .x = names(included.cov),
+            .f = ~ {
+              if (!is.null(values) & .x %in% names(values)) values[[.x]] else rj.obj[[.x]][rj.obj$iter[.x], ]
             }
-          }
-        )
-      )),
-      scale = params$sigma,
-      L = rj.obj$dat$param$bounds["t.ij", 1],
-      U = rj.obj$dat$param$bounds["t.ij", 2],
-      log = TRUE
-    )
-    
-    if (!lprod) {
-      if (all(par.name == "mu.i")) {
+          ))
+          cov.effects <- colSums(t(do.call(cbind, rj.obj$dat$covariates$dummy[names(included.cov)])) * covvalues)
+        }
+      } else {
+        cov.effects <- 0
+      }
+      
+      LL.2 <- dtnorm(
+        x = if(any(param.name == "t.ij") & !is.null(values)) values$t.ij else rj.obj$t.ij[rj.obj$iter["t.ij"],],
+        location = if(any(param.name == "mu.i") & !is.null(values)) 
+          values$mu.i[rj.obj$dat$whales$id] + cov.effects else 
+          rj.obj$mu.i[rj.obj$iter["mu.i"], rj.obj$dat$whales$id] + cov.effects,
+        scale = if(any(param.name == "sigma") & !is.null(values)) values$sigma else 
+          rj.obj$sigma[rj.obj$iter["sigma"]],
+        L = rj.obj$dat$param$dose.range[1],
+        U = rj.obj$dat$param$dose.range[2],
+        log = TRUE)
+      
+      if (any(param.name == "mu.i")) {
         LL.2 <- purrr::map_dbl(.x = seq_len(rj.obj$dat$whales$n), 
                                .f = ~ sum(LL.2[rj.obj$dat$whales$id == .x]))
-      }
-      
-      loglikelihood <- append(loglikelihood, list(LL.2))
-    } else {
-      loglikelihood[2] <- sum(LL.2)
+      } 
+      if (lprod) LL.2 <- sum(LL.2)
+      loglikelihood <- loglikelihood + LL.2
     }
-  }
-  
-  
-  if(all(par.name %in% c("mu.i", "mu", "phi")) | RJ){
-
-    LL.3 <- sapply(X = 1:nb_groups(model), 
-                   FUN = function(p){
-                     dtnorm(
-                       x = params$mu.i[model[rj.obj$dat$species$id] == p],
-                       location = unique(params$mu[model == p]),
-                       scale = params$phi,
-                       L = rj.obj$dat$param$bounds["mu.i", 1],
-                       U = rj.obj$dat$param$bounds["mu.i", 2],
-                       log = TRUE)
-                   })
     
-    if (!lprod) {
+    if(any(param.name %in% c("mu.i", "mu", "phi")) | RJ){
       
-      if (all(par.name == "mu.i")) {
-        mu.i.vec <- sort(as.numeric(gsub(
-          pattern = "mu.", replacement = "",
-          x = names(unlist(c(setNames(LL.3, rownames(LL.3)))))
-        )),
-        index.return = TRUE
-        )
-        loglikelihood <- append(loglikelihood, list(unlist(LL.3)[mu.i.vec$ix]))
-      } else {
-        loglikelihood <- append(loglikelihood, list(LL.3))
-      }
+      LL.3 <- dtnorm(
+        x = if(any(param.name == "mu.i") & !is.null(values)) values$mu.i else rj.obj$mu.i[rj.obj$iter["mu.i"],],
+        location = if(any(param.name == "mu") & !is.null(values)) values$mu[rj.obj$dat$species$id] else rj.obj$mu[rj.obj$iter["mu"], rj.obj$dat$species$id],
+        scale = if(any(param.name == "phi") & !is.null(values)) values$phi else rj.obj$phi[rj.obj$iter["phi"]],
+        L = rj.obj$dat$param$dose.range[1],
+        U = rj.obj$dat$param$dose.range[2],
+        log = TRUE)
       
-    } else {
-      
-      if(is.list(LL.3)) LL.3 <- sapply(LL.3, sum) else LL.3 <- colSums(LL.3)
-      
-      if (nb_groups(model) == 1) {
-        loglikelihood[2 + seq_len(nb_groups(model))] <- sum(LL.3)
-      } else {
-        loglikelihood[2 + seq_len(nb_groups(model))] <- LL.3
-      }
+      if (lprod) LL.3 <- sum(LL.3)
+      loglikelihood <- loglikelihood + LL.3
     }
-  }
-  
-  if(!lprod) return(unname(Reduce("+", loglikelihood))) else return(sum(loglikelihood, na.rm = TRUE))
+    
+    if(lprod) return(sum(loglikelihood, na.rm = TRUE)) else return(unname(loglikelihood)) 
+    
+  } else {
+    
+    # BIPHASIC
+    
+    if(any(c("mu.ij", "k.ij") %in% param.name) | RJ){
+      LL.1 <- dnorm(x = rj.obj$dat$obs$y_ij, 
+                    mean = if("mu.ij" %in% param.name & !is.null(values)) 
+                      values$mu.ij[cbind(seq_len(nrow(values$mu.ij)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] else if("k.ij" %in% param.name & !is.null(values)) rj.obj$mu.ij[rj.obj$iter["mu.ij"], ,][cbind(seq_along(values$k.ij), values$k.ij)] else rj.obj$t.ij[rj.obj$iter["t.ij"],], 
+                    sd = rj.obj$dat$obs$sd, 
+                    log = TRUE)
+      
+      LL.1[is.na(LL.1)] <- 0 
+      if(lprod) LL.1 <- sum(LL.1)
+      loglikelihood <- loglikelihood + LL.1
+    }
+    
+    if(any(c("mu.ij", "nu1", "tau1", "alpha") %in% param.name) | RJ){
+      
+      LL.2a <- 
+        dtnorm(x = if("mu.ij" %in% param.name & !is.null(values)) 
+          values$mu.ij[, 1] else rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 1],
+               location = if(any(c("nu1", "nu") %in% param.name) & !is.null(values)) values$nu[1, rj.obj$dat$species$trials] else rj.obj$nu[rj.obj$iter["nu"], rj.obj$dat$species$trials, 1],
+               scale = if("tau1" %in% param.name & !is.null(values)) values$tau[1] else rj.obj$tau[rj.obj$iter["tau"], 1],
+               L = rj.obj$dat$param$dose.range[1], 
+               U = if("alpha" %in% param.name & !is.null(values)) values$alpha[rj.obj$dat$species$trials] else rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials],
+               log = TRUE)
+      
+      if(lprod) LL.2a <- sum(LL.2a)
+      if(!"mu.ij" %in% param.name) loglikelihood <- loglikelihood + LL.2a
+      
+    }
+    
+    if(any(c("mu.ij", "nu2", "tau2", "alpha") %in% param.name) | RJ){
+      
+      LL.2b <- 
+        dtnorm(x = if("mu.ij" %in% param.name & !is.null(values)) 
+          values$mu.ij[, 2] else rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 2],
+               location = if(any(c("nu2", "nu") %in% param.name) & !is.null(values)) values$nu[2, rj.obj$dat$species$trials] else rj.obj$nu[rj.obj$iter["nu"], rj.obj$dat$species$trials, 2],
+               scale = if("tau2" %in% param.name & !is.null(values)) values$tau[2] else rj.obj$tau[rj.obj$iter["tau"], 2],
+               L = if("alpha" %in% param.name & !is.null(values)) values$alpha[rj.obj$dat$species$trials] else rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials],
+               U = rj.obj$dat$param$dose.range[2],
+               log = TRUE)
+      
+      if(lprod) LL.2b <- sum(LL.2b)
+      if(!"mu.ij" %in% param.name){
+        loglikelihood <- loglikelihood + LL.2b
+      } else {
+        mu.ij.loglik <- cbind(LL.2a, LL.2b)
+        mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] <- 
+          mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] + loglikelihood
+        if(RJ) loglikelihood <- rowSums(mu.ij.loglik) else loglikelihood <- mu.ij.loglik
+      }
+      
+    }
+    
+    # Note: psi updated via Gibbs sampling so not included here
+    if(any(c("psi.i", "k.ij", rj.obj$dat$covariates$names) %in% param.name) | RJ){
+      
+      if(rj.obj$dat$covariates$n > 0){
+        
+      if(is.null(included.cov)) included.cov <- rj.obj$include.covariates[rj.obj$iter["covariates"], ]
+      
+      if (sum(included.cov) == 0) {
+        covnames <- "nil"
+        cov.effects <- 0
+      } else {
+        included.cov <- included.cov[included.cov == 1]
+        covvalues <- do.call(c, purrr::map(
+          .x = names(included.cov),
+          .f = ~ {
+            if (!is.null(values) & (is.list(values) & .x %in% names(values))) {
+              qnorm(pnorm(q = values[[.x]],
+                          mean = rj.obj$config$priors[.x, 1],
+                          sd = rj.obj$config$priors[.x, 2]))
+            } else { 
+              qnorm(pnorm(q = rj.obj[[.x]][rj.obj$iter[.x], ], 
+                          mean = rj.obj$config$priors[.x, 1], 
+                          sd = rj.obj$config$priors[.x, 2]))
+            }
+          }
+        ))
+        cov.effects <- colSums(t(do.call(cbind, rj.obj$dat$covariates$dummy[names(included.cov)])) * covvalues)
+      }
+      
+      } else {
+        cov.effects <- 0
+      }
+      
+      if("psi.i" %in% param.name & !is.null(values)) psi.ij <- values$psi.i[rj.obj$dat$whales$id] + cov.effects else psi.ij <- rj.obj$psi.i[rj.obj$iter["psi.i"], rj.obj$dat$whales$id] + cov.effects
+      
+      pi.ij <- pnorm(psi.ij)
+      
+    }
+    
+    if(any(c("omega", "psi.i") %in% param.name) | RJ){
+      LL.3 <- 
+      dnorm(x = if("psi.i" %in% param.name & !is.null(values)) values$psi.i else 
+        rj.obj$psi.i[rj.obj$iter["psi.i"], ],
+              mean = if("psi" %in% param.name & !is.null(values)) values$psi else 
+                rj.obj$psi[rj.obj$iter["psi"]],
+              sd = if("omega" %in% param.name & !is.null(values)) values$omega else
+                rj.obj$omega[rj.obj$iter["omega"]],
+              log = TRUE)
+      if(lprod) LL.3 <- sum(LL.3)
+      loglikelihood <- loglikelihood + LL.3
+    }
+    
+    # if(param.name %in% c("psi.i") | RJ){
+    #   LL.4 <- 
+    #     dnorm(x = if(param.name == "psi.i" & !is.null(values)) values else rj.obj$psi.i[rj.obj$iter["psi.i"], ],
+    #           mean = if(param.name == "psi" & !is.null(values)) values else rj.obj$psi[rj.obj$iter["psi"]],
+    #           sd = if(param.name == "omega" & !is.null(values)) values else rj.obj$omega[rj.obj$iter["omega"]], 
+    #           log = TRUE)
+    #   if(lprod) LL.4 <- sum(LL.4)
+    #   loglikelihood <- loglikelihood + LL.4
+    # }
+    
+    if(any(c("k.ij", "covariates", "psi.i", rj.obj$dat$covariates$names) %in% param.name) | RJ){
+      
+      LL.4a <- d_binom(x = if("k.ij" %in% param.name & !is.null(values)) 2 - values$k.ij else 
+        2 - rj.obj$k.ij[rj.obj$iter["k.ij"], ], 
+                       size = 1, 
+                       prob = pi.ij, 
+                       log = TRUE)
+      
+      if(any(c("k.ij", rj.obj$dat$covariates$names) %in% param.name)) loglikelihood <- loglikelihood + LL.4a
+      
+    }
+    
+    if("psi.i" %in% param.name | RJ){
+      
+      LL.4b <- purrr::map_dbl(.x = seq_len(rj.obj$dat$whales$n),
+                              .f = ~ sum(LL.4a[rj.obj$dat$whales$id == .x]))
+      if(lprod) LL.4b <- sum(LL.4b)
+      loglikelihood <- loglikelihood + LL.4b  
+    }
+    
+    if(lprod) return(sum(loglikelihood, na.rm = TRUE)) else return(unname(loglikelihood)) 
+    
+    # if(lprod){
+    #   if(any(rj.obj$dat$covariates$names %in% param.name))
+    #     return(list(sum(loglikelihood, na.rm = TRUE), cov.effects)) else return(sum(loglikelihood, na.rm = TRUE))
+    # } else {
+    #   if("psi.i" %in% param.name)
+    #     return(list(loglikelihood, cov.effects)) else return(unname(loglikelihood)) 
+    # }
+    
+  }  
 }
-
 
 # Priors ----------------------------------------------------------------
 
@@ -212,13 +311,74 @@ uniform_prior <- function(rj.obj,
                           param.name,
                           param = NULL) {
   
-  loglik.unif <- dunif(x = unique(param), 
-                       min = rj.obj$dat$param$bounds[param.name, 1],
-                       max = rj.obj$dat$param$bounds[param.name, 2],
+  if("mu" %in% param.name) {
+  loglik.unif <- dunif(x = unique(param$out$mu), 
+                       min = rj.obj$config$priors[param.name, 1],
+                       max = rj.obj$config$priors[param.name, 2],
                        log = TRUE)
+  
+  } else {
+    loglik.unif <- c(dunif(x = unique(param$out$nu[1, ]), 
+                         min = rj.obj$config$priors["nu", 1],
+                         max = unique(param$out$alpha),
+                         log = TRUE),
+                     dunif(x = unique(param$out$nu[2, ]), 
+                           min = unique(param$out$alpha),
+                           max = rj.obj$config$priors["nu", 2],
+                           log = TRUE),
+                     dunif(x = unique(param$out$alpha), 
+                           min = rj.obj$config$priors["alpha", 1],
+                           max = rj.obj$config$priors["alpha", 2],
+                           log = TRUE))
+  }
   
   if (any(abs(loglik.unif) == Inf)) loglik.unif <- -100000
   return(sum(loglik.unif))
+}
+
+ff_prior <- function(rj.obj, param = NULL, phase) {
+  
+  if(phase == 1) {
+
+    if(is.null(param)) param <- list(mu = rj.obj$mu[rj.obj$iter["mu"], ],
+                                     sigma = rj.obj$sigma[rj.obj$iter["sigma"]],
+                                     phi = rj.obj$phi[rj.obj$iter["phi"]])
+    
+    loglik <- dunif(x = c(unique(param$mu), param$sigma, param$phi),
+                         min = rj.obj$config$priors[c(rep("mu", length(unique(param$mu))), "sigma", "phi"), 1],
+                         max = rj.obj$config$priors[c(rep("mu", length(unique(param$mu))), "sigma", "phi"), 2],
+                         log = TRUE)
+    
+  } else if(phase == 2){
+    
+    if(is.null(param)){
+      param <- list(alpha = unique(rj.obj$alpha[rj.obj$iter["alpha"], ]),
+                    nu1 = unique(rj.obj$nu[rj.obj$iter["nu"], , 1]),
+                    nu2 = unique(rj.obj$nu[rj.obj$iter["nu"], , 2]),
+                    tau = rj.obj$tau[rj.obj$iter["tau"], ],
+                    omega = rj.obj$omega[rj.obj$iter["omega"]],
+                    psi = rj.obj$psi[rj.obj$iter["psi"]])
+    } else {
+      param$nu1 <- param$nu[1, ]
+      param$nu2 <- param$nu[2, ]
+    }
+    
+    loglik <- dunif(x = c(param$alpha, param$nu1, param$nu2, param$tau, param$omega),
+          min = c(rj.obj$config$priors[rep("alpha", length(param$alpha)), 1],
+                  rj.obj$config$priors[rep("nu", length(param$nu1)), 1],
+                  param$alpha,
+                  rj.obj$config$priors[c(rep("tau", 2), "omega"), 1]),
+          max = c(rj.obj$config$priors[rep("alpha", length(param$alpha)), 2],
+                  param$alpha,
+                  rj.obj$config$priors[rep("nu", length(param$nu2)), 2],
+                  rj.obj$config$priors[c(rep("tau", 2), "omega"), 2]),
+          log = TRUE) + 
+      dnorm(param$psi, mean = rj.obj$config$priors["psi", 1], sd = rj.obj$config$priors["psi", 2], log = TRUE)
+    
+  }
+  
+  if (any(abs(loglik) == Inf)) loglik <- -100000
+  return(sum(loglik))
 }
 
 #' Normal prior on covariates
@@ -234,8 +394,8 @@ normal_prior <- function(rj.obj,
                          param = NULL) {
   
   loglik.norm <- dnorm(x = unique(param), 
-                       mean = rj.obj$config$prior[[param.name]][1], 
-                       sd = rj.obj$config$prior[[param.name]][2], 
+                       mean = rj.obj$config$priors[param.name, 1], 
+                       sd = rj.obj$config$priors[param.name, 2], 
                        log = TRUE)
   
   if (any(abs(loglik.norm) == Inf)) loglik.norm <- -100000
@@ -248,7 +408,7 @@ normal_prior <- function(rj.obj,
 #' Propose a new model.
 #' 
 #' @param move.type Type of between-model jump. (0): split/merge, (1): Bootstrap, (2): Cluster, (3): Random
-propose_jump <- function(rj.obj, move.type) {
+propose_jump <- function(rj.obj, move.type, phase) {
   
   # Perform function checks
   if (!move.type %in% 0:3) stop("Unrecognised move type.")
@@ -379,7 +539,6 @@ propose_jump <- function(rj.obj, move.type) {
       
     }
     
-    
     # Propose a split
     if (split.merge == 1) {
       
@@ -412,7 +571,16 @@ propose_jump <- function(rj.obj, move.type) {
       if(!length(n) == 2) stop("Length mismatch in n <from: N_groups>")
       
       # Jacobian
-      J <- (n[1] + n[2]) / (n[1] * n[2])
+      if(phase == 1){
+        J <- (n[1] + n[2]) / (n[1] * n[2])
+      } else if(phase == 2){
+        # J <- ((n[1] + n[2])^2)/(n[1]^2 * n[2]^2)
+        J <- ((n[1] + n[2])^3)/(n[1]^3 * n[2]^3)
+        # Value of J can be verified by constructing the matrix of partial derivatives
+        # m1 <- matrix(c(1, (1/n[1]), 1, -(1/n[2])), 2, 2, byrow = TRUE)
+        # m2 <- matrix(0,2,2)
+        # abs(det(rbind(cbind(m1, m2, m2), cbind(m2, m1, m2), cbind(m2, m2, m1))))
+      }
       
       # Compute model jump probabilities
       p.jump <- c(p.splitmerge * p.choosegroup * p.group)
@@ -455,7 +623,15 @@ propose_jump <- function(rj.obj, move.type) {
       if(!length(n) == 2) stop("Length mismatch in n <from: N_groups>")
       
       # Jacobian
-      J <- (n[1] * n[2]) / (n[1] + n[2])
+      if(phase == 1){
+        J <- (n[1] * n[2]) / (n[1] + n[2])
+      } else if(phase == 2){
+        J <- (n[1]^3 * n[2]^3) / ((n[1] + n[2])^3)
+        # Value of J can be verified by constructing the matrix of partial derivatives
+        # m1 <- matrix(c(n[1]/sum(n), n[2]/sum(n), 0, -n[2]), 2, 2, byrow = TRUE)
+        # m2 <- matrix(0,2,2)
+        # abs(det(rbind(cbind(m1, m2, m2), cbind(m2, m1, m2), cbind(m2, m2, m1))))
+      }
       
       # Reverse move
       available.groups.reverse <- which(l_groups(new.model) > 1)
@@ -487,29 +663,246 @@ propose_jump <- function(rj.obj, move.type) {
   ))
 }
 
+#' Proposal for jumps between functional forms
+#'
+#' Generate proposed values for relevant model parameters
+#' @param rj.obj Input list.
+#' @param from.phase Jump from monophasic to biphasic (1) or from biphasic to monophasic (2).
+#' @param scale.adj SD used in calls to rtnorm for the following parameters: alpha, nu, sigma, phi, mu
+
+proposal_ff <- function(rj.obj, 
+                        from.phase, 
+                        scale.adj = setNames(c(1, 1, 2, 3, 3, 5),
+                                             c("alpha", "nu", "tau", "sigma", "phi", "mu"))) {
+  
+  fprop <- list()
+  fprop$to.phase <- (2 - from.phase) + 1
+  fprop$t.ij <-  rj.obj$t.ij[rj.obj$iter["t.ij"], ]
+  
+  inits.bi <- purrr::map(.x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
+                         .f = ~{
+                           censored <- rj.obj$dat$obs$censored[rj.obj$dat$species$trials %in% 
+                                                        which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+                           y.obs <- rj.obj$dat$obs$y_ij[rj.obj$dat$species$trials %in% 
+                                                        which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+                           Lc.obs <- rj.obj$dat$obs$Lc[rj.obj$dat$species$trials %in% 
+                                                       which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+                           Rc.obs <- rj.obj$dat$obs$Rc[rj.obj$dat$species$trials %in% 
+                                                       which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+                           
+                           y.obs[is.na(y.obs) & censored == 1] <- 
+                             runif(n = sum(is.na(y.obs) & censored == 1),
+                                   min = Rc.obs[is.na(y.obs) & censored == 1],
+                                   max = rj.obj$dat$param$dose.range[2])
+                           y.obs[is.na(y.obs) & censored == -1] <- 
+                             runif(n = sum(is.na(y.obs) & censored == -1),
+                                   min = rj.obj$dat$param$dose.range[1],
+                                   max = Lc.obs[is.na(y.obs) & censored == -1])
+                           
+                           sort(y.obs)})
+  
+  inits.tau <- rbind(sapply(X = inits.bi, FUN = function(x){sd(x[x<median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = inits.bi, FUN = function(x){sd(x[x>median(x, na.rm = TRUE)], na.rm = TRUE)}))
+  
+  inits.tau[is.na(inits.tau)] <- runif(n = sum(is.na(inits.tau)), 
+                                       min = rj.obj$config$priors["tau", 1],
+                                       max = rj.obj$config$priors["tau", 2])
+  
+  input.data <- tibble::tibble(species = rj.obj$dat$species$trials,
+                               y = rj.obj$dat$obs$y_ij,
+                               censored = rj.obj$dat$obs$censored,
+                               rc = rj.obj$dat$obs$Rc,
+                               lc = rj.obj$dat$obs$Lc)
+  
+  mu.start <- purrr::map_dbl(
+    .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
+    .f = ~ {
+      
+      sp.data <- input.data %>% 
+        dplyr::filter(species == .x)
+      
+      if(all(is.na(sp.data$y))){
+        sp.data %>% 
+          dplyr::rowwise() %>% 
+          dplyr::mutate(y = ifelse(censored == 1,
+                                   runif(n = 1, min = rc, max = rj.obj$config$priors["mu", 2]),
+                                   runif(n = 1, min = rj.obj$config$priors["mu", 1], max = lc))) %>% 
+          dplyr::ungroup() %>% 
+          dplyr::pull(y) %>% 
+          mean(., na.rm = TRUE)
+      } else {
+        mean(sp.data$y, na.rm = TRUE)
+      }})
+  
+  if(fprop$to.phase == 2){
+    
+    fprop$alpha <- sapply(X = inits.bi, FUN = median) + 
+      rtnorm(n = length(inits.bi), 
+             location = 0, 
+             scale = scale.adj["alpha"], 
+             L = rj.obj$dat$param$dose.range[1] - sapply(X = inits.bi, FUN = median),
+             U = rj.obj$dat$param$dose.range[2] - sapply(X = inits.bi, FUN = median))
+    
+    fprop$alpha <- fprop$alpha[rj.obj$mlist[[rj.obj$current.model]]]
+    
+    fprop$k.ij <- as.numeric(fprop$alpha[rj.obj$mlist[[rj.obj$current.model]]][rj.obj$dat$species$trials] > fprop$t.ij) + 1
+    
+    fprop$nu <- 
+      rbind(sapply(X = inits.bi, FUN = function(x){
+        rtnorm(n = 1, location = quantile(x = x, probs = 0.25, na.rm = TRUE, names = FALSE), 
+               scale = scale.adj["nu"], 
+               L = rj.obj$dat$param$dose.range[1],
+               U = median(x, na.rm = TRUE))})[rj.obj$mlist[[rj.obj$current.model]]],
+        sapply(X = inits.bi, FUN = function(x){
+          rtnorm(n = 1, location = quantile(x = x, probs = 0.75, na.rm = TRUE, names = FALSE), 
+                 scale.adj["nu"], 
+                 L = median(x, na.rm = TRUE),
+                 U = rj.obj$dat$param$dose.range[2])})[rj.obj$mlist[[rj.obj$current.model]]])
+    
+    fprop$tau <- rowMeans(inits.tau) + 
+      rtnorm(n = 1, location = 0, scale = scale.adj["tau"], 
+             L = rj.obj$config$priors["tau", 1] - rowMeans(inits.tau),
+             U = rj.obj$config$priors["tau", 2] - rowMeans(inits.tau))
+    
+    fprop$mu.ij <- cbind(rtnorm(n = rj.obj$dat$trials$n, 
+                                location = fprop$nu[1, rj.obj$dat$species$trials],
+                                scale = fprop$tau[1], 
+                                L = rj.obj$dat$param$dose.range[1], 
+                                U = fprop$alpha[rj.obj$dat$species$trials]),
+                         rtnorm(n = rj.obj$dat$trials$n, 
+                                location = fprop$nu[2, rj.obj$dat$species$trials],
+                                scale = fprop$tau[2], 
+                                L = fprop$alpha[rj.obj$dat$species$trials],
+                                U = rj.obj$dat$param$dose.range[2]))
+
+    fprop$psi <- rnorm(n = 1, mean = rj.obj$config$priors["psi", 1], sd = rj.obj$config$priors["psi", 2])
+    fprop$omega <- runif(n = 1, min = rj.obj$config$priors["omega", 1], 
+                         max = rj.obj$config$priors["omega", 2])
+    
+    fprop$psi.i <- rnorm(n = rj.obj$dat$whales$n, mean = fprop$psi, sd = fprop$omega)
+    
+    included.cov <- rj.obj$include.covariates[rj.obj$iter["covariates"], ]
+    
+    if (sum(included.cov) == 0) {
+      covnames <- "nil"
+      cov.effects <- 0
+    } else {
+      included.cov <- included.cov[included.cov == 1]
+      covvalues <- do.call(c, purrr::map(
+        .x = names(included.cov),
+        .f = ~ {qnorm(pnorm(q = rj.obj[[.x]][rj.obj$iter[.x], ], 
+                        mean = rj.obj$config$priors[.x, 1], 
+                        sd = rj.obj$config$priors[.x, 2]))}))
+      cov.effects <- colSums(t(do.call(cbind, rj.obj$dat$covariates$dummy[names(included.cov)])) * covvalues)
+    }
+    
+    psi_ij <- fprop$psi.i[rj.obj$dat$whales$id] + cov.effects
+    fprop$pi.ij <- pnorm(q = psi_ij)
+    
+    if (!all(rj.obj$dat$obs$censored == 0)) {
+      
+        fprop$k.ij[rj.obj$dat$obs$censored == 1] <- 2
+        fprop$k.ij[rj.obj$dat$obs$censored == -1] <- 1
+        
+        for (a in 1:rj.obj$dat$trials$n) {
+          
+          if (rj.obj$dat$obs$censored[a] == 1){
+            if(fprop$mu.ij[a, 2] < rj.obj$dat$obs$Rc[a]){
+              fprop$mu.ij[a, 2] <- rtnorm(
+                n = 1,
+                location = fprop$nu[2, rj.obj$dat$species$trials[a]],
+                scale = 30,
+                L = rj.obj$dat$obs$Rc[a],
+                U = rj.obj$dat$param$dose.range[2])
+            }} 
+          
+          if (rj.obj$dat$obs$censored[a] == -1){
+            if(fprop$mu.ij[a, 1] > rj.obj$dat$obs$Lc[a]){ 
+              fprop$mu.ij[a, 1] <- rtnorm(
+                n = 1,
+                location = fprop$nu[1, rj.obj$dat$species$trials[a]],
+                scale = 30,
+                L = rj.obj$dat$param$dose.range[1],
+                U = rj.obj$dat$obs$Lc[a])
+              
+            }}
+          
+        }
+    }
+
+
+  } else if(fprop$to.phase == 1){
+
+    fprop$sigma <- rj.obj$config$var[1] + 
+      rtnorm(n = 1, location = 0, scale = scale.adj["sigma"], 
+             L = rj.obj$config$priors["sigma", 1] - rj.obj$config$var[1],
+             U = rj.obj$config$priors["sigma", 2] - rj.obj$config$var[1])
+    
+    fprop$phi <- rj.obj$config$var[2] + 
+      rtnorm(n = 1, location = 0, scale = scale.adj["phi"], 
+             L = rj.obj$config$priors["phi", 1] - rj.obj$config$var[2],
+             U = rj.obj$config$priors["phi", 2] - rj.obj$config$var[2])
+    
+    mu.deviates <- rtnorm(n = length(mu.start), 
+                          location = 0,
+                          scale = 5, 
+                          L = rj.obj$dat$param$dose.range[1] - mu.start,
+                          U = rj.obj$dat$param$dose.range[2] - mu.start)
+    
+    fprop$mu <- (mu.start + mu.deviates)[rj.obj$mlist[[rj.obj$current.model]]]
+    
+    fprop$mu.i <- rtnorm(n = rj.obj$dat$whales$n,
+                         location = fprop$mu[rj.obj$dat$species$id], 
+                         scale = fprop$phi,
+                         L = rj.obj$dat$param$dose.range[1], 
+                         U = rj.obj$dat$param$dose.range[2])
+    
+  }
+  
+  fprop$scale.adj <- scale.adj
+  fprop$start.mono <- mu.start[rj.obj$mlist[[rj.obj$current.model]]]
+  fprop$start.bi <- inits.bi
+  fprop$start.tau <- inits.tau
+  return(fprop)
+
+}
+
 #' Proposal for between-model jumps
 #'
 #' Generate proposed values for relevant model parameters
+#' @param rj.obj Input list.
 #' @param jump Proposed model jump, as defined by \code{\link{propose_jump}}.
+#' @param phase Monphasic (1) or biphasic (2).
+#' @param huelsenbeck Defines the type of proposal.
 
-proposal_rj <- function(rj.obj, jump, iter) {
+proposal_rj <- function(rj.obj, jump, phase, huelsenbeck = TRUE) {
 
+  # Monophasic
+  
+  if(phase == 1){
+  
   # Current mu
-  rj.means <- rj.obj$mu[iter - 1, ]
+  rj.means <- rj.obj$mu[rj.obj$iter["mu"], ]
   
   # Bootstrap moves
   if(jump$type == 1){
     
-    u <- rnorm(n = length(unique(jump$model$id)), mean = 0, sd = rj.obj$config$prop$dd)
-    rj.means <- median_data(rj.obj = rj.obj, model.id = jump$model$id) + u[jump$model$id]
+    rj.means <- median_data(rj.obj = rj.obj, model.id = jump$model$id)
+    
+    u <- rtnorm(n = length(unique(jump$model$id)), 
+                location = 0, 
+                scale = rj.obj$config$prop$dd,
+                L = rj.obj$dat$param$dose.range[1] - unique(rj.means),
+                U = rj.obj$dat$param$dose.range[2] - unique(rj.means))
+    
+    rj.means <- rj.means + u[jump$model$id]
     g_u <- NULL
     
     # Cluster and Random moves
   } else if (jump$type %in% c(2, 3)) {
     
-    rj.means <- sapply(X = 1:nb_groups(jump$model$id), 
-                       FUN = function(m) runif(n = 1, min = rj.obj$dat$param$bounds["mu", 1],
-                                               max = rj.obj$dat$param$bounds["mu", 2]))[jump$model$id]
+    rj.means <- runif(n = nb_groups(jump$model$id), 
+                      min = rj.obj$dat$param$dose.range[1],
+                      max = rj.obj$dat$param$dose.range[2])[jump$model$id]
     g_u <- u <- NULL
     
     # Split / merge move
@@ -519,16 +912,35 @@ proposal_rj <- function(rj.obj, jump, iter) {
     if (jump$move == 1) {
       
       g_u <- numeric(2)
+      b1 <- jump$n[1] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[1]])
+      b2 <- jump$n[1] * (rj.obj$dat$param$dose.range[1] - rj.means[jump$species$from[1]])
+      b3 <- -jump$n[2] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[1]])
+      b4 <- -jump$n[2] * (rj.obj$dat$param$dose.range[1] - rj.means[jump$species$from[1]])
+      b <- sort(c(b1, b2, b3, b4))
+      g_u <- b[2:3]
+      # g_u <- c(max(b[b<0]), min(b[b>0]))
       
-      g_u[1] <- unname(min(c(jump$n[1] * (rj.obj$dat$param$bounds["mu", 2] - rj.means[jump$species$from[1]]),
-                             jump$n[2] * (rj.means[jump$species$from[2]] - rj.obj$dat$param$bounds["mu", 1]))))
+      if(huelsenbeck){
+
+      # g_u[1] <- unname(min(c(jump$n[1] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[1]]),
+      #                        jump$n[2] * (rj.means[jump$species$from[2]] - rj.obj$dat$param$dose.range[1]))))
+      # 
+      # g_u[2] <- unname(max(c(-jump$n[2] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[2]]),
+      #                        -jump$n[1] * (rj.means[jump$species$from[1]] - rj.obj$dat$param$dose.range[1]))))
       
-      g_u[2] <- unname(max(c(-jump$n[2] * (rj.obj$dat$param$bounds["mu", 2] - rj.means[jump$species$from[2]]),
-                             -jump$n[1] * (rj.means[jump$species$from[1]] - rj.obj$dat$param$bounds["mu", 1]))))
-      
-      g_u <- sort(g_u)
+      # g_u <- sort(g_u)
       
       u <- runif(n = 1, min = g_u[1], max = g_u[2])
+      
+      } else {
+
+        # g_u <- NULL
+        
+        # Auxiliary variable for the change of dimensions
+        # u <- rnorm(n = 1, mean = 0, sd = rj.obj$config$prop$rj)
+        u <- rtnorm(n = 1, location = 0, scale = rj.obj$config$prop$rj, L = g_u[1], U = g_u[2])
+        
+      }
       
       rj.means[jump$species$to[[1]]] <- rj.means[jump$species$to[[1]]] + (u / jump$n[1])
       rj.means[jump$species$to[[2]]] <- rj.means[jump$species$to[[2]]] - (u / jump$n[2])
@@ -553,24 +965,204 @@ proposal_rj <- function(rj.obj, jump, iter) {
       g_u <- unname(c(-jump$n[1] * wm, jump$n[2] * wm))
       u <- (m[1] - wm) * jump$n[1]
       
-      # Or: u <- (wm - m[2]) * n[2]
+      # Or: u <- (wm - m[2]) * jump$n[2]
       # Or: u = (m[2] - m[1]) * ((n[1]*n[2])/(n[1]+n[2]))
       
     } # End move == 2
   } # End random
   
-  return(list(mu = rj.means, u = u, g_u = g_u, n = jump$n))
+  return(list(out = list(mu = rj.means), aux = list(u = u, g_u = g_u), n = jump$n, huelsenbeck = huelsenbeck))
+  
+  # Biphasic
+  
+  } else if(phase == 2){
+    
+    # Current mu
+    rj.means <- rj.obj$nu[rj.obj$iter["nu"], ,]
+    alpha.means <- rj.obj$alpha[rj.obj$iter["alpha"], ]
+    
+    # Bootstrap moves
+    if(jump$type == 1){
+      
+      alpha.means <- median_data(rj.obj = rj.obj, model.id = jump$model$id) 
+      z <- rtnorm(n = length(unique(jump$model$id)), location = 0, scale = rj.obj$config$prop$dd,
+                  L = rj.obj$config$priors["alpha", 1] - alpha.means,
+                  U = rj.obj$config$priors["alpha", 2] - alpha.means) 
+      alpha.means <- alpha.means + z[jump$model$id]
+      
+      u <- rtnorm(n = length(unique(jump$model$id)), 
+                 location = 0, 
+                 scale = rj.obj$config$prop$dd, 
+                 L = rj.obj$config$priors["nu", 1] - unique(alpha.means), 
+                 U = 0)
+      
+      w <- rtnorm(n = length(unique(jump$model$id)), 
+                  location = 0, 
+                  scale = rj.obj$config$prop$dd, 
+                  L = 0,
+                  U = rj.obj$config$priors["nu", 2] - unique(alpha.means))
+
+      rj.means <- matrix(c(alpha.means + u[jump$model$id], alpha.means + w[jump$model$id]), nrow = 2)
+      
+      # rj.med <- median_data(rj.obj = rj.obj, model.id = jump$model$id) 
+      # rj.diff <- rj.med - rj.obj$alpha[rj.obj$iter["alpha"], ]
+      # rj.complement <- rj.obj$alpha[rj.obj$iter["alpha"], ] - rj.diff
+      # rj.means <- matrix(c(rj.med, rj.complement), nrow = 2, byrow = TRUE) %>% 
+      #   apply(., MARGIN = 2, sort) + matrix(c(u, w), nrow = 2, byrow = TRUE)
+      
+      g_u <- g_w <- g_z <- NULL
+      
+      # Cluster and Random moves
+    } else if (jump$type %in% c(2, 3)) {
+      
+      alpha.means <- runif(n = nb_groups(jump$model$id), 
+                           min = rj.obj$config$priors["alpha", 1],
+                           max = rj.obj$config$priors["alpha", 2])
+      
+      rj.means <- matrix(c(runif(n = nb_groups(jump$model$id),
+                                     min = rj.obj$dat$param$dose.range[1],
+                                     max = alpha.means)[jump$model$id],
+                    runif(n = nb_groups(jump$model$id), 
+                          min = alpha.means,
+                          max = rj.obj$dat$param$dose.range[2])[jump$model$id]), nrow = 2)
+      
+      g_u <- g_w <- u <- w <-  NULL
+      
+      # Split / merge move
+    } else if (jump$type == 0){
+      
+      # Split move
+      if (jump$move == 1) {
+        
+        g_u <- g_w <- g_z <- numeric(2)
+        
+        # Alpha
+        
+        c1 <- min(jump$n[1] * (c(rj.obj$mu.ij[rj.obj$iter["mu.ij"], rj.obj$dat$species$trials %in% jump$species$to[[1]], 2],
+                                 rj.means[, 2],
+                                 rj.obj$config$priors["alpha", 2]) - 
+                             alpha.means[jump$species$from[1]]))
+        
+        c2 <- max(jump$n[1] * (c(rj.obj$mu.ij[rj.obj$iter["mu.ij"], rj.obj$dat$species$trials %in% jump$species$to[[1]], 1],
+                                 rj.means[, 1],
+                                 rj.obj$config$priors["alpha", 1]) - 
+                                 alpha.means[jump$species$from[1]]))
+        
+        c3 <- min(-jump$n[2] * (c(rj.obj$mu.ij[rj.obj$iter["mu.ij"], rj.obj$dat$species$trials %in% jump$species$to[[2]], 1],
+                                 rj.means[, 1],
+                                 rj.obj$config$priors["alpha", 1]) - 
+                                 alpha.means[jump$species$from[1]]))
+        
+        c4 <- max(-jump$n[2] * (c(rj.obj$mu.ij[rj.obj$iter["mu.ij"], rj.obj$dat$species$trials %in% jump$species$to[[2]], 2],
+                                  rj.means[, 2],
+                                  rj.obj$config$priors["alpha", 2]) - 
+                              alpha.means[jump$species$from[1]]))
+
+        # g_z <- sort(c(max(c2, c4), min(c1, c3)))
+        g_z <- sort(c(c1, c2, c3, c4))[2:3]
+
+        if(huelsenbeck){
+          z <- runif(n = 1, min = g_z[1], max = g_z[2])
+        } else {
+          z <- rtnorm(n = 1, location = 0, scale = rj.obj$config$prop$rj, L = g_z[1], U = g_z[2])
+        }
+        
+        alpha.means[jump$species$to[[1]]] <- alpha.means[jump$species$to[[1]]] + (z / jump$n[1])
+        alpha.means[jump$species$to[[2]]] <- alpha.means[jump$species$to[[2]]] - (z / jump$n[2])
+        
+        # nu_1
+        
+        a1 <- jump$n[1] * (alpha.means[jump$species$from[1]] - rj.means[jump$species$from[1], 1])
+        a2 <- jump$n[1] * (rj.obj$dat$param$dose.range[1] - rj.means[jump$species$from[1], 1])
+        a3 <- -jump$n[2] * (alpha.means[jump$species$from[1]] - rj.means[jump$species$from[1], 1])
+        a4 <- -jump$n[2] * (rj.obj$dat$param$dose.range[1] - rj.means[jump$species$from[1], 1])
+
+        g_u <- sort(c(a1, a2, a3, a4))[2:3]
+        
+        b1 <- jump$n[1] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[1], 2])
+        b2 <- jump$n[1] * (alpha.means[jump$species$from[1]] - rj.means[jump$species$from[1], 2])
+        b3 <- -jump$n[2] * (alpha.means[jump$species$from[1]] - rj.means[jump$species$from[1], 2])
+        b4 <- -jump$n[2] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[1], 2])
+
+        g_w <- sort(c(b1, b2, b3, b4))[2:3]
+        
+        if(huelsenbeck){
+
+          u <- runif(n = 1, min = g_u[1], max = g_u[2])
+          w <- runif(n = 1, min = g_w[1], max = g_w[2])
+          
+        } else {
+          
+          # Auxiliary variable for the change of dimensions
+          u <- rtnorm(n = 1, location = 0, scale = rj.obj$config$prop$rj, L = g_u[1], U = g_u[2])
+          w <- rtnorm(n = 1, location = 0, scale = rj.obj$config$prop$rj, L = g_w[1], U = g_w[2])
+          
+        }
+        
+        rj.means[jump$species$to[[1]], 1] <- rj.means[jump$species$to[[1]], 1] + (u / jump$n[1])
+        rj.means[jump$species$to[[2]], 1] <- rj.means[jump$species$to[[2]], 1] - (u / jump$n[2])
+        rj.means[jump$species$to[[1]], 2] <- rj.means[jump$species$to[[1]], 2] + (w / jump$n[1])
+        rj.means[jump$species$to[[2]], 2] <- rj.means[jump$species$to[[2]], 2] - (w / jump$n[2])
+        
+      } # End move == 1
+      
+      # Merge move
+      if (jump$move == 2) {
+        
+        # Means
+        m <- purrr::map(.x = 1:2,
+                        .f = ~sapply(X = jump$group, FUN = function(a) 
+                      unique(rj.means[which(rj.obj$mlist[[rj.obj$current.model]] == a), .x])))
+        
+        m <- append(m, list(sapply(X = jump$group, FUN = function(a) 
+          unique(alpha.means[which(rj.obj$mlist[[rj.obj$current.model]] == a)]))))
+        
+        # Calculate weighted average, using sample sizes as weights
+        wm <- purrr::map_dbl(.x = m, .f = ~weighted.mean(x = .x, w = jump$n))
+        
+        # current.means[now.together] <- wm
+        rj.means[jump$species$to, 1] <- wm[1]
+        rj.means[jump$species$to, 2] <- wm[2]
+        alpha.means[jump$species$to] <- wm[3]
+        
+        # The auxiliary variable in a merge move is calculated deterministically
+        g_u <- unname(c(-jump$n[1] * wm[1], jump$n[2] * wm[1])) 
+        g_w <- unname(c(-jump$n[1] * wm[2], jump$n[2] * wm[2]))
+        g_z <- unname(c(-jump$n[1] * wm[3], jump$n[2] * wm[3]))
+        
+        u <- (m[[1]][1] - wm[1]) * jump$n[1]
+        w <- (m[[2]][1] - wm[2]) * jump$n[1]
+        z <- (m[[3]][1] - wm[3]) * jump$n[1]
+        
+        # Or: u <- (wm - m[2]) * jump$n[2]
+        # Or: u = (m[2] - m[1]) * ((n[1]*n[2])/(n[1]+n[2]))
+        
+      } # End move == 2
+    } # End random
+
+    return(list(out = list(nu = t(rj.means), alpha = alpha.means),
+                aux = list(u = u, 
+                           w = w, 
+                           z = z,
+                           g_u = g_u, 
+                           g_w = g_w, 
+                           g_z = g_z),
+                n = jump$n, 
+                huelsenbeck = huelsenbeck))
+    
+  }
 }
 
 #' Proposal for within-model jumps
 #'
 #' Generate proposed values for relevant model parameters
 #'
+#' @param rj.obj RJ object.
 #' @param param.name Parameter name.
 #' @param seed Random seed. Only used for testing purposes.
 
-proposal_mh <- function(rj.obj, param.name, iter, seed = NULL) {
-  
+proposal_mh <- function(rj.obj, param.name, seed = NULL) {
+    
   # Set the random seed
   if(!is.null(seed)) set.seed(seed) 
   
@@ -578,107 +1170,294 @@ proposal_mh <- function(rj.obj, param.name, iter, seed = NULL) {
   ng <- unique(rj.obj$mlist[[rj.obj$current.model]])
   
   # Number of proposal values
-  if(param.name == "t.ij") N <- rj.obj$dat$trials$n else 
-    if(param.name == "mu.i") N <- rj.obj$dat$whales$n else 
-      if(param.name == "mu") N <- length(ng) else 
-        if(param.name %in% c("phi", "sigma")) N <- 1 else
-          if(param.name %in% rj.obj$dat$covariates$names) N <- rj.obj$dat$covariates$fL[[param.name]]$nparam
+  if(param.name %in% c("t.ij", "k.ij", "mu.ij")) N <- rj.obj$dat$trials$n else 
+    if(param.name %in% c("mu.i", "psi.i")) N <- rj.obj$dat$whales$n else 
+      if(param.name %in% c("mu", "alpha", "nu")) N <- length(ng) else 
+          if(param.name %in% c("tau")) N <- 2 else 
+            if(param.name %in% c("phi", "sigma", "omega", "psi")) N <- 1 else
+              if(param.name %in% rj.obj$dat$covariates$names) N <- rj.obj$dat$covariates$fL[[param.name]]$nparam
   
-  # Mean(s) for proposal(s)
-  if (param.name %in% c("t.ij", "mu.i")) m <- rj.obj[[param.name]][iter - 1, ]
-  if (param.name %in% c("mu")) m <- rj.obj[[param.name]][iter, ]
-  if (param.name %in% c("sigma", "phi")) m <- rj.obj[[param.name]][iter - 1]
-  if (param.name %in% rj.obj$dat$covariates$names) m <- rj.obj[[param.name]][iter, rj.obj$dat$covariates$fL[[param.name]]$index]
-  
-  lower.limit <- rep(rj.obj$dat$param$bounds[param.name, 1], N)
-  upper.limit <- rep(rj.obj$dat$param$bounds[param.name, 2], N)
-  
-  # Generate proposal(s)
-  if(param.name == "t.ij"){
+  if(param.name == "k.ij") {
     
-    lower.limit[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
-    upper.limit[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
-   
-  }
-  
-  if(param.name %in% c("t.ij", "mu.i")){
-    
-    pval <- rtnorm(n = N, 
-                   location = m, 
-                   scale = rj.obj$config$prop$mh[[param.name]], 
-                   L = lower.limit,
-                   U = upper.limit)
+    pval <- (1 - rbinom(n = N, size = 1, prob = rj.obj$config$prop$mh[["k.ij"]])) + 1
     
   } else {
     
-    pval <- rnorm(n = N, mean = unique(m), sd = rj.obj$config$prop$mh[[param.name]])
+    # Mean(s) for proposal(s)
+    if (param.name %in% c("t.ij", "mu.i", "alpha", "mu", "psi.i", "tau"))
+      m <- rj.obj[[param.name]][rj.obj$iter[param.name], ]
     
+    if (param.name %in% c("sigma", "phi", "omega", "psi"))
+      m <- rj.obj[[param.name]][rj.obj$iter[param.name]]
+    
+    if (param.name %in% c("nu", "mu.ij"))
+      m <- rj.obj[[param.name]][rj.obj$iter[param.name], , ]
+    
+    if (param.name %in% rj.obj$dat$covariates$names) 
+      m <- rj.obj[[param.name]][rj.obj$iter[param.name], rj.obj$dat$covariates$fL[[param.name]]$index]
+    
+    # Generate proposals
+    # BIPHASIC
+    
+    if(param.name == "mu.ij"){
+      
+      L.lower <- L.upper <- rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials]
+      
+      L.lower[rj.obj$dat$obs$Lc < L.lower & rj.obj$dat$obs$censored == -1] <-
+        rj.obj$dat$obs$Lc[rj.obj$dat$obs$Lc < L.lower & rj.obj$dat$obs$censored == -1]
+      
+      L.upper[rj.obj$dat$obs$Rc > L.upper & rj.obj$dat$obs$censored == 1] <-
+        rj.obj$dat$obs$Rc[rj.obj$dat$obs$Rc > L.upper & rj.obj$dat$obs$censored == 1]
+      
+    } else {
+      
+      pn <- ifelse(param.name %in% c("t.ij", "mu.i"), "mu", param.name)
+      lower.limit <- rep(rj.obj$config$priors[pn, 1], N)
+      upper.limit <- rep(rj.obj$config$priors[pn, 2], N)
+      if(param.name == "t.ij"){
+        lower.limit[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
+        upper.limit[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
+      }
     }
+    
+    if(param.name %in% c("t.ij", "mu.i")){
+      
+      pval <- rtnorm(n = N, 
+                     location = m, 
+                     scale = rj.obj$config$prop$mh[[param.name]], 
+                     L = lower.limit,
+                     U = upper.limit)
+      
+    } else if(param.name == "mu.ij"){
+      
+      pval <- unname(cbind(rtnorm(n = N,
+                                  location = m[, 1],
+                                  scale = rj.obj$config$prop$mh[[param.name]],
+                                  L = rj.obj$dat$param$dose.range[1], 
+                                  U = L.lower),
+                           
+                           rtnorm(n = N,
+                                  location = m[, 2],
+                                  scale = rj.obj$config$prop$mh[[param.name]],
+                                  L = L.upper, 
+                                  U = rj.obj$dat$param$dose.range[2])))
+      
+    } else if(param.name == "nu"){
+      
+      if(is.null(dim(m))){
+        
+        m1 <- m[1] 
+        m2 <- m[2]
+        pval <- rbind(rnorm(n = N, mean = unique(m1), sd = rj.obj$config$prop$mh[[param.name]]),
+              rnorm(n = N, mean = unique(m2), sd = rj.obj$config$prop$mh[[param.name]]))
+        
+        
+      } else {
+        
+        m1 <- m[,1]
+        m2 <- m[,2]
+      
+        pval <- rbind(rnorm(n = N, mean = unique(m1), sd = rj.obj$config$prop$mh[[param.name]]),
+                      rnorm(n = N, mean = unique(m2), sd = rj.obj$config$prop$mh[[param.name]]))
+      }
+      
+    } else {
+      
+      pval <- rnorm(n = N, mean = unique(m), sd = rj.obj$config$prop$mh[[param.name]])
+      
+    }
+    
+    # Additions
+    index <- cbind(ng, ord = 1:length(ng))
+    
+    if (param.name == "mu") {
+      pval <- pval[sapply(
+        X = rj.obj$mlist[[rj.obj$current.model]],
+        FUN = function(x) index[ng == x, 2]
+      )]
+    }
+    
+    if(param.name %in% rj.obj$dat$covariates$names){
+      if(rj.obj$dat$covariates$fL[[param.name]]$nL >= 2) 
+        pval <- c(0, pval)
+    }
+  } # end if k.ij
   
-  # Additions
-  index <- cbind(ng, ord = 1:length(ng))
+  if(param.name == "alpha") pval <- pval[rj.obj$mlist[[rj.obj$current.model]]]
+  if(param.name == "nu") pval <- pval[, rj.obj$mlist[[rj.obj$current.model]], drop = FALSE]
   
-  if (param.name == "mu") {
-    pval <- pval[sapply(
-      X = rj.obj$mlist[[rj.obj$current.model]],
-      FUN = function(x) index[ng == x, 2]
-    )]
-  }
   if(any(is.infinite(pval))) stop("Infinite values generated")
-  return(pval)
+  res <- list(pval)
+  names(res) <- param.name
+  
+  return(res)
 }
 
 # Proposal densities ----------------------------------------------------------------
 
+
+#' Proposal densities for functional form jumps.
+#'
+#'@param rj.obj Input object.
+#' @param param Parameter values.
+
+propdens_ff <- function(rj.obj, param){
+  
+  if(param$to.phase == 2){ 
+    
+    param <- append(param, list(mu = rj.obj$mu[rj.obj$iter["mu"], ],
+                                sigma = rj.obj$sigma[rj.obj$iter["sigma"]],
+                                phi = rj.obj$phi[rj.obj$iter["phi"]],
+                                mu.i = rj.obj$mu.i[rj.obj$iter["mu.i"], ]))
+    
+  } else if(param$to.phase == 1) {
+    
+    param <- append(param, list(alpha = rj.obj$alpha[rj.obj$iter["alpha"], ],
+                                nu = t(rj.obj$nu[rj.obj$iter["nu"], , ]),
+                                mu.ij = rj.obj$mu.ij[rj.obj$iter["mu.ij"], , ],
+                                tau = rj.obj$tau[rj.obj$iter["tau"], ],
+                                omega = rj.obj$omega[rj.obj$iter["omega"]],
+                                psi = rj.obj$psi[rj.obj$iter["psi"]],
+                                psi.i = rj.obj$psi.i[rj.obj$iter["psi.i"], ]))
+    
+  }
+    
+  logprop.mono <- sum(dtnorm(x = param$sigma, 
+                          location = rj.obj$config$var[1], 
+                          scale = param$scale.adj["sigma"],
+                          L = rj.obj$config$priors["sigma", 1],
+                          U = rj.obj$config$priors["sigma", 2],
+                          log = TRUE)) + 
+      
+      sum(dtnorm(x = param$phi, 
+                 location = rj.obj$config$var[2], 
+                 scale = param$scale.adj["phi"],
+                 L = rj.obj$config$priors["phi", 1],
+                 U = rj.obj$config$priors["phi", 2],
+                 log = TRUE)) +
+    
+    sum(dtnorm(x = unique(param$mu),
+               location = unique(param$start.mono),
+               scale = param$scale.adj["mu"],
+               L = rj.obj$dat$param$dose.range[1],
+               U = rj.obj$dat$param$dose.range[2],
+               log = TRUE)) + 
+      
+      sum(dtnorm(x = param$mu.i,
+                 location = param$mu[rj.obj$dat$species$id],
+                 scale = param$scale.adj["phi"],
+                 L = rj.obj$dat$param$dose.range[1], 
+                 U = rj.obj$dat$param$dose.range[2],
+                 log = TRUE))
+
+   
+ logprop.bi <- sum(dtnorm(x = unique(param$alpha),
+                      location = unique(sapply(X = param$start.bi, FUN = median)[rj.obj$mlist[[rj.obj$current.model]]]),
+                      scale = param$scale.adj["alpha"],
+                      L = rj.obj$dat$param$dose.range[1],
+                      U = rj.obj$dat$param$dose.range[2],
+                      log = TRUE)) +
+   
+   sum(dtnorm(x = unique(param$nu[1, ]),
+          location = unique(sapply(param$start.bi, quantile, probs = 0.25, na.rm = TRUE, names = FALSE)[rj.obj$mlist[[rj.obj$current.model]]]),
+          scale = param$scale.adj["nu"],
+          L = rj.obj$dat$param$dose.range[1],
+          U = unique(sapply(X = param$start.bi, FUN = median)[rj.obj$mlist[[rj.obj$current.model]]]),
+          log = TRUE)) +
+   
+   sum(dtnorm(x = unique(param$nu[2, ]),
+          location = unique(sapply(param$start.bi, quantile, probs = 0.75, na.rm = TRUE, names = FALSE)[rj.obj$mlist[[rj.obj$current.model]]]),
+          scale = param$scale.adj["nu"],
+          L = unique(sapply(X = param$start.bi, FUN = median)[rj.obj$mlist[[rj.obj$current.model]]]),
+          U = rj.obj$dat$param$dose.range[2],
+          log = TRUE)) +
+   
+   sum(dtnorm(x = param$tau,
+          location = param$start.tau,
+          scale = param$scale.adj["tau"],
+          L = rj.obj$config$priors["tau", 1],
+          U = rj.obj$config$priors["tau", 2],
+          log = TRUE)) +
+   
+   sum(dtnorm(x = param$mu.ij[, 1],
+          location = param$nu[1, rj.obj$dat$species$trials],
+          scale = param$tau[1],
+          L = rj.obj$dat$param$dose.range[1],
+          U = param$alpha[rj.obj$dat$species$trials],
+          log = TRUE)) + 
+   
+   sum(dtnorm(x = param$mu.ij[, 2],
+              location = param$nu[2, rj.obj$dat$species$trials],
+              scale = param$tau[2],
+              L = param$alpha[rj.obj$dat$species$trials],
+              U = rj.obj$dat$param$dose.range[2],
+              log = TRUE)) + 
+   
+   dnorm(x = param$psi, mean = rj.obj$config$priors["psi", 1], 
+         sd = rj.obj$config$priors["psi", 2], log = TRUE) +
+
+   dunif(x = param$omega, 
+         min = rj.obj$config$priors["omega", 1], 
+         max = rj.obj$config$priors["omega", 2], log = TRUE) + 
+   
+   sum(dnorm(x = param$psi.i, mean = param$psi, sd = param$omega, log = TRUE))
+   
+ if (param$to.phase == 2) {
+   return(c(logprop.mono, logprop.bi))
+ } else
+   if (param$to.phase == 1) {
+     return(c(logprop.bi, logprop.mono))
+   }
+
+}
+
 #' Proposal densities for between-model jumps
 #'
+#' @param rj.obj Input object.
 #' @param param Parameter values.
 #' @param jump Proposed between-model jump.
+#' @param phase Monophasic (1) or biphasic (2).
 
-propdens_rj <- function(rj.obj, param, jump, iter) {
+propdens_rj <- function(rj.obj, param, jump, phase) {
   
   # Adapted to work with Uniform proposal distribution as per Huelsenbeck et al.
   # aux is the value of the auxiliary variable 'u' drawn by proposal_rj
   # during a proposed split/merge move. u does not exist when the independent
   # sampler is used.
   
+  if(phase == 1) {
+    
   # Cluster and Random moves
   if(jump$type %in% c(2, 3)){
     
-    loglik.unif <- list()
-    
-    loglik.unif[[1]] <- dunif(x = unique(param$mu), 
-                              min = rj.obj$dat$param$bounds["mu", 1],
-                              max = rj.obj$dat$param$bounds["mu", 2],
-                              log = TRUE)
-    
-    loglik.unif[[2]] <- dunif(x = unique(rj.obj$mu[iter - 1, ]), 
-                              min = rj.obj$dat$param$bounds["mu", 1],
-                              max = rj.obj$dat$param$bounds["mu", 2],
-                              log = TRUE)
-    
-    loglik.unif <- purrr::map_dbl(.x = loglik.unif, 
-                                  .f = ~ifelse(any(abs(.x) == Inf), -100000, sum(.x)))
-    
-    return(unlist(loglik.unif))
+    loglik.unif <- unlist(purrr::map(.x = list(param$out$mu, rj.obj$mu[rj.obj$iter["mu"], ]),
+                              .f = ~sum(dunif(x = unique(.x), 
+                         min = rj.obj$dat$param$dose.range[1],
+                         max = rj.obj$dat$param$dose.range[2],
+                         log = TRUE))))
+    loglik.unif[is.infinite(loglik.unif)] <- -100000
+    return(loglik.unif)
     
     # Bootstrap moves
   } else if (jump$type == 1) {
     
-    loglik.norm.forward <- dnorm(x = param$u,
-                                 # x = unique(param$u[jump$model$id]), 
-                                 mean = 0, 
-                                 sd = rj.obj$config$prop$dd, 
+    loglik.norm.forward <- dtnorm(x = unique(param$aux$u),
+                                 location = 0, 
+                                 scale = rj.obj$config$prop$dd, 
+                                 L = rj.obj$dat$param$dose.range[1] - unique(param$out$mu),
+                                 U = rj.obj$dat$param$dose.range[2] - unique(param$out$mu),
                                  log = TRUE)
     
     if (any(abs(loglik.norm.forward) == Inf)) loglik.norm.forward <- -100000
     loglik.norm.forward <- sum(loglik.norm.forward)
     
-    loglik.norm.backward <- dnorm(x = median_data(rj.obj = rj.obj,
+    loglik.norm.backward <- dtnorm(x = unique(median_data(rj.obj = rj.obj,
                                                 model.id = rj.obj$mlist[[rj.obj$current.model]]) - 
-                                    rj.obj$mu[iter - 1, ],
-                                  mean = 0, 
-                                  sd = rj.obj$config$prop$dd,
+                                    rj.obj$mu[rj.obj$iter["mu"], ]),
+                                  location = 0, 
+                                  scale = rj.obj$config$prop$dd,
+                                  L = rj.obj$dat$param$dose.range[1] - unique(rj.obj$mu[rj.obj$iter["mu"], ]),
+                                  U = rj.obj$dat$param$dose.range[2] - unique(rj.obj$mu[rj.obj$iter["mu"], ]),
                                   log = TRUE)
     
     if (any(abs(loglik.norm.backward) == Inf)) loglik.norm.backward <- -100000
@@ -689,13 +1468,129 @@ propdens_rj <- function(rj.obj, param, jump, iter) {
     # Split / merge moves
   } else if (jump$type == 0) {
     
-    loglik.unif <- dunif(x = unique(param$u), min = param$g_u[1], max = param$g_u[2], log = TRUE)
-    if (any(abs(loglik.unif) == Inf)) loglik.unif <- -100000
+    if(param$huelsenbeck){
+    loglik <- dunif(x = unique(param$aux$u), 
+                    min = param$aux$g_u[1], 
+                    max = param$aux$g_u[2], 
+                    log = TRUE)
+    } else {
+    loglik <- dtnorm(x = unique(param$aux$u), 
+                     location = 0,
+                     scale = rj.obj$config$prop$rj, 
+                     L = param$aux$g_u[1],
+                     U = param$aux$g_u[2],
+                     log = TRUE)
+    }
     
+    if (any(abs(loglik) == Inf)) loglik <- -100000
     # Return two values for the ratio of proposal densities
     # Depending on the type of move, either the numerator or
     # denominator is 0 (as we work in logs)
-    if (jump$move == 1) return(c(0, loglik.unif)) else return(c(loglik.unif, 0))
+    if (jump$move == 1) return(c(0, loglik)) else return(c(loglik, 0)) 
+  }
+    
+  } else if(phase ==2) {
+    
+    if(jump$type %in% c(2, 3)){
+      
+      loglik.unif <- unlist(purrr::map(.x = list(param$out$alpha, rj.obj$alpha[rj.obj$iter["alpha"], ]),
+                                       .f = ~sum(dunif(x = unique(.x), 
+                                                   min = rj.obj$config$priors["alpha", 1],
+                                                   max = rj.obj$config$priors["alpha", 2],
+                                                   log = TRUE)))) +
+        
+        unlist(purrr::map2(.x = list(param$out$nu[1, ], rj.obj$nu[rj.obj$iter["nu"], , 1]),
+                                        .y = list(param$out$alpha, rj.obj$alpha[rj.obj$iter["alpha"], ]),
+                                .f = ~sum(dunif(x = unique(.x), 
+                                min = rj.obj$dat$param$dose.range[1],
+                                max = unique(.y),
+                                log = TRUE)))) +
+        
+        unlist(purrr::map2(.x = list(param$out$nu[2, ], rj.obj$nu[rj.obj$iter["nu"], , 2]),
+                           .y = list(param$out$alpha, rj.obj$alpha[rj.obj$iter["alpha"], ]),
+                           .f = ~sum(dunif(x = unique(.x), 
+                                           min = unique(.y),
+                                           max = rj.obj$dat$param$dose.range[2],
+                                           log = TRUE))))
+      
+      loglik.unif[is.infinite(loglik.unif)] <- -100000
+      return(loglik.unif)
+
+    } else if(jump$type == 1){
+      
+      loglik.norm.forward <- dtnorm(x = param$aux$z,
+                                   location = 0, 
+                                   scale = rj.obj$config$prop$dd, 
+                                   L = rj.obj$config$priors["alpha", 1] - unique(param$out$alpha),
+                                   U = rj.obj$config$priors["alpha", 2] - unique(param$out$alpha),
+                                   log = TRUE) + 
+        dtnorm(x = param$aux$u, 
+               location = 0, 
+               scale = rj.obj$config$prop$dd, 
+               L = rj.obj$config$priors["nu", 1] - unique(param$out$alpha), 
+               U = 0, 
+               log = TRUE) + 
+        
+        dtnorm(x = param$aux$w, 
+               location = 0, 
+               scale = rj.obj$config$prop$dd, 
+               L = 0,
+               U = rj.obj$config$priors["nu", 2] - unique(param$out$alpha),
+               log = TRUE)
+      
+      if (any(abs(loglik.norm.forward) == Inf)) loglik.norm.forward <- -100000
+      loglik.norm.forward <- sum(loglik.norm.forward)
+      
+      z <- rj.obj$alpha[rj.obj$iter["alpha"], ] - median_data(rj.obj = rj.obj, model.id = rj.obj$mlist[[rj.obj$current.model]])
+      u <- rj.obj$nu[rj.obj$iter["nu"], , 1] - rj.obj$alpha[rj.obj$iter["alpha"], ]
+      w <- rj.obj$nu[rj.obj$iter["nu"], , 2] - rj.obj$alpha[rj.obj$iter["alpha"], ]
+      
+      loglik.norm.backward <- 
+        dtnorm(x = unique(z), 
+               location = 0, 
+               scale = rj.obj$config$prop$dd, 
+               L = rj.obj$config$priors["alpha", 1] - unique(rj.obj$alpha[rj.obj$iter["alpha"], ]),
+               U = rj.obj$config$priors["alpha", 2] - unique(rj.obj$alpha[rj.obj$iter["alpha"], ]),
+               log = TRUE) + 
+        
+        dtnorm(x = unique(u), location = 0, scale = rj.obj$config$prop$dd, 
+               L = rj.obj$config$priors["nu", 1] - unique(rj.obj$alpha[rj.obj$iter["alpha"], ]),
+               U = 0, log = TRUE) + 
+        
+        dtnorm(x = unique(w), location = 0, scale = rj.obj$config$prop$dd, 
+               L = 0, U = rj.obj$config$priors["nu", 2] - unique(rj.obj$alpha[rj.obj$iter["alpha"], ]),
+               log = TRUE)
+      
+      if (any(abs(loglik.norm.backward) == Inf)) loglik.norm.backward <- -100000
+      loglik.norm.backward <- sum(loglik.norm.backward)
+      
+      return(c(loglik.norm.backward, loglik.norm.forward))
+      
+    } else if (jump$type == 0) {
+      
+      if(param$huelsenbeck){
+        
+        loglik <- purrr::map2_dbl(.x = unlist(param$aux[c("u", "w", "z")]),
+                              .y = param$aux[c("g_u", "g_w", "g_z")],
+                              .f = ~dunif(x = unique(.x),
+                                          min = .y[1], 
+                                          max = .y[2], 
+                                          log = TRUE))
+          
+      } else {
+        
+        loglik <- dtnorm(x = unlist(param$aux[c("u", "w", "z")]), 
+                        location = 0, 
+                        scale = rj.obj$config$prop$rj, 
+                        L = sapply(param$aux[c("g_u", "g_w", "g_z")], "[[", 1),
+                        U = sapply(param$aux[c("g_u", "g_w", "g_z")], "[[", 2),
+                        log = TRUE)
+      }
+      
+      if (any(abs(loglik) == Inf)) loglik <- -100000
+      if (jump$move == 1) return(c(0, sum(loglik))) else return(c(sum(loglik), 0)) 
+    }
+    
   }
 }
 
@@ -707,16 +1602,28 @@ propdens_rj <- function(rj.obj, param, jump, iter) {
 
 propdens_mh <- function(rj.obj, param.name, dest, orig) {
 
-  lower.limit <- rep(rj.obj$dat$param$bounds[param.name, 1], length(dest))
-  upper.limit <- rep(rj.obj$dat$param$bounds[param.name, 2], length(dest))
-  
-  if(param.name == "t.ij") {
+  if(param.name == "mu.ij"){
     
-    lower.limit[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
-    upper.limit[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
-
+    L.lower <- L.upper <- rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials]
+    
+    L.lower[rj.obj$dat$obs$Lc < L.lower & rj.obj$dat$obs$censored == -1] <-
+      rj.obj$dat$obs$Lc[rj.obj$dat$obs$Lc < L.lower & rj.obj$dat$obs$censored == -1]
+    
+    L.upper[rj.obj$dat$obs$Rc > L.upper & rj.obj$dat$obs$censored == 1] <-
+      rj.obj$dat$obs$Rc[rj.obj$dat$obs$Rc > L.upper & rj.obj$dat$obs$censored == 1]
+    
+  } else {
+    
+    pn <- ifelse(param.name %in% c("t.ij", "mu.i"), "mu", param.name)
+    lower.limit <- rep(rj.obj$config$priors[pn, 1], length(dest))
+    upper.limit <- rep(rj.obj$config$priors[pn, 2], length(dest))
+    
+    if(param.name == "t.ij"){
+      lower.limit[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
+      upper.limit[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
     }
-  
+  }
+
   if(param.name %in% c("t.ij", "mu.i")) {
     
     loglik <- dtnorm(x = dest, 
@@ -725,6 +1632,21 @@ propdens_mh <- function(rj.obj, param.name, dest, orig) {
                      L = lower.limit,
                      U = upper.limit,
                      log = TRUE)
+    
+  } else if(param.name == "mu.ij") {
+    
+    loglik <- unname(cbind(dtnorm(x = dest[, 1], 
+                           location = orig[, 1],
+                           scale = rj.obj$config$prop$mh[[param.name]], 
+                           L = rj.obj$dat$param$dose.range[1], 
+                           U = L.lower, 
+                           log = TRUE),
+                    dtnorm(x = dest[, 2], 
+                           location = orig[, 2],
+                           scale = rj.obj$config$prop$mh[[param.name]], 
+                           L = L.upper, 
+                           U = rj.obj$dat$param$dose.range[2], 
+                           log = TRUE)))
   } else {
     
     loglik <- dnorm(x = dest, mean = orig, sd = rj.obj$config$prop$mh[[param.name]], log = TRUE) 
@@ -732,7 +1654,7 @@ propdens_mh <- function(rj.obj, param.name, dest, orig) {
   }
   
   if (any(abs(loglik) == Inf)) loglik <- -100000
-  if(param.name %in% c("t.ij", "mu.i")) return(loglik) else return(sum(loglik))
+  if(param.name %in% c("t.ij", "mu.i", "mu.ij")) return(loglik) else return(sum(loglik))
 }
 
 # Trace ----------------------------------------------------------------
@@ -1053,6 +1975,56 @@ print.gvs <- function(gvs.dat){
 
 # Convenience ----------------------------------------------------------------
 
+#' Mimick transparent colours
+#' 
+#' Function to find the HEX colour code corresponding to an input colour 
+#' with a set opacity level (i.e. emulate transparency)
+
+#' @param input.colour Initial colour.
+#' @param opacity Desired level of transparency (number between 0 and 1).
+#' @param bg.colour Colour of the background. Defaults to 'white'.
+
+hexa2hex <- function(input.colour, 
+                     opacity, 
+                     bg.colour = "white"){
+  
+  # White background
+  bg <- grDevices::col2rgb(bg.colour, alpha = FALSE)
+  
+  # Convert input colour to RGB
+  rgbcol <- grDevices::col2rgb(input.colour, alpha = FALSE)
+  
+  # Calculate red, green, blue values corresponding to input colour at chosen transparency level
+  rc <- (1 - opacity) * bg[1,] + opacity * rgbcol[1,]
+  gc <- (1 - opacity) * bg[2,] + opacity * rgbcol[2,]
+  bc <- (1 - opacity) * bg[3,] + opacity * rgbcol[3,]
+  
+  # Convert back to hex
+  rgb2hex <- function(r,g,b) rgb(r, g, b, maxColorValue = 255)
+  return(rgb2hex(r = rc, g = gc, b = bc))
+}
+
+# Covariate effects (on probit scale, biphasic model)
+cov_effects <- function(rj.obj){
+  
+  included.cov <- rj.obj$include.covariates[rj.obj$iter["covariates"], ]
+  
+  if (sum(included.cov) == 0) {
+    covnames <- "nil"
+    cov.effects <- 0
+  } else {
+    included.cov <- included.cov[included.cov == 1]
+    covvalues <- do.call(c, purrr::map(
+      .x = names(included.cov),
+      .f = ~ {qnorm(pnorm(q = rj.obj[[.x]][rj.obj$iter[.x], ], 
+                          mean = rj.obj$config$priors[.x, 1], 
+                          sd = rj.obj$config$priors[.x, 2]))}
+    ))
+    cov.effects <- colSums(t(do.call(cbind, rj.obj$dat$covariates$dummy[names(included.cov)])) * covvalues)
+  }
+  return(cov.effects)
+}
+
 # Rescale probability vector
 rescale_p <- function(p, default.value = 0.05){
   if(length(p) == 1){
@@ -1094,6 +2066,44 @@ prob_models <- function(input.obj,
                               gvs = gvs, 
                               species.Groups = species.Groups))
   }
+}
+
+p_form <- function(input.trace){
+
+  res <- list()
+  
+  # Model trace
+  phase.trace <- input.trace[, "phase"]
+  
+  # Tabulate
+  res$est <- table(phase.trace)/nrow(input.trace)
+  
+  # Generate tibble output
+  res$est <- res$est %>% 
+    tibble::enframe() %>% 
+    dplyr::rename(phase = name, p = value) %>% 
+    dplyr::mutate(phase = dplyr::case_when(phase == "2" ~ "biphasic",
+                                   TRUE ~ "monophasic")) %>%
+    dplyr::mutate(p = as.numeric(p))
+  
+  # Compute Monte Carlo error
+  mce <- purrr::map(.x = 1:2, .f = ~as.numeric(as.numeric(phase.trace) == .x))
+  
+  res$mc.error <- purrr::map_dbl(.x = mce, .f = ~mcmcse::mcse(.x)$se) %>% 
+    purrr::set_names(x = ., nm = c("monophasic", "biphasic")) %>% 
+    tibble::enframe() %>% 
+    dplyr::rename(phase = name, monte_carlo = value)
+  
+  # Compute lower and upper interval bounds
+  res$est <- res$est %>% 
+    dplyr::left_join(x = ., y = res$mc.error, by = "phase") %>% 
+    dplyr::rowwise() %>% 
+    dplyr::mutate(lower = max(0, round(p - 1.98 * monte_carlo, 4)),
+                  upper = min(1, round(p + 1.98 * monte_carlo, 4))) %>% 
+    dplyr::ungroup()
+  
+  return(res)
+  
 }
 
 p_models <- function(input.trace, 
@@ -1249,6 +2259,8 @@ gg_model <- function(dat,
                      x.offset = 0.5, 
                      x.margin = 2){
   
+  rotate.x <- min(nchar(unique(dat$species))) > 5
+  
   # Probability values
   if(combine){
     p1 <- tibble::tibble(x = rep(max(dat$x) + x.offset, n.top),
@@ -1285,6 +2297,7 @@ gg_model <- function(dat,
                    legend.title = element_blank(),
                    legend.text = element_text(size = 12),
                    panel.background = element_rect(fill = "white")) + 
+    {if(rotate.x) ggplot2::theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))} +
     
     # Annotation for posterior probabilities
     ggplot2::geom_text(data = p1, aes(x = x , y = y, label = label), size = p.size, hjust = 0) +
@@ -1296,6 +2309,16 @@ gg_model <- function(dat,
     {if(!combine) ggtitle(paste0("Rank: ", no)) }
   
   return(out.plot)
+}
+
+prob_form <- function(obj, do.combine){
+  
+  if(do.combine){
+    ptrace <- do.call(rbind, obj$trace) %>% coda::as.mcmc()
+    p_form(input.trace = ptrace)
+  } else {
+    purrr::map(.x = obj$trace, .f = ~p_form(input.trace = .x))
+  }
 }
 
 #' Posterior inclusion probabilities for contextual covariates
@@ -1571,7 +2594,8 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
           }
         }
         else {
-          return(paste0("Density - ", x))
+          # return(paste0("Density - ", x))
+          return(paste0(x))
         }
       }
       MAIN_TR <- function(x, mtr = main_tr, idx) {
@@ -1584,7 +2608,8 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
           }
         }
         else {
-          return(paste0("Trace - ", x))
+          # return(paste0("Trace - ", x))
+          return(paste0(x))
         }
       }
       if (missing(col_den)) {
@@ -2077,15 +3102,16 @@ median_data <- function(rj.obj, model.id){
                      dplyr::filter(ID == .x)
                    
                    if(all(is.na(sp.data$y))){
-                     
-                     sp.data %>% 
-                       dplyr::rowwise() %>% 
-                       dplyr::mutate(y = ifelse(censored == 1,
-                                     runif(n = 1, min = rc, max = rj.obj$dat$param$bounds["mu", 2]),
-                                     runif(n = 1, min = rj.obj$dat$param$bounds["mu", 1], max = lc))) %>% 
+
+                       sp.data %>% 
+                         dplyr::rowwise() %>% 
+                         dplyr::mutate(y = dplyr::case_when(
+                           censored == 1 ~ runif(n = 1, min = rc, max = rj.obj$dat$param$dose.range[2]),
+                           censored == -1 ~ runif(n = 1, min = rj.obj$dat$param$dose.range[1], max = lc),
+                           TRUE ~ runif(n = 1, min = rj.obj$dat$param$dose.range[1], max = rj.obj$dat$param$dose.range[2]))) %>% 
                        dplyr::ungroup() %>% 
                        dplyr::pull(y) %>% 
-                       mean(., na.rm = TRUE)
+                       median(., na.rm = TRUE)
                    
                    } else {
                    
@@ -2148,7 +3174,8 @@ split_count <- function(speciesFrom){
   
   comb.list <- lapply(X = seq_len(length(speciesFrom) - 1),
                       FUN = function(N){
-                        utils::combn(x = speciesFrom, m = N) })
+                        combn(x = speciesFrom, m = N) })
+                        # gRbase::combn_prim(x = speciesFrom, m = N) })
   
   res <- purrr::map(.x = comb.list, 
                     .f = ~{
@@ -2174,15 +3201,25 @@ merge_count <- function(speciesFrom){
   
   # Use simplify = FALSE to return a list, even if only one single pairing is possible
   comb.list <- purrr::map(.x = speciesFrom, .f = ~paste0(.x, collapse = ",")) %>%
-    unlist() %>% utils::combn(x = ., m = 2, simplify = FALSE)
+    unlist() %>% 
+    combn(x = ., m = 2, simplify = FALSE)
+    # gRbase::combn_prim(x = ., m = 2, simplify = FALSE)
   return(comb.list)
 }
 
-acceptance_rate <- function(AR.obj, rj.obj, mp){
+acceptance_rate <- function(AR.obj, mp, cov.n = NULL){
   
-  AR.obj$accept[1:(5 + rj.obj[[1]]$dat$covariates$n)] <- 
-    purrr::map(.x = AR.obj$accept[1:(5 + rj.obj[[1]]$dat$covariates$n)],
+  ind <- which(grepl(pattern = "move.", x = names(AR.obj$accept)))
+  if(!is.null(cov.n)) ind <- c(ind, which(names(AR.obj$accept) %in% names(cov.n)))
+  
+  AR.obj$accept[-ind] <- 
+    purrr::map(.x = AR.obj$accept[-ind],
                .f = ~round( .x/ mp$n.iter, 3))
+  
+  if(!is.null(cov.n)){
+    AR.obj$accept[names(cov.n)] <- purrr::map(.x = names(cov.n),
+               .f = ~unname(round(AR.obj$accept[[.x]]/ cov.n[.x], 3)))
+    }
   
   if("move.0" %in% names(mp$move$m)){
     if(mp$move$m["move.0"] > 0){
@@ -2252,7 +3289,12 @@ glance <- function(dat, which.chain = 1, f = "head", start = 1, end = 6, reset =
   if(f == "update"){
     dat.list <- dat[!names(dat) %in% c("abbrev", "mcmc", "run_time", "accept", "config", "dat")]
     res <- purrr::map(.x = dat.list, .f = ~ {
-      if(is.null(dim(.x))) .x[length(.x)] else .x[nrow(.x), ]
+      if(is.null(dim(.x))){
+        .x[length(.x)] 
+      } else {
+        if(length(dim(.x)) == 2) .x[nrow(.x), ] 
+        if(length(dim(.x)) == 3) .x[nrow(.x), ]
+      }
     })
     res$mlist <- dat$mlist
     return(res)
@@ -2262,7 +3304,23 @@ glance <- function(dat, which.chain = 1, f = "head", start = 1, end = 6, reset =
 }
 
 outOfbounds <- function(rj.obj, v, p){
-  (any(v < rj.obj$dat$param$bounds[p, 1] | v > rj.obj$dat$param$bound[p, 2]))
+  if(p == "alpha") {
+    any(v[rj.obj$mlist[[rj.obj$current.model]]] < rj.obj$config$priors[p, 1]) | 
+      any(v[rj.obj$mlist[[rj.obj$current.model]]] > rj.obj$config$priors[p, 2]) | 
+      any(v[rj.obj$mlist[[rj.obj$current.model]]] < rj.obj$nu[rj.obj$iter["nu"], , 1]) |
+      any(v[rj.obj$mlist[[rj.obj$current.model]]] > rj.obj$nu[rj.obj$iter["nu"], , 2])
+  } else if(p == "nu1"){
+    any(v[rj.obj$mlist[[rj.obj$current.model]]] < rj.obj$config$priors["nu", 1]) | 
+      any(v[rj.obj$mlist[[rj.obj$current.model]]] > rj.obj$alpha[rj.obj$iter["alpha"], ])
+  } else if(p == "nu2"){
+    any(v[rj.obj$mlist[[rj.obj$current.model]]] < rj.obj$alpha[rj.obj$iter["alpha"], ]) | 
+      any(v[rj.obj$mlist[[rj.obj$current.model]]] > rj.obj$config$priors["nu", 2])
+  } else if(p == "mu"){
+    any(v[rj.obj$mlist[[rj.obj$current.model]]] < rj.obj$config$priors["mu", 1]) | 
+      any(v[rj.obj$mlist[[rj.obj$current.model]]] > rj.obj$config$priors["mu", 2])
+  } else {
+    any(v < rj.obj$config$priors[p, 1]) | any(v > rj.obj$config$priors[p, 2])
+  }
 }
 
 # Convenience function to list properties associated with a categorical covariate

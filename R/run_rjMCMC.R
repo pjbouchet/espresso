@@ -73,6 +73,7 @@ run_rjMCMC <- function(dat,
                                            moves = dat$config$move$moves,
                                            m = dat$config$move$freq,
                                            move.ratio = dat$config$move$ratio,
+                                           do.update = do.update,
                                            start.values = last.iter[[.x]]))
   
   # Needed to set up the progress bar on Windows
@@ -100,113 +101,145 @@ run_rjMCMC <- function(dat,
                                                                        time2 = start.time,
                                                                        units = "auto")), 1)}
                                  
-                                 #' ---------------------------------------------------------------------
-                                 # || Censoring ----
-                                 #' ---------------------------------------------------------------------
-                                 
-                                 rj$y.ij[i, ] <- rj$y.ij[i - 1, ]
-                                 
-                                 if (!all(rj$dat$obs$censored == 0)) {
-     
-                                   rj$y.ij[i, !rj$dat$obs$censored == 0] <- 
-                                     rnorm(n = sum(!rj$dat$obs$censored == 0),
-                                           mean = rj$t.ij[i - 1, !rj$dat$obs$censored == 0],
-                                           sd = rj$dat$obs$sd)
-                                   
-                                   }
-                                 
-                                 if(rj$config$model.select & rj$dat$species$n > 1){ 
+                                 #' -----------------------------------------------------
+                                 # Step 1: Split / merge ----
+                                 #' -----------------------------------------------------
 
-                                   #' ---------------------------------------------------------------------
-                                   # || Step 1: Split / merge ----
-                                   #' ---------------------------------------------------------------------
+                                 if(rj$config$model.select & rj$dat$species$n > 1) { 
 
-                                   # Propose jump and new parameters
-                                   proposed.jump <- propose_jump(rj.obj = rj, move.type = rj$mcmc$move$m[i])
-                                   new.params <- proposal_rj(rj.obj = rj, jump = proposed.jump, iter = i)
-                                   
-                                   # Priors
-                                   logprior.new <- uniform_prior(rj.obj = rj,
-                                                                 param.name = "mu",
-                                                                 param = new.params$mu)
-                                   
-                                   logprior.cur <- uniform_prior(rj.obj = rj,
-                                                                 param.name = "mu",
-                                                                 param = rj$mu[i - 1, ])
-                                   
-                                   # Likelihoods
-                                   loglik.new <- likelihood(rj.obj = rj,
-                                                            iter = i,
-                                                            model = proposed.jump$model$id, 
-                                                            values = list(mu = new.params$mu), 
-                                                            RJ = TRUE)
-
-                                   loglik.cur <- likelihood(rj.obj = rj,
-                                                            iter = i,
-                                                            model = rj$mlist[[rj$current.model]], 
-                                                            RJ = TRUE)
-                                   
-                                   # Proposal densities
-                                   logpropdens <- propdens_rj(rj.obj = rj,
-                                                              param = new.params, 
-                                                              jump = proposed.jump,
-                                                              iter = i)
-
-                                
-                                   # Posterior ratio
-                                   lognum <- loglik.new + 
-                                     logprior.new + 
-                                     logpropdens[1] + 
-                                     proposed.jump$p[2] + 
-                                     proposed.jump$jacobian
-                                   
-                                   logden <- loglik.cur + 
-                                     logprior.cur + 
-                                     logpropdens[2] + 
-                                     proposed.jump$p[1]
-                                   
-                                   if (runif(1) < exp(lognum - logden)) {
+                                     # Propose jump and new parameters
+                                     proposed.jump <- propose_jump(rj.obj = rj, 
+                                                                   move.type = rj$mcmc$move$m[i],
+                                                                   phase = rj$phase[i - 1])
                                      
-                                     new.model <- vec_to_model(input.vector = proposed.jump$model$id,
-                                                               sp.names = rj$dat$species$names)
+                                     new.params <- proposal_rj(rj.obj = rj,
+                                                               jump = proposed.jump,
+                                                               phase = rj$phase[i - 1],
+                                                               huelsenbeck = FALSE)
                                      
-                                     rj$model[i] <- rj$current.model <- new.model
-                                     if(!new.model %in% names(rj$mlist)) rj$mlist[[new.model]] <- 
-                                       proposed.jump$model$id
+                                     # Priors
+                                     logprior.new <- 
+                                       uniform_prior(rj.obj = rj,
+                                       param.name = if(rj$phase[i - 1] == 1) "mu" else c("nu", "alpha"),
+                                            param = new.params)
                                      
-                                     if(!new.model %in% rj$config$clust[[1]]$model) 
+                                     logprior.cur <- 
+                                       uniform_prior(rj.obj = rj,
+                                       param.name = if(rj$phase[i - 1] == 1) "mu" else c("nu", "alpha"),
+                                       param = if(rj$phase[i - 1] == 1) 
+                                         list(out = list(mu = rj$mu[i - 1, ])) else 
+                                                       list(out = list(nu = t(rj$nu[i - 1, ,]), 
+                                                                       alpha = rj$alpha[i - 1, ])))
+                                     
+                                     # Likelihoods
+                                     loglik.new <-
+                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                                  param.name = if(rj$phase[i - 1] == 1) "mu" else
+                                         c("nu", "alpha"),
+                                                  rj.obj = rj,
+                                                  model = proposed.jump$model$id,
+                                                  values = new.params$out,
+                                                  included.cov = NULL,
+                                                  RJ = TRUE,
+                                                  lprod = TRUE)
+                                     
+                                     loglik.cur <- 
+                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                                  param.name = if(rj$phase[i - 1] == 1) "mu" else
+                                         c("nu", "alpha"),
+                                                  rj.obj = rj,
+                                                  model = rj$mlist[[rj$current.model]], 
+                                                  values = NULL,
+                                                  included.cov = NULL,
+                                                  RJ = TRUE, 
+                                                  lprod = TRUE)
+                                     
+                                     # Proposal densities
+                                     logpropdens <- propdens_rj(rj.obj = rj,
+                                                                param = new.params,
+                                                                jump = proposed.jump,
+                                                                phase = rj$phase[i - 1])
+                                     
+                                     # Posterior ratio
+                                     lognum <- loglik.new + 
+                                       logprior.new + 
+                                       logpropdens[1] + 
+                                       proposed.jump$p[2] + 
+                                       proposed.jump$jacobian
+                                     
+                                     logden <- loglik.cur + 
+                                       logprior.cur + 
+                                       logpropdens[2] + 
+                                       proposed.jump$p[1]
+                                     
+                                     if (runif(1) < exp(lognum - logden)) {
                                        
-                                       rj$config$clust[[1]] <- 
-                                       rbind(rj$config$clust[[1]], 
-                                             tibble::tibble(model = new.model, p = 0, p_scale = 0)) %>% 
-                                       dplyr::mutate(p_scale = rescale_p(p))
-                                     
-                                     rj$mu[i, ] <- new.params$mu
-                                     
-                                     if(i > rj$mcmc$n.burn) rj$accept[paste0("move.", proposed.jump$type)] <- 
-                                       rj$accept[[paste0("move.", proposed.jump$type)]] + 1
-                                     
-                                   } else {
-                                     
-                                     rj$model[i] <- rj$current.model
-                                     rj$mu[i, ] <- rj$mu[i - 1, ]
-                                   }
+                                       new.model <- vec_to_model(input.vector = proposed.jump$model$id,
+                                                                 sp.names = rj$dat$species$names)
+                                       
+                                       rj$model[i] <- rj$current.model <- new.model
+                                       
+                                       # Add model to list
+                                       if(!new.model %in% names(rj$mlist)) rj$mlist[[new.model]] <- 
+                                         proposed.jump$model$id
+                                       
+                                       if(!new.model %in% rj$config$clust[[1]]$model){ 
+                                         rj$config$clust[[1]] <- 
+                                         rbind(rj$config$clust[[1]], 
+                                               tibble::tibble(model = new.model, p = 0, p_scale = 0)) %>% 
+                                         dplyr::mutate(p_scale = rescale_p(p))
+                                       }
+                                       
+                                       if(rj$config$function.select & rj$phase[i - 1] == 1){
+                                       rj$mu[i, ] <- new.params$out$mu}
+                                       if(rj$config$function.select & rj$phase[i - 1] == 2){
+                                       rj$nu[i, ,] <- t(new.params$out$nu)
+                                       rj$alpha[i, ] <- new.params$out$alpha}
+                                        
+                                       if(i > rj$mcmc$n.burn){
+                                         rj$accept[paste0(ifelse(rj$phase[i] == 1, "mono.", "bi."),
+                                                          "move.", proposed.jump$type)] <- 
+                                         rj$accept[[paste0(ifelse(rj$phase[i] == 1, "mono.", "bi."),
+                                                           "move.", proposed.jump$type)]] + 1 }
+                                       
+                                     } else { # If proposal not accepted
+                                       
+                                       rj$model[i] <- rj$current.model <- rj$model[i - 1]
+                                       if(rj$config$function.select | rj$phase[i - 1] == 1){
+                                       rj$mu[i, ] <- rj$mu[i - 1, ]}
+                                       if(rj$config$function.select | rj$phase[i - 1] == 2){
+                                       rj$nu[i, ,] <- rj$nu[i - 1, ,]
+                                       rj$alpha[i, ] <- rj$alpha[i - 1, ]
+                                       }
+                                        
+                                     }
+ 
+                                 } else { # If no model selection
                                    
-                                 } else {
-                                   
-                                   rj$mu[i, ] <- rj$mu[i - 1, ]
+                                   if(rj$config$function.select | rj$phase[i - 1] == 1){
+                                   rj$mu[i, ] <- rj$mu[i - 1, ]}
+                                   if(rj$config$function.select | rj$phase[i - 1] == 2){
+                                   rj$nu[i, ,] <- rj$nu[i - 1, ,]
+                                   rj$alpha[i, ] <- rj$alpha[i - 1, ]}
                                    
                                  }
                                  
-                                 #' ---------------------------------------------------------------------
-                                 # || Step 2: Add/remove covariates ----
-                                 #' ---------------------------------------------------------------------
+                                 if(rj$config$function.select | rj$phase[i - 1] == 1){
+                                 rj$iter["mu"] <- rj$iter["mu"] + 1}
+                                 if(rj$config$function.select | rj$phase[i - 1] == 2){
+                                 rj$iter["nu"] <- rj$iter["nu"] + 1
+                                 rj$iter["alpha"] <- rj$iter["alpha"] + 1}
+               
+                                 #' -----------------------------------------------------
+                                 # Step 2: Add/remove covariates ----
+                                 #' -----------------------------------------------------
 
                                  if(rj$dat$covariates$n > 0){
                                    
                                    if(rj$config$covariate.select){
                                      
-                                     # We consider all models to be equally likely when it comes to covariates.
+                                     # We consider all models to be equally likely 
+                                     # when it comes to covariates.
                                      # Therefore, the priors on models cancel out.
                                      
                                      # Select a covariate at random and switch it on/off
@@ -218,21 +251,24 @@ run_rjMCMC <- function(dat,
                                      if(add.remove){
                                        
                                        # Coefficients for covariate terms
-                                       beta.params <- sapply(X = chosen.covariate, 
-                                                             FUN = function(w) as.matrix(rj[[w]])[i - 1, ],
+                                       beta.params <- sapply(X = chosen.covariate,
+                                                             FUN = function(w)
+                                                               as.matrix(rj[[w]])[i - 1, ],
                                                              simplify = FALSE, USE.NAMES = TRUE)
                                        
           # Propose new values when a covariate is added
           beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index] <- rnorm(n = rj$dat$covariates$fL[[chosen.covariate]]$nparam, mean = 0, sd = rj$config$prop$cov)
+              
+                                                              
+                                       # Prior
+                                       logprior <- normal_prior(
+                                         rj.obj = rj,
+                                         param.name = chosen.covariate,
+                                         param = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index])
                                        
-          # Prior
-          logprior <- normal_prior(
-            rj.obj = rj,
-            param.name = chosen.covariate,
-            param = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index])
-                                       
-          # Proposal density
-          logpropdens <- sum(dnorm(x = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index], mean = 0, sd = rj$config$prop$cov, log = TRUE))
+                                       # Proposal density
+                                       logpropdens <- sum(dnorm(x = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index], mean = 0, 
+                                                      sd = rj$config$prop$cov, log = TRUE))
                                        
                                        # Ratio of prior / proposal density
                                        R <- logprior - logpropdens
@@ -266,38 +302,47 @@ run_rjMCMC <- function(dat,
                                      # The `values` argument will be the proposed values when
                                      # adding a covariate and the current values when removing
                                      # one (but these will be ignored, as the corresponding
-                                     # indicator in include.cov will be 0).
-                                     # include.cov corresponds to the include.covariates 
+                                     # indicator in included.cov will be 0).
+                                     # included.cov corresponds to the include.covariates 
                                      # matrix in rj - it is filled with either 1 or 0 
                                      # depending on whether a covariate is included or 
                                      # omitted from the model.
                                      
                                      loglik.new <- 
-                                       likelihood(rj.obj = rj,
-                                                  iter = i,
+                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                                  param = "covariates",
+                                                  rj.obj = rj,
                                                   model = rj$mlist[[rj$current.model]], 
-                                                  include.cov = proposed.covariates,
-                                           values = stats::setNames(list(beta.params[[chosen.covariate]]), 
+                                                  values = stats::setNames(list(beta.params[[chosen.covariate]]), 
                                                                            chosen.covariate),
-                                                  RJ = TRUE)
+                                                  included.cov = proposed.covariates,
+                                                  RJ = TRUE,
+                                                  lprod = TRUE)
                                      
-                                     loglik.cur <- likelihood(rj.obj = rj,
-                                                              iter = i,
-                                                              model = rj$mlist[[rj$current.model]], 
-                                                              include.cov = rj$include.covariates[i - 1, ], 
-                                                              RJ = TRUE)
+                                     loglik.cur <- 
+                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                                  param = "covariates",
+                                                  rj.obj = rj,
+                                                  model = rj$mlist[[rj$current.model]],
+                                                  values = NULL,
+                                                  included.cov = rj$include.covariates[i - 1, ], 
+                                                  RJ = TRUE,
+                                                  lprod = TRUE)
                                      
                                      # Posterior ratio - Model move probabilities are given in proposed.jump
                                      lognum <- loglik.new + R + pmove[2]
                                      logden <- loglik.cur + R + pmove[1]
+
                                      
                                      for (k in rj$dat$covariates$names) rj[[k]][i, ] <- rj[[k]][i - 1, ]
                                      
                                      if (runif(1) < exp(lognum - logden)) {
                                        
                                        rj$include.covariates[i, ] <- proposed.covariates
-                                       if(add.remove) rj[[chosen.covariate]][i, ] <- beta.params[[chosen.covariate]]
-                                       if(i > rj$mcmc$n.burn) rj$accept[["move.covariates"]] <- rj$accept[["move.covariates"]] + 1
+                                       if(add.remove) rj[[chosen.covariate]][i, ] <- 
+                                           beta.params[[chosen.covariate]]
+                                       if(i > rj$mcmc$n.burn) 
+                                         rj$accept[["move.covariates"]] <- rj$accept[["move.covariates"]] + 1
                                        
                                      } else {
                                        
@@ -307,124 +352,180 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     for (k in rj$dat$covariates$names) rj[[k]][i, ] <- rj[[k]][i - 1, ]
+                                     for (k in rj$dat$covariates$names){
+                                       rj[[k]][i, ] <- rj[[k]][i - 1, ]}
                                      
                                    }  # End if (covariate.select)
                                  } # End if (n.covariates > 0)
-                                 
-                                 
-                                 #' ---------------------------------------------------------------------
-                                 # || Step 3: Functional form ----
-                                 #' ---------------------------------------------------------------------
-                                 
-                                 # We can generalize the standard 'monophasic' dose-response function
-                                 # by allowing the threshold to come from one of two truncated normal 
-                                 # distributions, one with lower exposure values than the other. This gives
-                                 # a 'biphasic' function with a context-dependent part and a dose-dependent part.
-                                 
-                                 #' ---------------------------------------------------------------------
-                                 # || Step 4: Update parameters ----
-                                 #' ---------------------------------------------------------------------
-                                 
-                                 #'------------------------------
-                                 # // t.ij ----
-                                 #'------------------------------
-                                 proposed.t.ij <- proposal_mh(rj.obj = rj, param.name = "t.ij", iter = i)
 
-                                 loglik.proposed <- likelihood(rj.obj = rj,
-                                                               iter = i,
-                                                               model = rj$mlist[[rj$current.model]], 
-                                                               values = list(t.ij = proposed.t.ij), 
-                                                               lprod = FALSE)
+                                 rj$iter[c("covariates", rj$dat$covariates$names)] <- 
+                                   rj$iter[c("covariates", rj$dat$covariates$names)] + 1
                                  
-                                 loglik.current <- likelihood(rj.obj = rj,
-                                                              iter = i,
-                                                              model = rj$mlist[[rj$current.model]], 
-                                                              param.name = "t.ij",
-                                                              lprod = FALSE)
+                                 #' ---------------------------------------------------------------------
+                                 # Step 3: Functional form ----
+                                 #' ---------------------------------------------------------------------
                                  
-                                 prop.forward <- propdens_mh(rj.obj = rj,
-                                                             param.name = "t.ij", 
-                                                             dest = proposed.t.ij, 
-                                                             orig = rj$t.ij[i - 1, ])
-                                 
-                                 prop.backward <- propdens_mh(rj.obj = rj,
-                                                              param.name = "t.ij", 
-                                                              dest = rj$t.ij[i - 1, ],
-                                                              orig = proposed.t.ij)
-                                 
-                                 accept.prob <- runif(1) < exp((loglik.proposed + prop.backward) - 
-                                                                 (loglik.current + prop.forward))
-                                 
-                                 rj$t.ij[i, ] <- sapply(seq_len(rj$dat$trials$n), 
-                                   function(x) ifelse(accept.prob[x], proposed.t.ij[x], rj$t.ij[i - 1, x]))
-                                 
-                                 if(i > rj$mcmc$n.burn) rj$accept[["t.ij"]] <- 
-                                   rj$accept[["t.ij"]] + unname(ifelse(accept.prob, 1, 0))
-                                 
-                                 
-                                 #'------------------------------
-                                 # // sigma ----
-                                 #'------------------------------
-                                 proposed.sigma <- proposal_mh(rj.obj = rj, param.name = "sigma", iter = i)
-                                 
-                                 if(outOfbounds(rj.obj = rj, v = proposed.sigma, p = "sigma")){
-                                   accept.prob <- 0
+                                 if(rj$config$function.select){
+                                   
+                                   # We can generalize the standard 'monophasic' dose-response function
+                                   # by allowing the threshold to come from one of two truncated normal 
+                                   # distributions, one with lower exposure values than the other. 
+                                   # This gives a 'biphasic' function with a context-dependent part 
+                                   # and a dose-dependent part.
+                                   
+                                   ff.prop <- proposal_ff(rj.obj = rj, from.phase = rj$phase[i - 1])
+                                   
+                                   # Likelihoods
+                                   loglik.new <-
+                                     likelihood(biphasic = ifelse(ff.prop$to.phase == 1, FALSE, TRUE),
+                                                param.name = if(ff.prop$to.phase == 1) c("mu", "mu.i", "phi", "sigma") else c("nu", "alpha", "tau", "omega", "psi", "mu.ij", "psi.i", "k.ij"),
+                                                rj.obj = rj,
+                                                model = rj$mlist[[rj$current.model]],
+                                                values = ff.prop,
+                                                included.cov = NULL,
+                                                RJ = TRUE,
+                                                lprod = TRUE)
+                                   
+                                   loglik.current <-
+                                     likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                                param.name = NULL,
+                                                rj.obj = rj,
+                                                model = rj$mlist[[rj$current.model]],
+                                                values = NULL,
+                                                included.cov = NULL,
+                                                RJ = TRUE,
+                                                lprod = TRUE)
+                                   
+                                   # Priors
+                                   logprior.new <- ff_prior(rj.obj = rj, 
+                                                            param = ff.prop, 
+                                                            phase = ff.prop$to.phase)
+                                   
+                                   logprior.cur <- ff_prior(rj.obj = rj, 
+                                                            param = NULL,
+                                                            phase = rj$phase[i - 1])
+                                   
+                                   # Proposal densities
+                                   logpropdens <- propdens_ff(rj.obj = rj, param = ff.prop)
+                                   
+                                   # Posterior ratio (Jacobian is 1 and p is 1)
+                                   lognum <- loglik.new + 
+                                     logprior.new + 
+                                     logpropdens[1]
+                                   
+                                   logden <- loglik.cur + 
+                                     logprior.cur + 
+                                     logpropdens[2]
+                                   
+                                   if (runif(1) < exp(lognum - logden)) {
+                                     
+                                     rj$phase[i] <- ff.prop$to.phase
+                                     
+                                     if(i > rj$mcmc$n.burn){
+                                       
+                                       if(ff.prop$to.phase == 1)
+                                       rj$accept["to.monophasic"] <- rj$accept["to.monophasic"] + 1
+                                       
+                                       if(ff.prop$to.phase == 2)
+                                         rj$accept["to.biphasic"] <- rj$accept["to.biphasic"] + 1
+                                     }
+                                     
+
+                                     if(ff.prop$to.phase == 1){
+                                       
+                                       rj$sigma[i] <- ff.prop$sigma
+                                       rj$mu.i[i, ] <- ff.prop$mu.i
+                                       rj$mu[i, ] <- ff.prop$mu
+                                       rj$phi[i] <- ff.prop$phi
+
+                                       rj$tau[i, ] <- rj$tau[i - 1, ]
+                                       rj$omega[i] <- rj$omega[i - 1]
+                                       rj$psi[i] <- rj$psi[i - 1]
+                                       rj$mu.ij[i, ,] <- rj$mu.ij[i - 1, ,]
+                                       rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
+                                       rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
+                                       rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
+                                       
+                                     }else{
+                                       
+                                       rj$alpha[i, ] <- ff.prop$alpha
+                                       rj$nu[i, , 1] <- ff.prop$nu[1, ]
+                                       rj$nu[i, , 2] <- ff.prop$nu[2, ]
+                                       rj$tau[i, ] <- ff.prop$tau
+                                       rj$omega[i] <- ff.prop$omega
+                                       rj$psi[i] <- ff.prop$psi
+                                       rj$mu.ij[i, ,] <- ff.prop$mu.ij
+                                       rj$psi.i[i, ] <- ff.prop$psi.i
+                                       rj$k.ij[i, ] <- ff.prop$k.ij
+                                       rj$pi.ij[i, ] <- ff.prop$pi.ij
+                                       
+                                       rj$sigma[i] <- rj$sigma[i - 1]
+                                       rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
+                                       rj$phi[i] <- rj$phi[i - 1]
+                                     }
+                                     
+                                   } else {
+                                     
+                                     rj$phase[i] <- rj$phase[i - 1]
+                                     
+                                     rj$sigma[i] <- rj$sigma[i - 1]
+                                     rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
+                                     rj$phi[i] <- rj$phi[i - 1]
+                                     
+                                     rj$tau[i, ] <- rj$tau[i - 1, ]
+                                     rj$omega[i] <- rj$omega[i - 1]
+                                     rj$psi[i] <- rj$psi[i - 1]
+                                     rj$mu.ij[i, ,] <- rj$mu.ij[i - 1, ,]
+                                     rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
+                                     rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
+                                     rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
+                                     
+                                   }
+                                   
                                  } else {
                                    
-                                   loglik.proposed <- likelihood(rj.obj = rj,
-                                                                 iter = i,
-                                                                 model = rj$mlist[[rj$current.model]],
-                                                                 values = list(sigma = proposed.sigma))
+                                   rj$phase[i] <- rj$phase[i - 1]
                                    
-                                   loglik.current <- likelihood(rj.obj = rj,
-                                                                iter = i,
-                                                                model = rj$mlist[[rj$current.model]],
-                                                                param.name = "sigma")
+                                   if(rj$config$function.select | rj$phase[i - 1] == 1){
+                                   rj$sigma[i] <- rj$sigma[i - 1]
+                                   rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
+                                   rj$phi[i] <- rj$phi[i - 1]
+                                   }
                                    
-                                   accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   if(rj$config$function.select | rj$phase[i - 1] == 2){
+                                   rj$tau[i, ] <- rj$tau[i - 1, ]
+                                   rj$omega[i] <- rj$omega[i - 1]
+                                   rj$psi[i] <- rj$psi[i - 1]
+                                   rj$mu.ij[i, ,] <- rj$mu.ij[i - 1, ,]
+                                   rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
+                                   rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
+                                   rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
+
+                                   }
+                                   
+                                 }
                                  
-                                 if (runif(1) < accept.prob){
-                                   rj$sigma[i] <- proposed.sigma
-                                   if(i > rj$mcmc$n.burn) rj$accept[["sigma"]] <- rj$accept[["sigma"]] + 1
-                                 } else {rj$sigma[i] <- rj$sigma[i - 1]}
+                                 rj$t.ij[i, ] <- rj$t.ij[i - 1, ] # t.ij stay the same
+                                 rj$iter["t.ij"] <- rj$iter["t.ij"] + 1
+                                 
+                                 if(rj$config$function.select | rj$phase[i - 1] == 1){
+                                 rj$iter[c("sigma", "mu.i", "phi")] <- 
+                                   rj$iter[c("sigma", "mu.i", "phi")] + 1
+                                 }
+                                 
+                                 if(rj$config$function.select | rj$phase[i - 1] == 2){
+                                 rj$iter[c("tau", "omega", "psi", "mu.ij", "k.ij", "psi.i", "pi.ij")] <- 
+                                rj$iter[c("tau", "omega", "psi", "mu.ij", "k.ij", "psi.i", "pi.ij")] + 1
+                                 }
+                                 
+
+                                 #' ---------------------------------------------------------------------
+                                 # Step 4: Update parameters ----
+                                 #' ---------------------------------------------------------------------
                                  
                                  #'------------------------------
-                                 # // covariates ----
+                                 ### covariates ----
                                  #'------------------------------
-                                 # Only covariates currently in the model are updated
-                                 # The loop below provides a generalised version of the code that
-                                 # is applicable to any input covariates but impairs execution speed.
-                                 # As of June 2021, only four covariates are considered in the analysis,
-                                 # meaning the the loop is not hugely necessary here. It can be commented
-                                 # out if more covariates are to be added in the future. 
-                                 
-                                 # if(rj$dat$covariates$n > 0){
-                                 #   for (a in rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
-                                 #     # Normal proposal
-                                 #     proposed.value <- proposal_mh(rj.obj = rj, param.name = a) 
-                                 #     if(rj$dat$covariates$fL[[a]]$nL >= 2) proposed.value <- c(0, proposed.value)
-                                 #     prop.list <- list()
-                                 #     prop.list[[a]] <- proposed.value
-                                 #     loglik.proposed <- likelihood(rj.obj = rj,
-                                 #                                   model = rj$mlist[[rj$current.model]],
-                                 #                                   values = prop.list)
-                                 #     loglik.current <- likelihood(rj.obj = rj,
-                                 #                                  model = rj$mlist[[rj$current.model]],
-                                 #                                  param.name = a)
-                                 #      logprior.proposed <- normal_prior(rj.obj = rj,
-                                 #                                   param.name = a,
-                                 #                                   param = proposed.value)
-                                 #      logprior.current <- normal_prior(rj.obj = rj,
-                                 #                                       param.name = a, 
-                                 #                                       param = rj[[a]][i, ])
-                                 #       accept.prob <- exp((loglik.proposed + logprior.proposed) -
-                                 #                      (loglik.current + logprior.current))
-                                 # if (runif(1) < accept.prob){
-                                 #   rj[[a]][i, ] <- proposed.value
-                                 #   if(i > rj$mcmc$n.burn) rj$accept[[a]] <- rj$accept[[a]] + 1}
-                                 #   }
-                                 # }
                                  
                                  if(rj$dat$covariates$n > 0){
                                    
@@ -434,46 +535,50 @@ run_rjMCMC <- function(dat,
                                    
                                    if("exposed" %in% rj$dat$covariates$names){
                                      
-                                     if("exposed" %in% rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
+                                     if("exposed" %in% 
+                                        rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
                                        
-                                       proposed.value <- 
-                                         proposal_mh(rj.obj = rj, param.name = "exposed", iter = i)
-                                       
-                                       if(rj$dat$covariates$fL[["exposed"]]$nL >= 2) 
-                                         proposed.value <- c(0, proposed.value)
-                                       
-                                       prop.list <- list()
-                                       prop.list[["exposed"]] <- proposed.value
-                                       
-                                       loglik.proposed <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    values = prop.list)
-                                       loglik.current <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    param.name = "exposed")
-                                       
+                                       prop.list <- proposal_mh(rj.obj = rj, param.name = "exposed")
+
+                                         loglik.proposed <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "exposed",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = prop.list,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
+                                         
+                                         loglik.current <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "exposed",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = NULL,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
+                                      
                                        logprior.proposed <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "exposed",
-                                                      param = proposed.value)
+                                                      param = prop.list[["exposed"]][2])
                                        
                                        logprior.current <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "exposed",
-                                                      param = rj[["exposed"]][i, ])
+                                                      param = rj[["exposed"]][rj$iter["exposed"], 2])
                                        
-                                       accept.prob <- exp((loglik.proposed + logprior.proposed) - 
+                                       accept.prob <- 
+                                         runif(1) < exp((loglik.proposed + logprior.proposed) - 
                                                             (loglik.current + logprior.current))
                                        
-                                       if (runif(1) < accept.prob){
-                                         rj[["exposed"]][i, ] <- proposed.value 
+                                       if (accept.prob){
+                                         rj[["exposed"]][i, ] <- unlist(prop.list)
                                          if(i > rj$mcmc$n.burn) rj$accept[["exposed"]] <- 
-                                             rj$accept[["exposed"]] + 1}
-                                       
+                                             rj$accept[["exposed"]] + 1
+                                       } 
                                      }
                                    }
                                    
@@ -483,50 +588,52 @@ run_rjMCMC <- function(dat,
                                    
                                    if("sonar" %in% rj$dat$covariates$names){
                                      
-                                     if("sonar" %in% rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
+                                     if("sonar" %in% 
+                                        rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
                                        
-                                       proposed.value <- 
-                                         proposal_mh(rj.obj = rj, param.name = "sonar", iter = i)
-                                       
-                                       if(rj$dat$covariates$fL[["sonar"]]$nL >= 2) 
-                                         proposed.value <- c(0, proposed.value)
-                                       
-                                       prop.list <- list()
-                                       prop.list[["sonar"]] <- proposed.value
-                                       
-                                       loglik.proposed <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    values = prop.list)
-                                       
-                                       loglik.current <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    param.name = "sonar")
+                                       prop.list <- proposal_mh(rj.obj = rj, param.name = "sonar")
+
+                                         loglik.proposed <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "sonar",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = prop.list,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
+                                         
+                                         loglik.current <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "sonar",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = NULL,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
                                        
                                        logprior.proposed <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "sonar",
-                                                      param = proposed.value)
+                                                      param = prop.list[["sonar"]][2])
                                        
                                        logprior.current <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "sonar",
-                                                      param = rj[["sonar"]][i, ])
+                                                      param = rj[["sonar"]][rj$iter["sonar"], 2])
                                        
-                                       accept.prob <- exp((loglik.proposed + logprior.proposed) - 
+                                       accept.prob <- 
+                                         runif(1) < exp((loglik.proposed + logprior.proposed) - 
                                                             (loglik.current + logprior.current))
                                        
-                                       if (runif(1) < accept.prob){
-                                         rj[["sonar"]][i, ] <- proposed.value 
+                                       if (accept.prob){
+                                         rj[["sonar"]][i, ] <- unlist(prop.list)
                                          if(i > rj$mcmc$n.burn) rj$accept[["sonar"]] <- 
-                                             rj$accept[["sonar"]] + 1}
-                                       
+                                             rj$accept[["sonar"]] + 1
+                                       } 
                                      }
                                    }
-                                   
                                    
                                    #'------------------------------
                                    # // behavioural mode ----
@@ -534,47 +641,50 @@ run_rjMCMC <- function(dat,
                                    
                                    if("behaviour" %in% rj$dat$covariates$names){
                                      
-                                     if("behaviour" %in% rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
+                                     if("behaviour" %in% 
+                                        rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
                                        
-                                       proposed.value <- 
-                                         proposal_mh(rj.obj = rj, param.name = "behaviour", iter = i)
+                                       prop.list <- proposal_mh(rj.obj = rj, param.name = "behaviour")
                                        
-                                       if(rj$dat$covariates$fL[["behaviour"]]$nL >= 2) 
-                                         proposed.value <- c(0, proposed.value)
-                                       
-                                       prop.list <- list()
-                                       prop.list[["behaviour"]] <- proposed.value
-                                       
-                                       loglik.proposed <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    values = prop.list)
-                                       
-                                       loglik.current <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    param.name = "behaviour")
+                                         loglik.proposed <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "behaviour",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = prop.list,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
+                                         
+                                         loglik.current <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "behaviour",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = NULL,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
                                        
                                        logprior.proposed <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "behaviour",
-                                                      param = proposed.value)
+                                                      param = prop.list[["behaviour"]][2])
                                        
                                        logprior.current <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "behaviour",
-                                                      param = rj[["behaviour"]][i, ])
+                                                      param = rj[["behaviour"]][rj$iter["behaviour"], 2])
                                        
-                                       accept.prob <- exp((loglik.proposed + logprior.proposed) - 
+                                       accept.prob <- 
+                                         runif(1) < exp((loglik.proposed + logprior.proposed) - 
                                                             (loglik.current + logprior.current))
                                        
-                                       if (runif(1) < accept.prob){
-                                         rj[["behaviour"]][i, ] <- proposed.value 
+                                       if (accept.prob){
+                                         rj[["behaviour"]][i, ] <- unlist(prop.list)
                                          if(i > rj$mcmc$n.burn) rj$accept[["behaviour"]] <- 
-                                             rj$accept[["behaviour"]] + 1}
-                                       
+                                             rj$accept[["behaviour"]] + 1
+                                       } 
                                      }
                                    }
                                    
@@ -587,140 +697,670 @@ run_rjMCMC <- function(dat,
                                      if("range" %in% 
                                         rj$dat$covariates$names[rj$include.covariates[i, ] == 1]) {
                                        
-                                       proposed.value <- 
-                                         proposal_mh(rj.obj = rj, param.name = "range", iter = i)
-                                       
-                                       if(rj$dat$covariates$fL[["range"]]$nL >= 2) 
-                                         proposed.value <- c(0, proposed.value)
-                                       
-                                       prop.list <- list()
-                                       prop.list[["range"]] <- proposed.value
-                                       
+                                       prop.list <- proposal_mh(rj.obj = rj, param.name = "range")
+                                         
                                        loglik.proposed <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    values = prop.list)
-                                       
-                                       loglik.current <- 
-                                         likelihood(rj.obj = rj,
-                                                    iter = i,
-                                                    model = rj$mlist[[rj$current.model]],
-                                                    param.name = "range")
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "range",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = prop.list,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
+                                         
+                                         loglik.current <- 
+                                           likelihood(biphasic = rj$phase[i] == 2,
+                                                      param.name = "range",
+                                                      rj.obj = rj,
+                                                      model = rj$mlist[[rj$current.model]],
+                                                      values = NULL,
+                                                      included.cov = NULL,
+                                                      RJ = FALSE,
+                                                      lprod = TRUE)
                                        
                                        logprior.proposed <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "range",
-                                                      param = proposed.value)
+                                                      param = prop.list[["range"]])
                                        
                                        logprior.current <- 
                                          normal_prior(rj.obj = rj,
                                                       param.name = "range",
-                                                      param = rj[["range"]][i, ])
+                                                      param = rj[["range"]][rj$iter["range"]])
                                        
-                                       accept.prob <- exp((loglik.proposed + logprior.proposed) - 
-                                                            (loglik.current + logprior.current))
+                                       accept.prob <- runif(1) < 
+                                         exp((loglik.proposed + logprior.proposed) - 
+                                             (loglik.current + logprior.current))
                                        
-                                       if (runif(1) < accept.prob){
-                                         rj[["range"]][i, ] <- proposed.value 
+                                       if (accept.prob){
+                                         rj[["range"]][i, ] <- unlist(prop.list)
                                          if(i > rj$mcmc$n.burn) rj$accept[["range"]] <- 
-                                             rj$accept[["range"]] + 1}
-                                       
+                                             rj$accept[["range"]] + 1
+                                       } 
                                      }
                                    }
-                                 }
-                                 
-                                 #'------------------------------
-                                 # // mu.i ----
-                                 #'------------------------------
-                                 proposed.mu.i <- proposal_mh(rj.obj = rj, param.name = "mu.i", iter = i)
-                                 
-                                 loglik.proposed <- likelihood(rj.obj = rj,
-                                                               iter = i,
-                                                               model = rj$mlist[[rj$current.model]],
-                                                               values = list(mu.i = proposed.mu.i),
-                                                               lprod = FALSE)
-                                 
-                                 loglik.current <- likelihood(rj.obj = rj,
-                                                              iter = i,
-                                                              model = rj$mlist[[rj$current.model]],
-                                                              param.name = "mu.i", 
-                                                              lprod = FALSE)
-                                 
-                                 prop.forward <- propdens_mh(rj.obj = rj,
-                                                             param.name = "mu.i", 
-                                                             dest = proposed.mu.i,
-                                                             orig = rj$mu.i[i - 1, ])
-                                 
-                                 prop.backward <- propdens_mh(rj.obj = rj,
-                                                              param.name = "mu.i", 
-                                                              dest = rj$mu.i[i - 1, ],
-                                                              orig = proposed.mu.i)
-                                 
-                                 accept.prob <- runif(1) < exp((loglik.proposed + prop.backward) -
-                                                                 (loglik.current + prop.forward))
-                                 
-                                 rj$mu.i[i, ] <- sapply(seq_len(rj$dat$whales$n), 
-                                     function(x) ifelse(accept.prob[x], proposed.mu.i[x], rj$mu.i[i - 1, x]))
-                                 
-                                 if(i > rj$mcmc$n.burn) 
-                                   rj$accept[["mu.i"]] <- 
-                                   rj$accept[["mu.i"]] + unname(ifelse(accept.prob, 1, 0))
-                                 
-                                 #'------------------------------
-                                 # // mu ----
-                                 #'------------------------------
-                                 proposed.mu <- proposal_mh(rj.obj = rj, param.name = "mu", iter = i)
-                                 
-                                 if(outOfbounds(rj.obj = rj, v = proposed.mu, p = "mu")){
                                    
-                                   accept.prob <- 0
+                                 } # End covariates.n > 0
+                                 
+                                 if(rj$phase[i] == 1){
+                                   
+                                   #'------------------------------
+                                   ### t.ij (monophasic) ----
+                                   #'------------------------------
+                                   proposed.t.ij <- proposal_mh(rj.obj = rj, param.name = "t.ij")
+                                   
+                                   loglik.proposed <- likelihood(param.name = "t.ij",
+                                                                 rj.obj = rj,
+                                                                 model = rj$mlist[[rj$current.model]], 
+                                                                 values = proposed.t.ij, 
+                                                                 included.cov = NULL,
+                                                                 RJ = FALSE,
+                                                                 lprod = FALSE)
+                                   
+                                   loglik.current <- likelihood(param.name = "t.ij",
+                                                                rj.obj = rj,
+                                                                model = rj$mlist[[rj$current.model]], 
+                                                                values = NULL,
+                                                                included.cov = NULL,
+                                                                RJ = FALSE,
+                                                                lprod = FALSE)
+                                   
+                                   prop.forward <- propdens_mh(rj.obj = rj,
+                                                               param.name = "t.ij", 
+                                                               dest = proposed.t.ij[[1]], 
+                                                               orig = rj$t.ij[i - 1, ])
+                                   
+                                   prop.backward <- propdens_mh(rj.obj = rj,
+                                                                param.name = "t.ij", 
+                                                                dest = rj$t.ij[i - 1, ],
+                                                                orig = proposed.t.ij[[1]])
+                                   
+                                   accept.prob <- runif(rj$dat$trials$n) < 
+                                     exp((loglik.proposed + prop.backward) - 
+                                           (loglik.current + prop.forward))
+                                   
+                                   # rj$t.ij[i, ] <- rj$t.ij[i - 1, ]
+                                   rj$t.ij[i, accept.prob] <- proposed.t.ij[[1]][accept.prob]
+
+                                   if(i > rj$mcmc$n.burn) rj$accept[["t.ij"]] <- 
+                                     rj$accept[["t.ij"]] + unname(ifelse(accept.prob, 1, 0))
+                                   
+                                   # rj$iter["t.ij"] <- rj$iter["t.ij"] + 1
+                                   
+                                   #'------------------------------
+                                   # // sigma ----
+                                   #'------------------------------
+                                   proposed.sigma <- proposal_mh(rj.obj = rj, param.name = "sigma")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.sigma[[1]], p = "sigma")){
+                                     accept.prob <- 0
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(param.name = "sigma",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.sigma,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(param.name = "sigma",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob){
+                                     rj$sigma[i] <- proposed.sigma[[1]]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["sigma"]] <- 
+                                         rj$accept[["sigma"]] + 1
+                                   }
+                                   
+                                   # rj$iter["sigma"] <- rj$iter["sigma"] + 1
+                                   
+                                   #'------------------------------
+                                   # // mu.i ----
+                                   #'------------------------------
+                                   proposed.mu.i <- proposal_mh(rj.obj = rj, param.name = "mu.i")
+                                   
+                                   loglik.proposed <- likelihood(param.name = "mu.i",
+                                                                 rj.obj = rj,
+                                                                 model = rj$mlist[[rj$current.model]],
+                                                                 values = proposed.mu.i,
+                                                                 included.cov = NULL,
+                                                                 RJ = FALSE,
+                                                                 lprod = FALSE)
+                                   
+                                   loglik.current <- likelihood(param.name = "mu.i", 
+                                                                rj.obj = rj,
+                                                                model = rj$mlist[[rj$current.model]],
+                                                                values = NULL,
+                                                                included.cov = NULL,
+                                                                RJ = FALSE,
+                                                                lprod = FALSE)
+                                   
+                                   prop.forward <- propdens_mh(rj.obj = rj,
+                                                               param.name = "mu.i", 
+                                                               dest = proposed.mu.i[[1]],
+                                                               orig = rj$mu.i[i - 1, ])
+                                   
+                                   prop.backward <- propdens_mh(rj.obj = rj,
+                                                                param.name = "mu.i", 
+                                                                dest = rj$mu.i[i - 1, ],
+                                                                orig = proposed.mu.i[[1]])
+                                   
+                                   accept.prob <- 
+                                     runif(rj$dat$whales$n) < 
+                                     exp((loglik.proposed + prop.backward) -
+                                           (loglik.current + prop.forward))
+                                   
+                                   # rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
+                                   rj$mu.i[i, accept.prob] <- proposed.mu.i[[1]][accept.prob]
+                                   
+                                   if(i > rj$mcmc$n.burn) 
+                                     rj$accept[["mu.i"]] <- 
+                                     rj$accept[["mu.i"]] + unname(ifelse(accept.prob, 1, 0))
+                                   
+                                   # rj$iter["mu.i"] <- rj$iter["mu.i"] + 1
+                                   
+                                   #'------------------------------
+                                   # // mu ----
+                                   #'------------------------------
+                                   proposed.mu <- proposal_mh(rj.obj = rj, param.name = "mu")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.mu[[1]], p = "mu")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(param = "mu",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.mu,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(param.name = "mu",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob){
+                                     rj$mu[i, ] <- proposed.mu[[1]] 
+                                     if(i > rj$mcmc$n.burn) rj$accept[["mu"]] <- rj$accept[["mu"]] + 1}
+                                   
+                                   #'------------------------------
+                                   # // phi ----
+                                   #'------------------------------
+                                   proposed.phi <- proposal_mh(rj.obj = rj, param.name = "phi")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.phi[[1]], p = "phi")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(param.name = "phi",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.phi,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(param.name = "phi",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$phi[i] <- proposed.phi[[1]] 
+                                     if(i > rj$mcmc$n.burn) rj$accept[["phi"]] <- rj$accept[["phi"]] + 1
+                                   }
+                                   
+                                   # rj$iter["phi"] <- rj$iter["phi"] + 1
                                    
                                  } else {
+
+                                   if(rj$dat$covariates$n > 0){
+                                     
+                                     rj$pi.ij[i, ] <- 
+                                       pnorm(rj$psi.i[rj$iter["psi.i"], rj$dat$whales$id] + 
+                                               cov_effects(rj.obj = rj))
+                                     
+                                   } else {
+                                     
+                                     rj$pi.ij[i, ] <- pnorm(rj$psi.i[rj$iter["psi.i"], rj$dat$whales$id])
+                                     
+                                   }
                                    
-                                   loglik.proposed <- likelihood(rj.obj = rj,
-                                                                 iter = i,
+                                   # rj$iter["pi.ij"] <- rj$iter["pi.ij"] + 1
+                                   
+                                   #'------------------------------
+                                   # // alpha ----
+                                   #'------------------------------
+                                   proposed.alpha <- proposal_mh(rj.obj = rj, param.name = "alpha")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.alpha[[1]], p = "alpha")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                   param.name = "alpha",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.alpha,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(biphasic = TRUE,
+                                                                  param.name = "alpha",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$alpha[i, ] <- proposed.alpha[[1]]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["alpha"]] <-
+                                         rj$accept[["alpha"]] + 1
+                                   }
+                                  
+                                   
+                                   #'------------------------------
+                                   # // nu1 ----
+                                   #'------------------------------
+                                   
+                                   proposed.nu <- proposal_mh(rj.obj = rj, param.name = "nu")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.nu[[1]][1, ], p = "nu1")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                   param.name = "nu1",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.nu,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(biphasic = TRUE,
+                                                                  param.name = "nu1",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$nu[i, , 1] <- proposed.nu[[1]][1, ]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["nu"]][1] <- 
+                                         rj$accept[["nu"]][1] + 1
+                                   }
+                                   
+                                   #'------------------------------
+                                   # // nu2 ----
+                                   #'------------------------------
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.nu[[1]][2, ], p = "nu2")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                   param.name = "nu2",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.nu,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(biphasic = TRUE,
+                                                                  param.name = "nu2",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$nu[i, , 2] <- proposed.nu[[1]][2, ]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["nu"]][2] <- 
+                                         rj$accept[["nu"]][2] + 1
+                                   }
+                                   
+                                   #'------------------------------
+                                   # // tau1 ----
+                                   #'------------------------------
+                                   
+                                   proposed.tau <- proposal_mh(rj.obj = rj, param.name = "tau")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.tau[[1]][1], p = "tau")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                   param.name = "tau1",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.tau,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(biphasic = TRUE,
+                                                                  param.name = "tau1",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$tau[i, 1] <- proposed.tau[[1]][1]
+                                     # rj$tau[i, 2] <- rj$tau[i - 1, 2]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["tau"]][1] <-
+                                         rj$accept[["tau"]][1] + 1
+                                   }
+                                   
+                                   # rj$iter["tau"] <- rj$iter["tau"] + 1
+                                   
+                                   #'------------------------------
+                                   # // tau2 ----
+                                   #'------------------------------
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.tau[[1]][2], p = "tau")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                   param.name = "tau2",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.tau,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(biphasic = TRUE,
+                                                                  param.name = "tau2",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$tau[i, 2] <- proposed.tau[[1]][2]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["tau"]][2] <-
+                                         rj$accept[["tau"]][2] + 1
+                                   }
+                                   
+                                   #'------------------------------
+                                   # // omega ----
+                                   #'------------------------------
+                                   
+                                   proposed.omega <- proposal_mh(rj.obj = rj, param.name = "omega")
+                                   
+                                   if(outOfbounds(rj.obj = rj, v = proposed.omega[[1]], p = "omega")){
+                                     
+                                     accept.prob <- 0
+                                     
+                                   } else {
+                                     
+                                     loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                   param.name = "omega",
+                                                                   rj.obj = rj,
+                                                                   model = rj$mlist[[rj$current.model]],
+                                                                   values = proposed.omega,
+                                                                   included.cov = NULL,
+                                                                   RJ = FALSE,
+                                                                   lprod = TRUE)
+                                     
+                                     loglik.current <- likelihood(biphasic = TRUE,
+                                                                  param.name = "omega",
+                                                                  rj.obj = rj,
+                                                                  model = rj$mlist[[rj$current.model]],
+                                                                  values = NULL,
+                                                                  included.cov = NULL,
+                                                                  RJ = FALSE,
+                                                                  lprod = TRUE)
+                                     
+                                     accept.prob <- exp(loglik.proposed - loglik.current)}
+                                   
+                                   if (runif(1) < accept.prob) {
+                                     rj$omega[i] <- proposed.omega[[1]]
+                                     if(i > rj$mcmc$n.burn) rj$accept[["omega"]] <- 
+                                         rj$accept[["omega"]] + 1
+                                   }
+                                   
+                                   # rj$iter["omega"] <- rj$iter["omega"] + 1
+                                   
+                                   #'------------------------------
+                                   # // psi ----
+                                   #'------------------------------
+                                   
+                                   # Gibbs sampler as we have a Normal prior and a Normal likelihood
+                                   tmp.calc <- rj$dat$whales$n / rj$omega[rj$iter["omega"]] ^ 2
+                                   sigma2.post <- 1 / (rj$config$psi.gibbs[1] + tmp.calc) 
+                                   mu.post <- sigma2.post * (rj$config$psi.gibbs[2] + 
+                                               mean(rj$psi.i[rj$iter["psi.i"], ]) * tmp.calc)
+                                   rj$psi[i] <- rnorm(1, mean = mu.post, sd = sqrt(sigma2.post))
+                                   # rj$iter["psi"] <- rj$iter["psi"] + 1
+                                   
+                                   #'------------------------------
+                                   # // mu.ij ----
+                                   #'------------------------------
+                                   
+                                   proposed.mu.ij <- proposal_mh(rj.obj = rj, param.name = "mu.ij")
+                                   
+                                   loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                 param.name = "mu.ij",
+                                                                 rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]],
-                                                                 values = list(mu = proposed.mu))
+                                                                 values = proposed.mu.ij,
+                                                                 included.cov = NULL,
+                                                                 RJ = FALSE,
+                                                                 lprod = FALSE)
                                    
-                                   loglik.current <- likelihood(rj.obj = rj,
-                                                                iter = i,
+                                   loglik.current <- likelihood(biphasic = TRUE,
+                                                                param.name = "mu.ij",
+                                                                rj.obj = rj,
                                                                 model = rj$mlist[[rj$current.model]],
-                                                                param.name = "mu")
+                                                                values = NULL,
+                                                                included.cov = NULL,
+                                                                RJ = FALSE,
+                                                                lprod = FALSE)
                                    
-                                   accept.prob <- exp(loglik.proposed - loglik.current)}
-                                 
-                                 if (runif(1) < accept.prob){
-                                   rj$mu[i, ] <- proposed.mu 
-                                   if(i > rj$mcmc$n.burn) rj$accept[["mu"]] <- rj$accept[["mu"]] + 1}
-                                 
-                                 #'------------------------------
-                                 # // phi ----
-                                 #'------------------------------
-                                 proposed.phi <- proposal_mh(rj.obj = rj, param.name = "phi", iter = i)
-                                 
-                                 if(outOfbounds(rj.obj = rj, v = proposed.phi, p = "phi")){
+                                   logprop.forward <- propdens_mh(rj.obj = rj, param.name = "mu.ij",
+                                                                  dest = proposed.mu.ij[[1]],
+                                                                  orig = rj$mu.ij[rj$iter["mu.ij"], ,])
                                    
-                                   accept.prob <- 0
+                                   logprop.backward <- propdens_mh(rj.obj = rj, param.name = "mu.ij",
+                                                                   dest = rj$mu.ij[rj$iter["mu.ij"], ,],
+                                                                   orig = proposed.mu.ij[[1]])
                                    
-                                 } else {
+                                   accept.prob <-  runif(2 * rj$dat$trials$n) < 
+                                     exp((loglik.proposed + logprop.backward) - 
+                                           (loglik.current + logprop.forward))
                                    
-                                   loglik.proposed <- likelihood(rj.obj = rj,
-                                                                 iter = i,
+                                   rj$mu.ij[i, accept.prob[, 1], 1] <- 
+                                     proposed.mu.ij[[1]][accept.prob[, 1], 1]
+                                   
+                                   # rj$mu.ij[i, !accept.prob[, 1], 1] <- 
+                                   #   rj$mu.ij[i - 1, !accept.prob[, 1], 1]
+                                   
+                                   rj$mu.ij[i, accept.prob[, 2], 2] <- 
+                                     proposed.mu.ij[[1]][accept.prob[, 2], 2]
+                                   
+                                   # rj$mu.ij[i, !accept.prob[, 2], 2] <- 
+                                   #   rj$mu.ij[i - 1, !accept.prob[, 2], 2]
+                                   
+                                   if(i > rj$mcmc$n.burn){
+                                     rj$accept[["mu.ij.1"]] <- rj$accept[["mu.ij.1"]] + accept.prob[, 1]
+                                     rj$accept[["mu.ij.2"]] <- rj$accept[["mu.ij.2"]] + accept.prob[, 2]}
+                                   
+                                   # rj$iter["mu.ij"] <- rj$iter["mu.ij"] + 1
+                                   # rj$iter["t.ij"] <- rj$iter["t.ij"] + 1
+                                   
+                                   rj$t.ij[i, ] <- ((2 - rj$k.ij[rj$iter["k.ij"], ]) * 
+                                                      rj$mu.ij[i, , 1]) +
+                                     ((1 - (2 - rj$k.ij[rj$iter["k.ij"], ])) * 
+                                        rj$mu.ij[i, , 2])
+                                   
+                                   #'------------------------------
+                                   # // psi.i ----
+                                   #'------------------------------
+                                   
+                                   proposed.psi.i <- proposal_mh(rj.obj = rj, param.name = "psi.i")
+                                   
+                                   loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                 param.name = "psi.i",
+                                                                 rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]],
-                                                                 values = list(phi = proposed.phi))
+                                                                 values = proposed.psi.i,
+                                                                 included.cov = NULL,
+                                                                 RJ = FALSE,
+                                                                 lprod = FALSE)
                                    
-                                   loglik.current <- likelihood(rj.obj = rj,
-                                                                iter = i,
+                                   loglik.current <- likelihood(biphasic = TRUE,
+                                                                param.name = "psi.i", 
+                                                                rj.obj = rj,
                                                                 model = rj$mlist[[rj$current.model]],
-                                                                param.name = "phi")
+                                                                values = NULL,
+                                                                included.cov = NULL,
+                                                                RJ = FALSE,
+                                                                lprod = FALSE)
                                    
-                                   accept.prob <- exp(loglik.proposed - loglik.current)}
-                                 
-                                 if (runif(1) < accept.prob) {
-                                   rj$phi[i] <- proposed.phi 
-                                   if(i > rj$mcmc$n.burn) rj$accept[["phi"]] <- rj$accept[["phi"]] + 1
-                                 } else {rj$phi[i] <- rj$phi[i - 1]}
+                                   accept.prob <- 
+                                     runif(rj$dat$whales$n) < exp(loglik.proposed - loglik.current)
+                                   
+                                   # rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
+                                   rj$psi.i[i, accept.prob] <- proposed.psi.i[[1]][accept.prob]
+
+                                   if(rj$dat$covariates$n > 0){
+                                     rj$pi.ij[i, ] <- 
+                                       pnorm(rj$psi.i[rj$iter["psi.i"], rj$dat$whales$id] + 
+                                               cov_effects(rj.obj = rj))
+                                   } else {
+                                     rj$pi.ij[i, ] <- pnorm(rj$psi.i[rj$iter["psi.i"], rj$dat$whales$id])
+                                   }
+                                   
+                                   if(i > rj$mcmc$n.burn) {
+                                     rj$accept[["psi.i"]][accept.prob] <- 
+                                       rj$accept[["psi.i"]][accept.prob] + 1
+                                   }
+                                   
+                                   # rj$iter["psi.i"] <- rj$iter["psi.i"] + 1
+
+                                   #'------------------------------
+                                   # // k.ij ----
+                                   #'------------------------------
+                                   
+                                   proposed.k.ij <- proposal_mh(rj.obj = rj, param.name = "k.ij")
+                                   
+                                   loglik.proposed <- likelihood(biphasic = TRUE,
+                                                                 param.name = "k.ij",
+                                                                 rj.obj = rj,
+                                                                 model = rj$mlist[[rj$current.model]],
+                                                                 values = proposed.k.ij,
+                                                                 included.cov = NULL,
+                                                                 RJ = FALSE,
+                                                                 lprod = FALSE)
+                                   
+                                   loglik.current <- likelihood(biphasic = TRUE,
+                                                                param.name = "k.ij",
+                                                                rj.obj = rj,
+                                                                model = rj$mlist[[rj$current.model]],
+                                                                values = NULL,
+                                                                included.cov = NULL,
+                                                                RJ = FALSE,
+                                                                lprod = FALSE)
+                                   
+                                   logprop.forward <- d_binom(x = 2 - proposed.k.ij[[1]], 
+                                                              size = 1, 
+                                                              prob = rj$config$prop$mh$k.ij, 
+                                                              log = TRUE)
+                                   
+                                   logprop.backward <- d_binom(x = 2 - rj$k.ij[i - 1, ], 
+                                                               size = 1, 
+                                                               prob = rj$config$prop$mh$k.ij, 
+                                                               log = TRUE)
+                                   
+                                   accept.prob <- 
+                                     runif(rj$dat$trials$n) < exp((loglik.proposed + logprop.backward) - 
+                                                                    (loglik.current + logprop.forward))
+                                   
+                                   # Set acceptance probability to 0 if proposed values
+                                   # do not align with constraints imposed on censored data
+                                   rc.check <- rj$mu.ij[rj$iter["mu.ij"], ,][cbind(seq_along(proposed.k.ij[[1]]), proposed.k.ij[[1]])][rj$dat$obs$censored == 1] < rj$dat$obs$Rc[rj$dat$obs$censored == 1]
+                                   
+                                   lc.check <- rj$mu.ij[rj$iter["mu.ij"], ,][cbind(seq_along(proposed.k.ij[[1]]), proposed.k.ij[[1]])][rj$dat$obs$censored == -1] > rj$dat$obs$Lc[rj$dat$obs$censored == -1]
+                                   
+                                   accept.prob[rj$dat$obs$censored == 1][rc.check] <- FALSE
+                                   accept.prob[rj$dat$obs$censored == -1][lc.check] <- FALSE
+                                   
+                                   # rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
+                                   rj$k.ij[i, accept.prob] <- proposed.k.ij[[1]][accept.prob]
+                                   
+                                   if(i > rj$mcmc$n.burn) 
+                                     rj$accept[["k.ij"]][accept.prob] <- 
+                                     rj$accept[["k.ij"]][accept.prob] + 1
+                                   
+                                   rj$t.ij[i, ] <-  ((2 - rj$k.ij[i, ]) * rj$mu.ij[i, , 1]) +
+                                     ((1 - (2 - rj$k.ij[i, ])) * rj$mu.ij[i, , 2])
+                                   
+                                   # rj$iter["k.ij"] <- rj$iter["k.ij"] + 1
+                                   
+                                 } # End if biphasic
+                                   
+                                 if(any(!rj$iter == i)) stop("Mismatched iteration count")
                                  
                                } # End RJMCMC
                                

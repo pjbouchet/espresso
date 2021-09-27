@@ -6,17 +6,22 @@
 \usage{
 compile_rjMCMC(
   rj.object,
+  phase = 1,
   by.model = FALSE,
+  n.top = 10,
   covariate = NULL,
   covariate.values = NULL,
   species = NULL,
-  credible.intervals = seq(95, 1, by = -5)
+  credible.intervals = seq(95, 1, by = -5),
+  npts = 20
 )
 }
 \arguments{
 \item{rj.object}{Input rjMCMC object of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}.}
 
 \item{by.model}{Logical. If \code{TRUE}, the function subsets posterior parameter estimates to produce separate dose-response curves for each candidate model.}
+
+\item{n.top}{Number of top-ranking models to generate curves for when \code{by.model = TRUE}.}
 
 \item{covariate}{Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given by \code{species}.}
 
@@ -25,6 +30,8 @@ compile_rjMCMC(
 \item{species}{Species name.}
 
 \item{credible.intervals}{Credible intervals. Must be a integer vector in \code{(0, 100]}. Defaults to 5-95\% in 5\% increments.}
+
+\item{npts}{Number of quadrature points to use to integrate out the random effects when computing dose-response curves for biphasic models. Defaults to 20.}
 }
 \value{
 A list object of class \code{dose_response}.

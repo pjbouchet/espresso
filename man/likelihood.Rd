@@ -5,33 +5,33 @@
 \title{Likelihood}
 \usage{
 likelihood(
-  rj.obj,
-  iter,
-  model,
-  values = list(),
-  include.cov = NULL,
+  biphasic = FALSE,
   param.name = NULL,
+  rj.obj,
+  model,
+  values = NULL,
+  included.cov = NULL,
   RJ = FALSE,
   lprod = TRUE
 )
 }
 \arguments{
+\item{biphasic}{Logical. Indicates the type of model for which likelihoods should be calculated.}
+
+\item{param.name}{Paramter name. Ignored if \code{values} is specified.}
+
 \item{rj.obj}{rjMCMC object.}
 
-\item{iter}{Current iteration.}
-
-\item{model}{Model ID number.}
+\item{model}{Integer vector determining species groupings for the model of interest.}
 
 \item{values}{List of proposed values, if available.}
 
-\item{include.cov}{Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.}
+\item{included.cov}{Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.}
 
 \item{RJ}{Logical. If \code{TRUE}, returns the likelihoods associated with between-model jumps. If \code{FALSE}, returns the likelihoods associated with the update step of the Metropolis sampler.}
 
 \item{lprod}{If \code{TRUE}, returns the product of individual likelihoods.}
-
-\item{param}{Paramter name. Ignored if \code{values} is specified.}
 }
 \description{
-Calculate log-likelihoods required by the rjMCMC sampler.
+Calculate the log-likelihood of a monophasic dose-response model, as required by the rjMCMC sampler.
 }
