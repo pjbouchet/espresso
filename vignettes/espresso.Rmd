@@ -80,7 +80,7 @@ A flowchart of a typical `espresso` workflow is shown below.
 
 ## Data
 
-For demonstration purposes, we rely on the `example_brs` dataset available from within `espresso`. This is a mock dataset manufactured based on real-world observations made during behavioural response studies (hereafter, BRS). This dataset should **not** be used for inference, however it provides a useful template for setting up input data files in a format readable by `espresso`. It is accompanied by another dataset, `species_brs`, which provides a list of cetacean species for which BRS data currently exist.
+For demonstration purposes, we rely on the `example_brs` dataset available from within `espresso`. This is a mock dataset manufactured based on real-world observations made during behavioural response studies (hereafter, BRSs). This dataset [should **not**]{.ul} be used for inference, however it provides a useful template for setting up input data files in a format that is readable by `espresso`. It is accompanied by another dataset, `species_brs`, which provides a list of cetacean species for which BRS data currently exist.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 knitr::kable(head(example_brs), format = "pandoc")
@@ -143,6 +143,12 @@ mydat <- read_data(file = NULL)
 mydat <- read_data(file = NULL, exclude.species = "Risso's dolphin", min.N = 3)
 ```
 
+::: {style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
+**Update: v1.0**
+
+When **risk.functions = TRUE**, additional samples taken from the risk functions derived in Moretti et al. (2014) and Frankel et al. are incorporated.
+:::
+
 ### Print summary
 
 We can get a detailed summary of the dataset by using the `summary()` command:
@@ -151,11 +157,8 @@ We can get a detailed summary of the dataset by using the `summary()` command:
 summary(mydat)
 ```
 
-::: {#update style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, August 20, 2021
-:::
-
-> **Note:** Help files for S3 methods like `summary`, `plot` and `print` are accessed by combining the method name and the class of the R object to which they apply. For instance, the documentation for the data summary function can be viewed with: `?summary.brsdata`
+> **Note:** Help files for S3 methods like `summary`, `plot` and `print` are accessed by combining the method name and the class of the R object to which they apply. For instance, the documentation for the data summary function can be viewed with: \
+> `?summary.brsdata`
 
 ### Covariates
 
@@ -205,7 +208,7 @@ mydat.grp <- create_groups(dat.obj = mydat, abbrev = TRUE,
             species.groups = list(Beaked_whales = c("Ha", "Cuvier's beaked whale")))
 ```
 
-> Note that the `abbrev` argument can be used to shorten group names, which is useful to avoid clutter in plots and data summaries. Here, `abbrev` is set to `TRUE` so the chosen group name, `Beaked_whales` will be abbreviated to `Bkd_w` (see below).
+> Note that the `abbrev` argument can be used to shorten group names, which is useful to avoid clutter in subsequent plots and data summaries. Here, `abbrev` is set to `TRUE` so the chosen group name, `Beaked_whales` will be abbreviated to `Bkd_w` (as shown below).
 
 The resulting object now has an additional class of `<brsdata.grp>` and only four species, including the new group:
 
@@ -214,7 +217,7 @@ class(mydat.grp)
 summary(mydat.grp)
 ```
 
-Predefined species groupings can be dissolved using the `undo_groups()` function, which returns the original dataset.
+Predefined species groupings can be dissolved again using the `undo_groups()` function, which returns the original dataset.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 mydat.ungrp <- undo_groups(mydat.grp)
@@ -226,11 +229,13 @@ summary(mydat.ungrp)
 
 ### Overview
 
-The (monophasic) Bayesian hierarchical dose-response model is fully described in @Miller2014 and @Antunes2014, and is illustrated in Figure 2.
+The monophasic Bayesian hierarchical dose-response model is fully described in @Miller2014 and @Antunes2014, and is illustrated in Figure 2. The biphasic version of the same model is shown in Figure 3.
 
-![Figure 2. *Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.*](rjmcmc_dag_monophasic.png){width="602"}
+![Figure 2. *Directed acyclic graph of the monophasic dose-response function. Model variables are denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.*](rjmcmc_dag_monophasic.png){width="602"}
 
-To discriminate between competing models, we treat the model **itself** as a parameter and form the joint posterior distribution over both parameters and models [@Oedekoven2014]. Every iteration of the rjMCMC algorithm therefore entails two sequential steps:
+![Figure 3. Directed acyclic graph of the biphasic dose-response function. Model variables are denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.](rjmcmc_dag_biphasic.png)
+
+To discriminate between competing models, rjMCMCs treat the **model** **itself** as a parameter and forms the joint posterior distribution over both parameters and models [@Oedekoven2014]. Every iteration of the rjMCMC algorithm therefore entails two sequential steps:
 
 1.  A **between-model** move, whereby we update the model using the rjMCMC algorithm.
 
@@ -252,36 +257,40 @@ To facilitate convergence and avoid getting stuck in local maxima, `espresso` al
 
 By default, data-driven and random moves are only proposed every 100^th^ iteration, at a relative frequency of 3 (Type I) / 1 (Type II) / 1 (random), such that attempts to perform a Type I move are made at iterations 100, 200, and 300, followed by a Type II move at iteration 400, and a random move at iteration 500. Again, these default values can be modified by the user where needed.
 
-A similar strategy is in place when covariate selection is enabled. In this case, the reversible jump step also entails a proposal to either drop a covariate that is already included in the model, or add one that is not. This requires generating a value for the new covariate parameter from a predefined proposal distribution (if we propose to add a covariate) or setting it to zero (if we propose to delete it), and calculating the acceptance probability accordingly [@Oedekoven2014].
+A similar strategy is in place when covariate selection is enabled. In this case, the reversible jump step also entails a proposal to either drop a covariate that is already included in the model, or add one that is not. This requires generating a value for the new covariate parameter from a predefined proposal distribution (if we propose to add a covariate) or setting it to zero (if we propose to delete it), and calculating the acceptance probability accordingly [@Oedekoven2014]. Likewise for the selection of dose-response functional forms (monophasic vs biphasic).
 
 Default values for many of those choices are already given in `espresso`, but can be modified by the user if necessary, as explained in the section below.
 
 ### Configuration
 
-Before running any models, we need to first set up the reversible jump sampler. The `configure_rjMCMC()` function allows us to do so, by specifying whether to enable either/both model (`model.select`) and covariate (`covariate.select`) selection:
+Before running any models, we need to first set up the reversible jump sampler. The `configure_rjMCMC()` function allows us to do so, by specifying whether to enable model (`model.select`), covariate (`covariate.select`), and/or functional form (`function.select`) selection:
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 mydat.config <- configure_rjMCMC(dat = mydat.grp,
                                  model.select = TRUE,
                                  covariate.select = TRUE,
+                                 function.select = TRUE,
+                                 biphasic = TRUE,
                                  n.rep = 100)
 ```
 
 > **Note:** When `model.select = FALSE`, the MCMC sampler will be constrained to the species groupings defined in the `brsdata` or `brsdata.grp` object, and will only estimate the parameters of the corresponding model, without allowing model selection. Likewise, `covariate.select = FALSE` will force the inclusion of all covariates defined using `read_data()` or `simulate_data()`.
 
 ::: {style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, August 20, 2021
+**Update: v1.0**
+
+The **biphasic** argument can be used to impose a functional form. Set to TRUE for biphasic, and FALSE for monphasic.
 :::
 
-Other (optional) arguments can be passed to `configure_rjMCMC`, for instance to change move types, default values for proposal standard deviations in the MCMC sampler etc. Please consult the help documentation for details.
+Other (optional) arguments can be passed to `configure_rjMCMC`, for instance to change move types, default values for proposal standard deviations in the MCMC sampler etc. Please consult the help documentation (`?configure_rjMCMC`) for details.
 
 `configure_rjMCMC()` performs three actions:
 
 -   It returns empirical estimates of the between-whale (φ) and within-whale between-exposure (σ) variation, which are needed to generate plausible starting values for the MCMC chains.
 
--   It defines the means and standard deviations of relevant (1) proposal distributions and (2) priors. Default values for the widths of proposal distributions were chosen through careful pilot tuning of individual parameters, but can be adjusted using the `proposal.mh` and `proposal.rj` arguments, if necessary (see help files). The Bayesian hierarchical dose-response model assumes Uniform priors for μ, σ and φ (Figure 2), and Normal priors centred on `0` and with a standard deviation of `30` for all contextual covariates, ***β***. These values can be modified using the `prior.covariates` argument.
+-   It defines the means and standard deviations of relevant (1) proposal distributions and (2) priors. Default values for the widths of proposal distributions are chosen through careful pilot tuning of individual parameters, but can be adjusted using the `proposal.mh` and `proposal.rj` arguments, if necessary (see help files). The Bayesian hierarchical dose-response model assumes Uniform priors for μ, σ and φ in the monophasic model (Figure 2), as well as for α, ν, τ and ω in the biphasic model (Figure 3). Normal priors centred on `0` and with a standard deviation of `30` are used for all contextual covariates, ***β***. A Normal prior N(0,1) is ψ in the biphasic model. These values can be modified using the `priors` argument.
 
--   It conducts a model-based cluster analysis to parameterise between-model jumps using `n.rep` bootstrap replicates of the input data.
+-   It conducts a model-based cluster analysis to parameterise between-model jumps and inform starting values, using `n.rep` bootstrap replicates of the input data.
 
 The output object is one of class `<rjconfig>`. It is identical to the input `brsdata` or `brsdata.grp` object but contains additional information needed for sampler execution, which is captured in the 'MCMC' section of the data summary.
 
@@ -295,17 +304,17 @@ summary(mydat.config, print.config = TRUE)
 Now that initial setup is complete, we can proceed with model fitting. This step is designed to mirror a typical Bayesian modelling workflow in the `rjags` package [@Plummer2019]. The following call to `run_rjMCMC()` compiles the information given in `mydat.config`, creates the R data structures required to hold the MCMC samples, and runs the models:
 
 ```{r modelfit, eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
-rj <- run_rjMCMC(dat = mydat.config, n.chains = 3, n.burn = 25000, n.iter = 100000)
+rj <- run_rjMCMC(dat = mydat.config, n.chains = 3, n.burn = 2000, n.iter = 10000)
 ```
 
-For illustration purposes (and speed!), we use three MCMC chains of 10,000 samples each, and a 1,000 step burn-in. These values are dependent on the context of each analysis, but should generally be much higher than this -- typically, the higher the number of species (and thus the number of candidate models, when `model.selection = TRUE`), the longer the chains will need to be to achieve convergence.
+For illustration purposes (and speed!), we use three MCMC chains of 10,000 samples each, and a 2,000 step burn-in. These values are dependent on the context of each analysis, but should generally be much higher than this -- typically, the higher the number of species (and thus the number of candidate models, when `model.selection = TRUE`), the longer the chains will need to be to achieve convergence.
 
 With five species in the dataset (namely, `Bm`, `Oo`, `Pm`, `Gm`, `Bkd_w`), the sampler will jump between 52 possible candidate models. Out of interest, these can be listed using the `listParts` function from the `partitions` package [@Hankin2006].
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-multicool::Bell(n = 5) # Number of candidate models
+numbers::bell(n = 5) # Number of candidate models
 
-# List of candidate models
+# List of candidate models (in a nice format)
 partitions::listParts(x = 5) %>%
   purrr::map_depth(.x = ., .depth = 2, .f = ~mydat.config$species$names[.x]) %>%
   purrr::map(.x = ., 
@@ -322,10 +331,6 @@ partitions::listParts(x = 5) %>%
 
 We need to make sure that the MCMC sampler produces a Markov chain that "converges" to the appropriate density (the posterior density) and that explores the parameter space ("mixes") efficiently, i.e., that doesn't reject or accept too many proposals. If too many proposals are rejected, we need many simulations to generate a sufficient number of parameter samples. If too many proposals are accepted, we don't gain much information about the underlying distribution.
 
-::: {style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, 20 August, 2021
-:::
-
 We start by extracting posterior samples from the `rjmcmc` object returned by `run_rjMCMC()`. This gives an object of class `<rjtrace>`.
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -340,19 +345,11 @@ rj.posterior <- trace_rjMCMC(rj, thin = 10)
 class(rj.posterior)
 ```
 
-::: {.update style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, 20 August, 2021
-:::
-
-> **Note:** The `thin` argument is used to discard every k^th^ value, where `thin = k`. This is mainly done to reduce autocorrelation in the MCMC chains and obtain a more representative sample of independent draws from the posterior. There is still some [debate](http://doingbayesiandataanalysis.blogspot.com/2011/11/thinning-to-reduce-autocorrelation.html) around the merits of thinning chains in MCMC. However, it can be useful to deal with memory or time constraints in post-chain processing, i.e., for obtaining R objects of more manageable size after (very) long runs of the algorithm. The example above (`thin = 10`) is purely arbitrary. An appropriate value needs to be determined by inspection of the chain autocorrelation plots (see below), among other things.
-
-::: {.update style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, 20 August, 2021
-:::
+> **Note:** The `thin` argument is used to discard every k^th^ value, where `thin = k`. This is mainly done to reduce autocorrelation in the MCMC chains and obtain a more representative sample of independent draws from the posterior. There is still some [debate](http://doingbayesiandataanalysis.blogspot.com/2011/11/thinning-to-reduce-autocorrelation.html) around the merits of thinning chains in MCMC. However, it can be useful to deal with memory or time constraints in post-chain processing, i.e., for obtaining R objects of more manageable size after (potentially very) long runs of the algorithm. The example above (using `thin = 10`) is purely arbitrary. An appropriate value needs to be determined by inspection of the chain autocorrelation plots (see below), among other things.
 
 In rjMCMC, there is little point in checking individual model parameters if the algorithm hasn't converged to a stationary distribution for the between-model jumps. The recommended approach to model assessment therefore involves two stages:
 
-1.  First, assess the convergence of the rjMCMC sampler (between-model jumps). This is done by looking at **(i)** **running means plots** of the `model_ID` parameter (which should show chains plateau-ing around the same model (or set of models), **(ii)** **tile plots** of species groupings for top-ranked models (which should show similar grouping patterns and similar posterior probabilities across chains), and **(iii)** to some extent, **density plots** of model size.
+1.  First, assess the convergence of the rjMCMC sampler (between-model jumps). When `model.select = TRUE`, this is done by looking at **(i)** **running means plots** of the `model_ID` parameter (which should show chains plateau-ing around the same model (or set of models), **(ii)** **tile plots** of species groupings for top-ranked models (which should show similar grouping patterns and similar posterior probabilities across chains), and **(iii)** to some extent, **density plots** of model size (i.e., number of species groupings). Similarly, when `function.select = TRUE`, the chain-specific posterior probabilities for each dose-response functional forms should be within Monte Carlo errors of each other.
 
 2.  Second, assess the convergence of the Metropolis-Hastings sampler (within-model jumps). Here, convergence and mixing are commonly ascertained both (1) graphically, by inspecting e.g., trace plots of individual parameters and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package `coda` [@Plummer2006].
 
@@ -376,27 +373,21 @@ The `summary` and `plot` methods provide all the information needed to perform t
 summary(rj.posterior)
 ```
 
-> **Note:** A more compact version of the output summary can be obtained by hiding sections that are not of interest. This is done by setting the relevant argument to `FALSE` (see help files for details). For example, `accept.rate = FALSE` will hide summary of acceptance rates.
+> **Note:** A more compact version of the output summary can be obtained by hiding sections that are not of interest. This is done by setting the relevant argument to `FALSE` (see help files at `?summary.rjtrace` for details). For example, `accept.rate = FALSE` will hide summary of acceptance rates.
 
-::: {.update style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, 20 August, 2021
-:::
+> **Note:** `n.top` sets the number of top-ranking models to display in the output. Values (substantially) greater than 10 (the default) may result in memory errors or long run times.
 
-> **Note:** `n.top` sets the number of top-ranking models to display in the output. Values substantially greater than 10 (the default) may result in memory errors or long run times.
+> **Note:** The `summary` method presents all outputs for individual chains and all chains combined in the same run.
 
-> **Note:** The `combine.chains` argument is now deprecated. Instead, the `summary` method presents all outputs for individual chains and all chains combined in the same run.
-
-Trace and density plots can be obtained using the `plot` method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy [caterpillar](http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg). Running mean plots are also useful in identifying whether the means of the different chains converge to a similar value.
+Trace and density plots can be obtained using the `plot` method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy [caterpillar](http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg). Running mean plots are also useful in identifying whether the means of the different chains converge to a similar value. Plots for specific parameters of interest can be generated using the `param.name` argument. If `individual = TRUE` separate density lines will be plotted for each chain.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 plot(rj.posterior, individual = TRUE)
 ```
 
-> **Note:** Plots for specific parameters of interest can be generated using the `param.name` argument. If `individual = TRUE` separate density lines will be plotted for each chain.
-
 Another way to check for convergence is to look at the serial autocorrelation between MCMC samples. The lag-$k$ autocorrelation is the correlation between every sample and the sample $k$ steps before it. This autocorrelation should become smaller as $k$ increases, i.e., samples can be considered as independent. If, on the other hand, autocorrelation remains high for higher values of $k$, this indicates a high degree of correlation between our samples and slow mixing.
 
-> **Note:** Autocorrelation plots can be obtained with `autocorr = TRUE` (this is now the default)
+> **Note:** Autocorrelation plots can be obtained with `autocorr = TRUE` (the default).
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Plot for the range covariate only
@@ -407,6 +398,11 @@ plot(rj.posterior, param.name = "range", autocorr = FALSE)
 
 Updates to the Markov chain may be required if the model has failed to converge. The `update_rjMCMC()` function can be used to extend a previous model run; it "picks up where the sampler left off" by extracting the last MCMC samples for each parameter and using those as new starting values. The same model checking procedures apply to this new run, and the update process can be repeated until convergence is achieved.
 
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE}
+# Extend the previous run by 10,000 iterations.
+rj.posterior2 <- update_rjMCMC(rjdat = rj, n.iter = 10000)
+```
+
 ## Dose-response
 
 ### By species
@@ -414,12 +410,18 @@ Updates to the Markov chain may be required if the model has failed to converge.
 The `compile_rjMCMC()` function computes posterior dose-response curves for each species (or *a priori* species grouping) from the parameter estimates of a fitted rjMCMC model. The output is an object of class `<dose_response>`, which can be passed to `plot` directly:
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-doseR <- compile_rjMCMC(rj.posterior)
+doseR <- compile_rjMCMC(rj.posterior, phase = 1)
 class(doseR)
 plot(doseR)
 ```
 
 > **Note:** By default, `compile_rjMCMC()` calculates a range of posterior credible intervals, from 5% to 95%, in 5% increments. These default values can be overridden using the `credible.intervals` argument.
+
+::: {style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
+**Update: v1.0**
+
+When **function.select = TRUE**, the **phase** argument can be used to specify whether to get curves from parameter estimates associated with the **monophasic (phase = 1)** or **biphasic (phase = 2)** dose-response model.
+:::
 
 Curves for covariates of interest can also be obtained by conditioning on a given species/species group. For example:
 
@@ -438,7 +440,7 @@ doseR.rge <- compile_rjMCMC(rj.posterior,
 plot(doseR.rge, scientific.name = TRUE)
 ```
 
-Numerous additional options are available to refine plot aesthetics, including shading/colours, plot ordering, faceting layouts, and species labels. Some example visualisations are given below.
+Numerous additional options are available to refine plot aesthetics, including shading/colours, plot ordering, faceting layouts, and species labels. Some example visualisations are given below. See `?plot.dose_response` for full details.
 
 [Example 1]{.ul}: Black and white colour scheme.
 
@@ -464,11 +466,13 @@ plot(doseR, scientific.name = TRUE, show.p0_5 = FALSE, outline.outer = TRUE)
 plot(doseR, colour.by = "species", overlay = TRUE)
 ```
 
-### By model
+::: {style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
+**Update: v1.0**
 
-::: {.update style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, 20 August, 2021
+Individual plots for each species can be created using **do.facet = FALSE**. All outputs can be saved to disk by specifying **do.save = TRUE** and indicating the desired file format such as **file.format = "pdf"** (or "png", "tiff", "jpeg"). Additional arguments to ggplot2::ggsave can be passed directly to plot to change plot dimensions, resolution, output directory etc.
 :::
+
+### By model
 
 When `model.select = TRUE`, dose-response curves are derived irrespective of model IDs (by default), and therefore reflect model uncertainty (see above). If dose-response functions are needed for a specific model of interest (e.g., the top-ranking model), then the `by.model` argument should be set to `TRUE`. This ensures that posterior estimates are extracted for each model separately.
 
@@ -489,10 +493,6 @@ doseR
 ```
 
 ## Sharing results
-
-::: {.update style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
-Update: Fri, 20 Aug, 2021
-:::
 
 The `create_report` function generates a self-contained `html` document that summarises the results of an analysis conducted with `espresso`. This is done by writing and rendering an RMarkdown (`.Rmd`) file behind the scenes, and makes it easy to share outputs with other users. `create_report` searches for objects of class `brsdata`, `rjtrace`, and `dose_response` and returns relevant plots and summaries as detailed in the previous sections of this vignette. The two main arguments are the output directory, `outdir`, and the output file name, `filename`. If these are not specified, the function will save the file as `espresso_report.html` in the current working directory. The argument `model.ranks` can be used to generate dose-response plots for several top ranking models - this only works when `by.model` was set to `TRUE` in `compile_rjMCMC`.
 
