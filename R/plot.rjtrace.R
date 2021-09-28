@@ -25,10 +25,7 @@
 #' mydat.config <- configure_rjMCMC(dat = mydat,
 #'                                  model.select = TRUE,
 #'                                  covariate.select = FALSE,
-#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
-#'                                                     mu = 7, phi = 10, sigma = 10),
-#'                                  proposal.rj = list(dd = 20, cov = 7),
-#'                                  prior.covariates = c(0, 30),
+#'                                  function.select = FALSE,
 #'                                  n.rep = 100)
 #' summary(mydat.config)
 #' 
@@ -52,12 +49,6 @@ plot.rjtrace <- function(rj.obj,
                          covariates.incl = FALSE,
                          autocorr = TRUE,
                          individual = TRUE){
-  
-  # Redo this in simpler way.
-  # 1 determine if covariates
-  # run plot on all params except cov
-  # for cov: run below with covariates.incl
-  # then lastly run autocorr
   
   if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
   
@@ -122,10 +113,6 @@ plot.rjtrace <- function(rj.obj,
       }
     }
   }
-  
-  # for(nc in 1:length(mcmc.trace)){
-  #   colnames(mcmc.trace[[nc]])[which(startsWith(colnames(mcmc.trace[[1]]), prefix = "mu"))] <- 
-  #     paste0("mu (", rj.obj$dat$species$names, ")")}
   
   if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]])
   if(!rj.obj$config$model.select) mpars <- mpars[!mpars %in% c("model_size", "model_ID")]

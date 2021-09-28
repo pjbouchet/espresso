@@ -254,16 +254,6 @@ likelihood <- function(biphasic = FALSE,
       loglikelihood <- loglikelihood + LL.3
     }
     
-    # if(param.name %in% c("psi.i") | RJ){
-    #   LL.4 <- 
-    #     dnorm(x = if(param.name == "psi.i" & !is.null(values)) values else rj.obj$psi.i[rj.obj$iter["psi.i"], ],
-    #           mean = if(param.name == "psi" & !is.null(values)) values else rj.obj$psi[rj.obj$iter["psi"]],
-    #           sd = if(param.name == "omega" & !is.null(values)) values else rj.obj$omega[rj.obj$iter["omega"]], 
-    #           log = TRUE)
-    #   if(lprod) LL.4 <- sum(LL.4)
-    #   loglikelihood <- loglikelihood + LL.4
-    # }
-    
     if(any(c("k.ij", "covariates", "psi.i", rj.obj$dat$covariates$names) %in% param.name) | RJ){
       
       LL.4a <- d_binom(x = if("k.ij" %in% param.name & !is.null(values)) 2 - values$k.ij else 
@@ -284,15 +274,7 @@ likelihood <- function(biphasic = FALSE,
       loglikelihood <- loglikelihood + LL.4b  
     }
     
-    if(lprod) return(sum(loglikelihood, na.rm = TRUE)) else return(unname(loglikelihood)) 
-    
-    # if(lprod){
-    #   if(any(rj.obj$dat$covariates$names %in% param.name))
-    #     return(list(sum(loglikelihood, na.rm = TRUE), cov.effects)) else return(sum(loglikelihood, na.rm = TRUE))
-    # } else {
-    #   if("psi.i" %in% param.name)
-    #     return(list(loglikelihood, cov.effects)) else return(unname(loglikelihood)) 
-    # }
+    if(lprod) return(sum(loglikelihood, na.rm = TRUE)) else return(unname(loglikelihood))
     
   }  
 }
@@ -922,22 +904,11 @@ proposal_rj <- function(rj.obj, jump, phase, huelsenbeck = TRUE) {
       
       if(huelsenbeck){
 
-      # g_u[1] <- unname(min(c(jump$n[1] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[1]]),
-      #                        jump$n[2] * (rj.means[jump$species$from[2]] - rj.obj$dat$param$dose.range[1]))))
-      # 
-      # g_u[2] <- unname(max(c(-jump$n[2] * (rj.obj$dat$param$dose.range[2] - rj.means[jump$species$from[2]]),
-      #                        -jump$n[1] * (rj.means[jump$species$from[1]] - rj.obj$dat$param$dose.range[1]))))
-      
-      # g_u <- sort(g_u)
-      
       u <- runif(n = 1, min = g_u[1], max = g_u[2])
       
       } else {
 
-        # g_u <- NULL
-        
         # Auxiliary variable for the change of dimensions
-        # u <- rnorm(n = 1, mean = 0, sd = rj.obj$config$prop$rj)
         u <- rtnorm(n = 1, location = 0, scale = rj.obj$config$prop$rj, L = g_u[1], U = g_u[2])
         
       }
@@ -2172,9 +2143,6 @@ p_models <- function(input.trace,
     # Tabulate
     res$model$m_prob <- table(mtrace)/nrow(input.trace)
     
-    # model.ID.posterior <- as.numeric(names(res$model$m_prob))[order(res$model$m_prob, decreasing = TRUE)]
-    # bestmod <- as.numeric(names(which.max(res$model$m_prob))); names(bestmod) <- NULL
-    
     # Generate tibble output
     res$model$m_prob <- res$model$m_prob %>% 
       tibble::enframe() %>% 
@@ -2187,22 +2155,6 @@ p_models <- function(input.trace,
     
     # Identify top-ranking model
     res$model$bestmod <- res$model$m_prob$model[1]
-    
-    # # Assign names
-    # if (select) {
-    #   names(res$model$m_prob) <- 
-    #     sapply(X = names(res$model$m_prob), FUN = function(nn) mlist$model[as.numeric(nn)])
-    # } else {
-    #   names(res$model$m_prob) <- mlist$model
-    # }
-    
-
-    # res$model$m_prob <- sort(res$model$m_prob, decreasing = TRUE)
-    # res$model$bestmod <- names(which.max(res$model$m_prob))
-    # res$model$m_prob <- tibble::enframe(res$model$m_prob) %>% 
-    #   dplyr::rename(model = name, p = value) %>% 
-    #   dplyr::mutate(p = as.numeric(p)) %>% 
-    #   dplyr::slice(1:n.top)
     
     # Compute Monte Carlo error
     mce <- as.numeric(mtrace)
@@ -3289,13 +3241,14 @@ glance <- function(dat, which.chain = 1, f = "head", start = 1, end = 6, reset =
     dat.list <- dat[!names(dat) %in% c("abbrev", "mcmc", "run_time", "accept", "config", "dat")]
     res <- purrr::map(.x = dat.list, .f = ~ {
       if(is.null(dim(.x))){
-        .x[length(.x)] 
+        out <- .x[length(.x)] 
       } else {
-        if(length(dim(.x)) == 2) .x[nrow(.x), ] 
-        if(length(dim(.x)) == 3) .x[nrow(.x), ]
+        if(length(dim(.x)) == 2) out <- .x[nrow(.x), ] 
+        if(length(dim(.x)) == 3) out <- .x[nrow(.x), ,]
       }
-    })
+    out})
     res$mlist <- dat$mlist
+    res$iter <- dat$iter
     return(res)
   } else {
     dat <- dat[!names(dat)%in%c("accept", "mlist", "config", "dat")]

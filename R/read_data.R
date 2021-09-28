@@ -28,6 +28,7 @@
 #' 
 #' @export
 #' @param file Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.
+#' @param risk.functions Logical. If \code{TRUE}, a sample of points from the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} are included.
 #' @param include.species Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.
 #' @param exclude.species Character vector specifying which species should be discarded. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. No species are excluded when this argument is set to the default of \code{NULL}.
 #' @param min.N Minimum number of observations per species. Species with sample sizes smaller than \code{min.N} will be removed.
@@ -63,12 +64,14 @@
 #' # whilst excluding sperm whales and any other species with a sample size
 #' # smaller than two observations.
 #' mydat <- read_data(file = "path/to/my/data.csv", 
+#'                   risk.functions = FALSE,
 #'                   exclude.species = "Sperm whale",
 #'                   min.N = 2)
 #' }
 #' @keywords brs gvs rjmcmc dose-response             
 
 read_data <- function(file = NULL,
+                      risk.functions = FALSE,
                       include.species = NULL, 
                       exclude.species = NULL,
                       min.N = NULL,
@@ -457,8 +460,6 @@ read_data <- function(file = NULL,
   #' ---------------------------------------------
   # Store results in list
   #' ---------------------------------------------
-  
-  
   # Factor levels and other associated info for each covariate
   # nL: Number of levels (will be 0 for integer and continuous covariates)
   # nparam: Number of levels other than the baseline

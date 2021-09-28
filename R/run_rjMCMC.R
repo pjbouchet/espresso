@@ -26,10 +26,7 @@
 #' mydat.config <- configure_rjMCMC(dat = mydat,
 #'                                  model.select = TRUE,
 #'                                  covariate.select = FALSE,
-#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
-#'                                                     mu = 7, phi = 10, sigma = 10),
-#'                                  proposal.rj = list(dd = 20, cov = 7),
-#'                                  prior.covariates = c(0, 30),
+#'                                  function.select = FALSE,
 #'                                  n.rep = 100)
 #' summary(mydat.config)
 #' 
@@ -53,6 +50,10 @@ run_rjMCMC <- function(dat,
     last.iter <- purrr::map(.x = seq_along(dat), .f = ~glance(dat = dat, which.chain = .x, f = "update"))
   } else {
     last.iter <- vector(mode = "list", length = n.chains)
+  }
+  
+  if(do.update){
+    dat <- append(dat[[1]][["dat"]], dat[[1]]["config"])
   }
   
   # Parallel computing

@@ -27,10 +27,7 @@
 #' mydat.config <- configure_rjMCMC(dat = mydat,
 #'                                  model.select = TRUE,
 #'                                  covariate.select = FALSE,
-#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
-#'                                                     mu = 7, phi = 10, sigma = 10),
-#'                                  proposal.rj = list(dd = 20, cov = 7),
-#'                                  prior.covariates = c(0, 30),
+#'                                  function.select = FALSE,
 #'                                  n.rep = 100)
 #' summary(mydat.config)
 #' 
@@ -168,15 +165,11 @@ summary.rjtrace <- function(rj.obj,
       
       tb.combined <- prob_covariates(obj = rj.obj, do.combine = TRUE)
       tb <- prob_covariates(obj = rj.obj, do.combine = FALSE)
-      
-      # if(combine.chains){
-      
+
       cat("--- All chains (n = ", coda::nchain(rj.obj$trace), ") --- \n", sep = "")
       print(tb.combined)
       cat("\n")
-      
-      # } else {
-      
+
       cat("--- Individual chains ---\n", sep = "")
       
       for(nc in seq_len(coda::nchain(rj.obj$trace))){
@@ -184,8 +177,7 @@ summary.rjtrace <- function(rj.obj,
         print(tb[[nc]])
         cat("\n")
       }
-      # }
-      
+
     } else {
       
       cat("Covariate selection: FALSE\n")
@@ -231,8 +223,6 @@ summary.rjtrace <- function(rj.obj,
                          do.combine = TRUE,
                          gvs = "gvs" %in% class(rj.obj))
       
-      # if(combine.chains){
-      
       cat("--- All chains (n = ", coda::nchain(rj.obj$trace), ") --- \n", sep = "")
       if(!is.null(n.top)) cat("\nTop ", n.top, " models:\n", sep = "")
       print(head(res$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
@@ -258,9 +248,7 @@ summary.rjtrace <- function(rj.obj,
                combine = TRUE, 
                x.offset = 0.75,
                x.margin = 1)
-      
-      # } else {
-      
+
       res <- prob_models(input.obj = rj.obj, 
                          n.top = n.top,
                          mlist = rj.obj$mlist, 
@@ -331,8 +319,7 @@ summary.rjtrace <- function(rj.obj,
         purrr::walk(.x = gg.tiles, .f = ~print(.x))
         
       }
-        
-      # }
+
     } else {
       
       cat("Model selection: FALSE\n")

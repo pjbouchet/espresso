@@ -448,9 +448,6 @@ simulate_data <- function(biphasic = FALSE,
     names(res$covariates$coefs) <- covariate.names
     res$covariates$fL <- fL
     if(biphasic) res$covariates$biphasic <- covariates.biphasic
-    # sapply(X = covariate.names, 
-    #                             FUN = function(x) factor_levels(covname = x, dat = res$covariates$df), 
-    #                             simplify = FALSE, USE.NAMES = TRUE)
     
   }
   

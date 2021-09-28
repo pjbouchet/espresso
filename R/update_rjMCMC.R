@@ -60,7 +60,7 @@ update_rjMCMC <- function(rjdat, n.iter = 1000){
   update.res <- run_rjMCMC(dat = rjdat,
                            n.chains = length(rjdat),
                            n.burn = 0,
-                           n.iter = n.iter, 
+                           n.iter = n.iter,
                            do.update = TRUE)
   
   #' -----------------------------------------------

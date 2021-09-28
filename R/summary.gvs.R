@@ -22,11 +22,13 @@
 #' # Simulate data for two species
 #' mydat <- simulate_data(n.species = 2,
 #'                        n.whales = 16,
+#'                        min.trials = 1,
 #'                        max.trials = 3,
 #'                        covariates = list(exposed = c(0, 5), range = 0.5),
 #'                        mu = c(101, 158),
 #'                        phi = 20,
 #'                        sigma = 20,
+#'                        Lc = c(60, 65),
 #'                        Rc = c(210, 211),
 #'                        seed = 58697)
 #' summary(mydat)

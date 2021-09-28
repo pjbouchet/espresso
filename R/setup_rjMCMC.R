@@ -71,10 +71,6 @@ setup_rjMCMC <- function(rj.input,
                                           move == "2" ~ "data-driven (Type II)",
                                           move == "3" ~ "random")) 
   
-  if(do.update){
-    rj.input <- append(rj.input[[1]][["dat"]], rj.input[[1]]["config"])
-  }
-  
   rj <- list(mcmc = list(n.chains = n.chains,
                          n.burn = n.burn,
                          n.iter = n.iter,
@@ -88,7 +84,8 @@ setup_rjMCMC <- function(rj.input,
   # Create data matrices and vectors
   #' -----------------------------------------------
   
-  rj <- append(rj, list(t.ij = matrix(data = 0, nrow = tot.iter, ncol = rj.input$trials$n)))
+  rj <- append(rj, list(t.ij = matrix(data = 0, nrow = tot.iter, 
+                                      ncol = rj.input$trials$n)))
   
   if(!rj.input$config$biphasic | rj.input$config$function.select){
     
@@ -216,11 +213,6 @@ setup_rjMCMC <- function(rj.input,
   if(rj.input$config$model.select){
     ml <- as.list(rep(0, length(rj.input$config$move$moves)))
     names(ml) <- paste0("move.", rj.input$config$move$moves) 
-    # names(ml) <- unlist(purrr::map(.x = ml, 
-    #            .f = ~dplyr::case_when(.x == 0 ~ "split.merge",
-    #                  .x == 1 ~ "data.drivenI",
-    #                  .x == 2 ~ "data.drivenII",
-    #                  .x == 3 ~ "random")))
     if(rj.input$config$function.select){
       ml <- append(ml, ml)
       names(ml) <- paste0(c("mono.", "bi."), names(ml))
@@ -246,8 +238,9 @@ setup_rjMCMC <- function(rj.input,
     
     for(it in names(start.values)){
       if(it == "mlist") rj[[it]] <- start.values[[it]]
-      if(is.null(dim(rj[[it]]))) rj[[it]][1] <- start.values[[it]][1] else 
-        rj[[it]][1, ] <- start.values[[it]]
+      if(is.null(dim(rj[[it]]))) rj[[it]][1] <- start.values[[it]][1] 
+      if(length(dim(rj[[it]])) == 2) rj[[it]][1, ] <- start.values[[it]]
+      if(length(dim(rj[[it]])) == 3) rj[[it]][1, ,] <- start.values[[it]]
     }
     
   } else {

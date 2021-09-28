@@ -31,10 +31,7 @@
 #' mydat.config <- configure_rjMCMC(dat = mydat,
 #'                                  model.select = TRUE,
 #'                                  covariate.select = FALSE,
-#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
-#'                                                     mu = 7, phi = 10, sigma = 10),
-#'                                  proposal.rj = list(dd = 20, cov = 7),
-#'                                  prior.covariates = c(0, 30),
+#'                                  function.select = FALSE,
 #'                                  n.rep = 100)
 #' summary(mydat.config)
 #' 
@@ -257,7 +254,6 @@ compile_rjMCMC <- function(rj.object,
                              .f = ~{
           
           # Set up matrices
-          # ioffset <- (0:(rj.object$mcmc$n.chains - 1)) * (rj.object$mcmc$n.iter)
           p.response.individ <- matrix(data = 0, nrow = npts, ncol = length(dose.range))
           p.response <- matrix(data = 0, nrow = nrow(mcmc.list[[mcl]]), ncol = length(dose.range))
           

@@ -26,10 +26,7 @@
 #' mydat.config <- configure_rjMCMC(dat = mydat,
 #'                                  model.select = TRUE,
 #'                                  covariate.select = FALSE,
-#'                                  proposal.mh = list(t.ij = 10, mu.i = 10, 
-#'                                                     mu = 7, phi = 10, sigma = 10),
-#'                                  proposal.rj = list(dd = 20, cov = 7),
-#'                                  prior.covariates = c(0, 30),
+#'                                  function.select = FALSE,
 #'                                  n.rep = 100)
 #' summary(mydat.config)
 #' 
@@ -180,16 +177,6 @@ trace_rjMCMC <- function(rj.dat,
     dplyr::select(-value) %>% 
     dplyr::arrange(rank) %>% 
     dplyr::rename(model = name)
-
-  #' ---------------------------------------------
-  # Functional forms
-  #' ---------------------------------------------
-  
-  # rj.phase <- purrr::map(.x = rj.dat, .f = "phase")
-  # for(nc in seq_along(rj.phase)){
-  #   if (burn > 0) rj.phase[[nc]] <- rj.phase[[nc]][-(1:burn)] # Remove burn-in
-  #   rj.phase[[nc]] <- rj.phase[[nc]][seq(from = 1, to = length(rj.phase[[nc]]), thin)]
-  # }
   
   #' ---------------------------------------------
   # Posterior medians
