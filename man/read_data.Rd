@@ -6,6 +6,7 @@
 \usage{
 read_data(
   file = NULL,
+  risk.functions = FALSE,
   include.species = NULL,
   exclude.species = NULL,
   min.N = NULL,
@@ -21,6 +22,8 @@ read_data(
 }
 \arguments{
 \item{file}{Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.}
+
+\item{risk.functions}{Logical. If \code{TRUE}, a sample of points from the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} are included.}
 
 \item{include.species}{Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.}
 
@@ -91,6 +94,7 @@ mydat <- read_data(file = NULL)
 # whilst excluding sperm whales and any other species with a sample size
 # smaller than two observations.
 mydat <- read_data(file = "path/to/my/data.csv", 
+                  risk.functions = FALSE,
                   exclude.species = "Sperm whale",
                   min.N = 2)
 }

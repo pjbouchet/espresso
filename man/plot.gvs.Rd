@@ -21,23 +21,6 @@ Generate trace, density, and autocorrelation plots from a \code{gvs} object.
 \details{
 Adapted from Casey Youngflesh's function \code{\link[MCMCvis]{MCMCtrace}}.
 }
-\examples{
-\dontrun{
-library(espresso)
-
-# Import the example data
-
-mydat <- read_data(file = NULL) 
-
-# Import a real dataset with the sonar and range covariates, 
-# excluding sperm whales and any other species with a sample size
-# smaller than two
-
-mydat <- read_data(file = "path/to/my/data.csv", 
-                  exclude.species = "Sperm whale",
-                  min.N = 2) 
-}
-}
 \seealso{
 \code{\link{run_rjMCMC}} \code{\link{trace_rjMCMC}}
 }

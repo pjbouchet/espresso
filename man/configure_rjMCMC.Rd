@@ -93,10 +93,6 @@ mydat.config <- configure_rjMCMC(dat = mydat,
                                  model.select = TRUE,
                                  covariate.select = FALSE,
                                  function.select = FALSE,
-                                 proposal.mh = list(t.ij = 10, mu.i = 10, 
-                                                    mu = 7, phi = 10, sigma = 10),
-                                 proposal.rj = list(dd = 20, cov = 7),
-                                 priors = list(covariates = c(0, 30), psi = c(0, 10)),
                                  n.rep = 100)
 summary(mydat.config)
 }

@@ -60,7 +60,7 @@
 
 \item{file.format}{Character. File format for output plots on disk. Can be one of \code{png}, \code{jpeg}, \code{tiff} or \code{pdf}. Only used when \code{do.save = TRUE}.}
 
-\item{...}{Additional arguments as passed to \link{\code{ggplot::ggsave}}.}
+\item{...}{Additional arguments as passed to \code{\link[ggplot2]{gg.save}}.}
 
 \item{file.dir}{Path to the output directory. This defaults to the current working directory. Only used when \code{do.save = TRUE}.}
 }
@@ -80,10 +80,7 @@ summary(mydat)
 mydat.config <- configure_rjMCMC(dat = mydat,
                                  model.select = TRUE,
                                  covariate.select = FALSE,
-                                 proposal.mh = list(t.ij = 10, mu.i = 10, 
-                                                    mu = 7, phi = 10, sigma = 10),
-                                 proposal.rj = list(dd = 20, cov = 7),
-                                 prior.covariates = c(0, 30),
+                                 function.select = FALSE,
                                  n.rep = 100)
 summary(mydat.config)
 
