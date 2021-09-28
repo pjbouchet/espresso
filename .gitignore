@@ -41,3 +41,4 @@ vignettes/*.pdf
 inst/test_code.R
 inst/likelihood_2.R
 inst/likelihood_3.R
+inst/likelihood_old.R
