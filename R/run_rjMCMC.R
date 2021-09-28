@@ -192,11 +192,18 @@ run_rjMCMC <- function(dat,
                                        }
                                        
                                        if(rj$phase[i - 1] == 1){
-                                       rj$mu[i, ] <- new.params$out$mu}
+                                       rj$mu[i, ] <- new.params$out$mu
+                                       if(rj$config$function.select){
+                                         rj$nu[i, ,] <- rj$nu[i - 1, ,]
+                                         rj$alpha[i, ] <- rj$alpha[i - 1, ]
+                                       }}
                                        
                                        if(rj$phase[i - 1] == 2){
                                        rj$nu[i, ,] <- t(new.params$out$nu)
-                                       rj$alpha[i, ] <- new.params$out$alpha}
+                                       rj$alpha[i, ] <- new.params$out$alpha
+                                       if(rj$config$function.select){
+                                         rj$mu[i, ] <- rj$mu[i - 1, ]
+                                       }}
                                         
                                        if(i > rj$mcmc$n.burn){
                                          rj$accept[paste0(ifelse(rj$phase[i] == 1, "mono.", "bi."),
@@ -207,9 +214,9 @@ run_rjMCMC <- function(dat,
                                      } else { # If proposal not accepted
                                        
                                        rj$model[i] <- rj$current.model <- rj$model[i - 1]
-                                       if(rj$phase[i - 1] == 1){
+                                       if(rj$config$function.select | rj$phase[i - 1] == 1){
                                        rj$mu[i, ] <- rj$mu[i - 1, ]}
-                                       if(rj$phase[i - 1] == 2){
+                                       if(rj$config$function.select | rj$phase[i - 1] == 2){
                                        rj$nu[i, ,] <- rj$nu[i - 1, ,]
                                        rj$alpha[i, ] <- rj$alpha[i - 1, ]
                                        }
@@ -448,7 +455,7 @@ run_rjMCMC <- function(dat,
                                        rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
                                        rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
                                        
-                                     }else{
+                                     } else {
                                        
                                        rj$alpha[i, ] <- ff.prop$alpha
                                        rj$nu[i, , 1] <- ff.prop$nu[1, ]
@@ -520,7 +527,6 @@ run_rjMCMC <- function(dat,
                                 rj$iter[c("tau", "omega", "psi", "mu.ij", "k.ij", "psi.i", "pi.ij")] + 1
                                  }
                                  
-
                                  #' ---------------------------------------------------------------------
                                  # Step 4: Update parameters ----
                                  #' ---------------------------------------------------------------------
@@ -1363,7 +1369,8 @@ run_rjMCMC <- function(dat,
                                  } # End if biphasic
                                    
                                  if(any(!rj$iter == i)) stop("Mismatched iteration count")
-                                 if(sum(rj$alpha[i, ]) == 0 ) stop("Zero")
+                                 if(rj$config$function.select & sum(rj$alpha[i, ]) == 0 |
+                                    rj$config$biphasic & sum(rj$alpha[i, ]) == 0) stop("Zeroes in alpha")
                                } # End RJMCMC
                                
                                rj
