@@ -274,7 +274,7 @@ plot.dose_response <- function(dr.object,
   } else {
     
     posterior.medians <- posterior.medians.grp %>% 
-      {if(dr.object$phase == 1) dplyr::arrange(pmed) else .} %>% 
+      {if(dr.object$phase == 1) dplyr::arrange(., pmed) else .} %>% 
       dplyr::mutate(rank = 1:dplyr::n())
   }
   
