@@ -257,9 +257,6 @@ compile_rjMCMC <- function(rj.object,
           p.response.individ <- matrix(data = 0, nrow = npts, ncol = length(dose.range))
           p.response <- matrix(data = 0, nrow = nrow(mcmc.list[[mcl]]), ncol = length(dose.range))
           
-          # Integrate out the random effect
-          ppts <- seq(0, 1, length = (npts + 2))[-c(1, (npts + 2))]
-          
           pb <- progress::progress_bar$new(format = "Computing [:bar] :percent eta: :eta ",
                                            total = nrow(.x),
                                            width = getOption("width") + 5)
@@ -376,7 +373,8 @@ compile_rjMCMC <- function(rj.object,
                  p.med.bymodel = rj.object$p.med.bymodel,
                  covariate = covariate,
                  covariate.values = covariate.values,
-                 species = species)
+                 species = species,
+                 names = rj.object$dat$species$names)
   
   if(!is.null(covariate)) output$fL <- rj.object$dat$covariates$fL[[covariate]] else output$fL <- rj.object$dat$covariates$fL
   

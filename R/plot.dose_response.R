@@ -11,7 +11,7 @@
 #' @param colour Used to overwrite the \code{colour.by} argument, if desired.
 #' @param colour.median Colour to use for the posterior median. Overwrites the \code{colour.by} argument.
 #' @param order.by How should plots be arranged? Use \code{order.by = "species"} to arrange plots by species (groups) names in alphabetical order, or \code{order.by = "response"}, to arrange plots by response thresholds (from most to least sensitive species (groups), as determined by the estimated posterior medians for μ). Only relevant when \code{overlay = FALSE}.
-#' @param show.p0_5 Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.
+#' @param show.pmed Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.
 #' @param rotate.y Logical. If \code{TRUE}, y-axis labels are rotated clockwise by 90 degrees.
 #' @param all.credint Logical. If \code{TRUE}, plot all credible intervals. If \code{FALSE}, only plot the outermost interval.
 #' @param scientific.name Logical. If \code{TRUE}, use species' scientific names in plot titles.
@@ -69,7 +69,7 @@ plot.dose_response <- function(dr.object,
                                colour = NULL,
                                colour.median = NULL,
                                order.by = "response", # or "species"
-                               show.p0_5 = TRUE,
+                               show.pmed = TRUE,
                                rotate.y = FALSE,
                                all.credint = FALSE,
                                scientific.name = FALSE,
@@ -275,7 +275,9 @@ plot.dose_response <- function(dr.object,
     
     posterior.medians <- posterior.medians.grp %>% 
       {if(dr.object$phase == 1) dplyr::arrange(., pmed) else .} %>% 
-      dplyr::mutate(rank = 1:dplyr::n())
+      dplyr::mutate(rank = 1:dplyr::n()) %>% 
+      dplyr::mutate(., grp = dr.object$names[as.numeric(grp)])
+    
   }
   
   if(!is.null(covariate.values)) posterior.medians <- posterior.medians %>% 
@@ -439,7 +441,7 @@ plot.dose_response <- function(dr.object,
   # Labels for posterior medians
   #' ---------------------------------------------
   
-  if(show.p0_5){
+  if(show.pmed){
     
     if(!is.null(covariate)){
       
