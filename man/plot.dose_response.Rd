@@ -13,7 +13,7 @@
   colour = NULL,
   colour.median = NULL,
   order.by = "response",
-  show.p0_5 = TRUE,
+  show.pmed = TRUE,
   rotate.y = FALSE,
   all.credint = FALSE,
   scientific.name = FALSE,
@@ -42,7 +42,7 @@
 
 \item{order.by}{How should plots be arranged? Use \code{order.by = "species"} to arrange plots by species (groups) names in alphabetical order, or \code{order.by = "response"}, to arrange plots by response thresholds (from most to least sensitive species (groups), as determined by the estimated posterior medians for μ). Only relevant when \code{overlay = FALSE}.}
 
-\item{show.p0_5}{Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.}
+\item{show.pmed}{Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.}
 
 \item{rotate.y}{Logical. If \code{TRUE}, y-axis labels are rotated clockwise by 90 degrees.}
 

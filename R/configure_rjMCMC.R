@@ -70,8 +70,6 @@ configure_rjMCMC <- function(dat,
                              priors = list(covariates = c(0, 30), 
                                            sigma = c(0, 45), 
                                            phi = c(0, 45),
-                                           # alpha = c(110, 160),
-                                           
                                            omega = c(0, 2),
                                            tau = c(0, 45),
                                            psi = c(0, 1)), 
