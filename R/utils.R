@@ -2245,14 +2245,16 @@ gg_model <- function(dat,
                                                angle = 90, vjust = 0.5, hjust = 0.5),
                    plot.margin = margin(t = 1, r = 1, b = 0.25, l = 1, "cm"),
                    legend.position = "top",
-                   legend.title = element_blank(),
+                   # legend.title = element_blank(),
                    legend.text = element_text(size = 12),
                    panel.background = element_rect(fill = "white")) + 
-    {if(rotate.x) ggplot2::theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))} +
+    {if(rotate.x) ggplot2::theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))} +
     
     # Annotation for posterior probabilities
     ggplot2::geom_text(data = p1, aes(x = x , y = y, label = label), size = p.size, hjust = 0) +
     ggplot2::geom_text(data = p2, aes(x = x , y = y, label = label), size = p.size) +
+    
+    labs(fill = "Groups") +
     
     ggplot2::guides(fill = guide_legend(nrow = 1)) +
     

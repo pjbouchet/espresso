@@ -233,6 +233,10 @@ summary.rjtrace <- function(rj.obj,
       gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::parula(max(unlist(ggres$group))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
       m.matrix <- do.call(rbind, ggres$group)
       
+      # Re-assign colours
+      m.matrix <- t(apply(X = m.matrix, MARGIN = 1, FUN = function(x) 
+       match(seq_along(unique(x)), unique(x))[x]))
+      
       gg.matrix <- tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n), y = seq_len(n.top)) %>% 
         dplyr::rowwise() %>% 
         dplyr::mutate(grouping = m.matrix[y, x]) %>% 
@@ -240,14 +244,14 @@ summary.rjtrace <- function(rj.obj,
         dplyr::ungroup() %>% 
         dplyr::mutate(y = n.top - y + 1)
       
-      gg.combined <- gg_model(dat = gg.matrix, 
-               post.probs = round(res$model$m_prob$p, 3),
-               rj.obj = rj.obj, 
-               colours = gg.cols,
-               n.top = n.top,
-               combine = TRUE, 
-               x.offset = 0.75,
-               x.margin = 1)
+      gg.combined <- gg_model(dat = gg.matrix,
+                              post.probs = round(res$model$m_prob$p, 3),
+                              rj.obj = rj.obj,
+                              colours = gg.cols,
+                              n.top = n.top,
+                              combine = TRUE,
+                              x.offset = 0.75,
+                              x.margin = 1)
 
       res <- prob_models(input.obj = rj.obj, 
                          n.top = n.top,
