@@ -259,7 +259,7 @@ trace_rjMCMC <- function(rj.dat,
     if(rj.dat[[1]]$config$covariate.select){
       cov.tbl <- purrr::map(.x = cov.tbl, 
                             .f = ~dplyr::bind_rows(.x, 
-              tibble::tibble(param = "covariates", phase = NA, n.iter = mcmc.params$n.iter)))
+              tibble::tibble(param = "covariates", phase = NA, n.iter = rj[[1]]$mcmc$n.iter)))
     }
     
   }

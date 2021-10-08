@@ -206,9 +206,9 @@ run_rjMCMC <- function(dat,
                                        }}
                                         
                                        if(i > rj$mcmc$n.burn){
-                                         rj$accept[paste0(ifelse(rj$phase[i] == 1, "mono.", "bi."),
+                                         rj$accept[paste0(ifelse(rj$phase[i - 1] == 1, "mono.", "bi."),
                                                           "move.", proposed.jump$type)] <- 
-                                         rj$accept[[paste0(ifelse(rj$phase[i] == 1, "mono.", "bi."),
+                                         rj$accept[[paste0(ifelse(rj$phase[i - 1] == 1, "mono.", "bi."),
                                                            "move.", proposed.jump$type)]] + 1 }
                                        
                                      } else { # If proposal not accepted
