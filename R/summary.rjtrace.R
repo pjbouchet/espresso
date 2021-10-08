@@ -47,7 +47,7 @@ summary.rjtrace <- function(rj.obj,
                             convergence = TRUE,
                             gelman.rubin = 1.1,
                             model.ranks = TRUE,
-                            n.top = 10, 
+                            n.top = 10,
                             covariate.prob = TRUE,
                             ff.prob = TRUE,
                             rmd = FALSE){
@@ -114,7 +114,9 @@ summary.rjtrace <- function(rj.obj,
       dplyr::select(-label) %>% 
       tidyr::pivot_wider(names_from = param, values_from = AR)
     
-    print(AR)
+    all.NA <- apply(X = AR, MARGIN = 2, FUN = function(x) all(is.na(x)))
+    
+    print(AR[, !all.NA])
   }
   
   if(convergence){
@@ -204,9 +206,11 @@ summary.rjtrace <- function(rj.obj,
         do.call(rbind, .) %>% 
         dplyr::bind_cols(tibble::tibble(chain = as.character(1:rj.obj$mcmc$n.chains)), .) %>% 
         dplyr::bind_rows(., tb.combined)
+      
+      print(tb.out)
 
     } else {
-      cat("Funcational form selection: FALSE\n")
+      cat("Functional form selection: FALSE\n")
     }
   }
   
@@ -293,6 +297,10 @@ summary.rjtrace <- function(rj.obj,
       
       m.matrix <- lapply(X = seq_len(min(c(min.n, n.top))), 
                          FUN = function(x) do.call(rbind, purrr::map(.x = gg.res, .f = ~.x[x, ])))
+      
+      # Re-assign colours
+      m.matrix <- purrr::map(.x = m.matrix, .f = ~t(apply(X = .x, MARGIN = 1, FUN = function(x) 
+        match(seq_along(unique(x)), unique(x))[x])))
       
       gg.matrix <- purrr::map(.x = m.matrix,
                               .f = ~{
