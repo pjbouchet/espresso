@@ -96,6 +96,8 @@ summary.rjtrace <- function(rj.obj,
     cat("--------------------\n")
     
     print(rj.obj$ess)
+    sufficient.ess <- rj.obj$ess %>% dplyr::filter(ESS >= 100 & !is.na(ESS)) %>% 
+      dplyr::pull(parameter)
     # print(coda::effectiveSize(rj.obj$trace))
     # print(mcmcse::ess(rj.obj$trace))
   }
@@ -130,7 +132,7 @@ summary.rjtrace <- function(rj.obj,
       # (e.g., when a model has been specified a priori, or when there are only 2 species,
       # and hence only two possible models)
       coda.out <- tryCatch(exp = {
-        cvg <- coda::gelman.diag(x = rj.obj$trace,
+        cvg <- coda::gelman.diag(x = rj.obj$trace[, sufficient.ess],
                                  autoburnin = FALSE, 
                                  multivariate = TRUE)},
         error = function(e){ NA })
