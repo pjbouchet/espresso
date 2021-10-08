@@ -152,7 +152,8 @@ compile_rjMCMC <- function(rj.object,
                       # Identify columns corresponding to species means
                       if (!is.null(species)) {
                         col.index <- which(colnames(mcmc.list[[mcl]]) %in% 
-                                             paste0(pn, ".", ifelse(phase == 1, "", "lower."), species))
+                                             paste0(pn, ".", ifelse(phase == 1, "", "lower."), 
+                                                    which(rj.object$dat$species$names == species)))
                         sp.names <- species
                       } else {
                         col.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]), prefix = pn))

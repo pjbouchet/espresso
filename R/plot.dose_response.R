@@ -10,6 +10,7 @@
 #' @param colour.by Curves can be coloured by species group (\code{colour.by = "group"}) or by individual species (\code{colour.by = "species"}), or can use a single colour scheme (the default, \code{colour.by = NULL}).
 #' @param colour Used to overwrite the \code{colour.by} argument, if desired.
 #' @param colour.median Colour to use for the posterior median. Overwrites the \code{colour.by} argument.
+#' @param fill.alpha Opacity applied to the credible intervals. Ranges from 0 (transparent) to 1 (fully opaque).
 #' @param order.by How should plots be arranged? Use \code{order.by = "species"} to arrange plots by species (groups) names in alphabetical order, or \code{order.by = "response"}, to arrange plots by response thresholds (from most to least sensitive species (groups), as determined by the estimated posterior medians for μ). Only relevant when \code{overlay = FALSE}.
 #' @param show.pmed Logical. If \code{TRUE}, the values of posterior medians are added to facet labels. Only relevant when \code{overlay = FALSE}.
 #' @param rotate.y Logical. If \code{TRUE}, y-axis labels are rotated clockwise by 90 degrees.
@@ -68,6 +69,7 @@ plot.dose_response <- function(dr.object,
                                colour.by = NULL,
                                colour = NULL,
                                colour.median = NULL,
+                               fill.alpha = 0.3,
                                order.by = "response", # or "species"
                                show.pmed = TRUE,
                                rotate.y = FALSE,
@@ -242,15 +244,12 @@ plot.dose_response <- function(dr.object,
       dplyr::arrange(lower) %>% 
       dplyr::mutate(pmed = paste0(round(lower, 2), " / ", round(upper, 2))) %>% 
       dplyr::select(-lower, -upper)
-      # dplyr::group_by(grp) %>% 
-      # dplyr::summarise(pmed = paste0(round(pmed, 2), collapse = " / ")) %>% 
-      # dplyr::ungroup()
   }
   
   if(!is.null(covariate)){
     
     posterior.medians.grp <- posterior.medians.grp %>% 
-      dplyr::filter(grp == dr.object$species)
+      dplyr::filter(grp == which(dr.object$names == dr.object$species))
     
     posterior.medians.covar <- dr.object$p.med %>% 
       dplyr::filter(stringr::str_detect(param, covariate)) %>% 
@@ -260,7 +259,7 @@ plot.dose_response <- function(dr.object,
     
     posterior.medians <- posterior.medians.covar %>% 
       dplyr::mutate(pmed = posterior.medians.grp$pmed) %>% 
-      {if(dr.object$phase == 1) dplyr::arrange(pmed.cov + pmed) else dplyr::arrange(., pmed.cov)} %>% 
+      {if(dr.object$phase == 1) dplyr::arrange(., pmed.cov + pmed) else dplyr::arrange(., pmed.cov)} %>% 
       dplyr::mutate(rank = 1:dplyr::n()) %>% 
       dplyr::mutate(grp = dr.object$species) %>% 
       dplyr::rename(parcov = param) %>% 
@@ -504,7 +503,7 @@ plot.dose_response <- function(dr.object,
     
   }
   
-  if(!is.null(covariate.values)) {
+  if(!is.null(covariate.values) | !is.null(covariate)) {
     
     median.list <- median.list %>% 
       dplyr::mutate(colgrp = factor(colgrp)) %>% 
@@ -540,17 +539,19 @@ plot.dose_response <- function(dr.object,
       gplot <- gplot +
         geom_polygon(data = gdat, aes(x = x, y = y, group = colgrp), fill = "white") +
         geom_polygon(data = gdat, aes(x = x, y = y, group = colgrp, fill = colgrp), 
-                     alpha = seq(0.3, 1, length = length(plot.quants))[qq]) 
+                     alpha = seq(fill.alpha, 1, length = length(plot.quants))[qq]) 
     } else {
       
       gplot <- gplot +
         geom_polygon(data = gdat, aes(x = x, y = y), fill = "white") +
-        {if(colour.by == "group") geom_polygon(data = gdat,
+        {if(colour.by == "group" & is.null(colour)) geom_polygon(data = gdat,
                                                aes(x = x, y = y, fill = colgrp),
-                                               alpha = seq(0.3, 1, length = length(plot.quants))[qq]) } + 
-        {if(colour.by == "species") geom_polygon(data = gdat,
+                                               alpha = seq(fill.alpha, 1, length = length(plot.quants))[qq]) } + 
+        {if(colour.by == "species" & is.null(colour)) geom_polygon(data = gdat,
                                                  aes(x = x, y = y, fill = grp),
-                                                 alpha = seq(0.3, 1, length = length(plot.quants))[qq]) } 
+                                                 alpha = seq(fill.alpha, 1, length = length(plot.quants))[qq]) } +
+        {if(!is.null(colour)) geom_polygon(data = gdat, aes(x = x, y = y), fill = colour,
+                                                 alpha = seq(fill.alpha, 1, length = length(plot.quants))[qq]) }
     }
     
     if(outline.outer){

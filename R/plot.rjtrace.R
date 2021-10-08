@@ -5,6 +5,7 @@
 #' @export
 #' @param rj.obj rjMCMC trace object of class \code{rjtrace}.
 #' @param covariates.incl Logical. If \code{TRUE}, the trace is filtered to only retain posterior estimates obtained when the contextual covariates were included in the model. Only relevant when \code{covariate.select = TRUE} in \code{\link{configure_rjMCMC}}.
+#' @param phase Integer. If used, will only generate plots for the parameters of the monophasic (1) or biphasic (2) model.
 #' @inheritParams plot.gvs
 #' @import ggplot2
 #' 
@@ -46,6 +47,7 @@
 
 plot.rjtrace <- function(rj.obj, 
                          param.name = NULL, 
+                         phase = NULL,
                          covariates.incl = FALSE,
                          autocorr = TRUE,
                          individual = TRUE){
@@ -107,10 +109,17 @@ plot.rjtrace <- function(rj.obj,
       colnames(mcmc.trace[[nc]])[mu.indices] <-
         gsub(pattern = "mu.", replacement = "mu  ", x = colnames(mcmc.trace[[nc]])[mu.indices])
       
-      for(j in rj.obj$dat$species$names){
+      for(j in mu.indices){
         colnames(mcmc.trace[[nc]])[mu.indices] <-
-          gsub(pattern = j, replacement = paste0("(", j, ")"), x = colnames(mcmc.trace[[nc]])[mu.indices])
+          gsub(pattern = j, replacement = paste0("(", rj.obj$dat$species$names[j], ")"), 
+               x = colnames(mcmc.trace[[nc]])[mu.indices])
       }
+      
+      
+      # for(j in rj.obj$dat$species$names){
+      #   colnames(mcmc.trace[[nc]])[mu.indices] <-
+      #     gsub(pattern = j, replacement = paste0("(", j, ")"), x = colnames(mcmc.trace[[nc]])[mu.indices])
+      # }
     }
   }
   
@@ -119,7 +128,26 @@ plot.rjtrace <- function(rj.obj,
   if(!rj.obj$config$covariate.select) mpars <- mpars[!mpars %in% paste0("incl.", rj.obj$dat$covariates$names)]
   if(!rj.obj$config$function.select) mpars <- mpars[!mpars %in% "phase"]
   
+  if(!is.null(phase)){
+    
+    if(phase == 1){
+      
+      mpars <- mpars[!grepl(pattern = "alpha", x = mpars)]
+      mpars <- mpars[!grepl(pattern = "nu", x = mpars)]
+      mpars <- mpars[!grepl(pattern = "tau", x = mpars)]
+      mpars <- mpars[!grepl(pattern = "omega", x = mpars)]
+      mpars <- mpars[!grepl(pattern = "psi", x = mpars)]
+      
+    } else if (phase == 2){
+      
+      mpars <- mpars[!grepl(pattern = "mu", x = mpars)]
+      mpars <- mpars[!grepl(pattern = "phi", x = mpars)]
+      mpars <- mpars[!grepl(pattern = "sigma", x = mpars)]
+    }
+  }
+  
   if(is.null(param.name)) bpars <- mpars else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
+  
   
   if(is.null(param.name)){
     
