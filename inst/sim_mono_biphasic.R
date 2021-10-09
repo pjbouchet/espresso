@@ -5,8 +5,8 @@ mu = 140
 phi = 25
 sigma = 20
 
-psi = 0.5
-omega = 10
+psi = 0.2
+omega = 1.5
 npts = 50
 nu1 = 120
 nu2 = 165

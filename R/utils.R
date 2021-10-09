@@ -1283,7 +1283,9 @@ propdens_ff <- function(rj.obj, param){
   } else if(param$to.phase == 1) {
     
     param <- append(param, list(alpha = rj.obj$alpha[rj.obj$iter["alpha"], ],
-                                nu = t(rj.obj$nu[rj.obj$iter["nu"], , ]),
+                                nu = if(rj.obj$dat$species$n == 1) 
+                                        matrix(rj.obj$nu[rj.obj$iter["nu"], , ]) else
+                                          t(rj.obj$nu[rj.obj$iter["nu"], , ]),
                                 mu.ij = rj.obj$mu.ij[rj.obj$iter["mu.ij"], , ],
                                 tau = rj.obj$tau[rj.obj$iter["tau"], ],
                                 omega = rj.obj$omega[rj.obj$iter["omega"]],
