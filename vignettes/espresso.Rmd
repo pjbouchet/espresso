@@ -89,25 +89,39 @@ knitr::kable(head(species_brs), format = "pandoc")
 
 Here, `example_brs` contains 174 observations of 8 cetacean species (i.e., blue whale, killer whale, Cuvier's beaked whale, long-finned pilot whale, sperm whale, northern bottlenose whale, Risso's dolphin, bottlenose dolphin). Of the 20 columns in the data, only five are compulsory:
 
++----------+-------------------------------------------------------------------------------------------------------------------+
 | Header   | Description                                                                                                       |
-|----------|-------------------------------------------------------------------------------------------------------------------|
++==========+===================================================================================================================+
 | species  | Species code, as listed in `species_brs`                                                                          |
++----------+-------------------------------------------------------------------------------------------------------------------+
 | tag_id   | Unique tag ID number                                                                                              |
++----------+-------------------------------------------------------------------------------------------------------------------+
 | resp_spl | Sound pressure level at time of response (in dB re 1μPa)                                                          |
++----------+-------------------------------------------------------------------------------------------------------------------+
 | max_spl  | Maximum sound pressure level reached during the exposure (in dB re 1μPa)                                          |
++----------+-------------------------------------------------------------------------------------------------------------------+
 | censored | Integer variable indicating whether an observation is left-censored (-1), right-censored (1), or not censored (0) |
++----------+-------------------------------------------------------------------------------------------------------------------+
 
 When contextual covariates are specified, additional fields must also be included, as relevant:
 
++---------------------+-----------------------------------------------------------------+
 | Header              | Description                                                     |
-|---------------------|-----------------------------------------------------------------|
++=====================+=================================================================+
 | exp_order           | History of exposure (1 = 1st exposure, 2 = 2nd exposure, etc.)  |
++---------------------+-----------------------------------------------------------------+
 | exp_signal          | Type of sonar signal (e.g., MFAS, REAL MFA, PRN, CAS)           |
++---------------------+-----------------------------------------------------------------+
 | pre_feeding         | Behavioural mode (TRUE = feeding, FALSE = non-feeding)          |
++---------------------+-----------------------------------------------------------------+
 | min_range           | Minimum whale-source range during the exposure                  |
++---------------------+-----------------------------------------------------------------+
 | resp_range          | Whale-source range at the time of response                      |
++---------------------+-----------------------------------------------------------------+
 | inferred_resp_range | Best estimate of whale-source range at the time of response     |
++---------------------+-----------------------------------------------------------------+
 | inferred_min_range  | Best estimate of minimum whale-source range during the exposure |
++---------------------+-----------------------------------------------------------------+
 
 ### Import file
 
@@ -265,7 +279,7 @@ mydat.config <- configure_rjMCMC(dat = mydat.grp,
 ::: {style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;"}
 **Update: v1.0**
 
-The **biphasic** argument can be used to impose a functional form. Set to TRUE for biphasic, and FALSE for monphasic.
+The **biphasic** argument can be used to impose a functional form. Set to TRUE for biphasic, and FALSE for monophasic. Note that this argument will be ignored when function.select = TRUE.
 :::
 
 Other (optional) arguments can be passed to `configure_rjMCMC`, for instance to change move types, default values for proposal standard deviations in the MCMC sampler etc. Please consult the help documentation (`?configure_rjMCMC`) for details.
@@ -368,7 +382,7 @@ summary(rj.posterior)
 Trace and density plots can be obtained using the `plot` method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy [caterpillar](http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg). Running mean plots are also useful in identifying whether the means of the different chains converge to a similar value. Plots for specific parameters of interest can be generated using the `param.name` argument. If `individual = TRUE` separate density lines will be plotted for each chain.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-plot(rj.posterior, individual = TRUE)
+plot(rj.posterior, individual = TRUE, phase = 1)
 ```
 
 Another way to check for convergence is to look at the serial autocorrelation between MCMC samples. The lag-$k$ autocorrelation is the correlation between every sample and the sample $k$ steps before it. This autocorrelation should become smaller as $k$ increases, i.e., samples can be considered as independent. If, on the other hand, autocorrelation remains high for higher values of $k$, this indicates a high degree of correlation between our samples and slow mixing.
@@ -443,7 +457,7 @@ plot(doseR, colour.by = "species", order.by = "response")
 [Example 3]{.ul}: Scientific names in plot labels, posterior medians hidden, outer credible intervals outlined.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-plot(doseR, scientific.name = TRUE, show.p0_5 = FALSE, outline.outer = TRUE)
+plot(doseR, scientific.name = TRUE, show.pmed = FALSE, outline.outer = TRUE)
 ```
 
 [Example 4]{.ul}: Plot overlay.
