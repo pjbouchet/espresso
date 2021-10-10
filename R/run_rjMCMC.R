@@ -395,7 +395,7 @@ run_rjMCMC <- function(dat,
                                                 RJ = TRUE,
                                                 lprod = TRUE)
                                    
-                                   loglik.current <-
+                                   loglik.cur <-
                                      likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
                                                 param.name = NULL,
                                                 rj.obj = rj,
