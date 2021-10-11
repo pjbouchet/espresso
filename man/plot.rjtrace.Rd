@@ -7,6 +7,7 @@
 \method{plot}{rjtrace}(
   rj.obj,
   param.name = NULL,
+  phase = NULL,
   covariates.incl = FALSE,
   autocorr = TRUE,
   individual = TRUE
@@ -16,6 +17,8 @@
 \item{rj.obj}{rjMCMC trace object of class \code{rjtrace}.}
 
 \item{param.name}{Parameter name(s). Defaults to \code{NULL}, which returns plots for all parameters in the model.}
+
+\item{phase}{Integer. If used, will only generate plots for the parameters of the monophasic (1) or biphasic (2) model.}
 
 \item{covariates.incl}{Logical. If \code{TRUE}, the trace is filtered to only retain posterior estimates obtained when the contextual covariates were included in the model. Only relevant when \code{covariate.select = TRUE} in \code{\link{configure_rjMCMC}}.}
 

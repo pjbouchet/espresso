@@ -12,6 +12,7 @@
   colour.by = NULL,
   colour = NULL,
   colour.median = NULL,
+  fill.alpha = 0.3,
   order.by = "response",
   show.pmed = TRUE,
   rotate.y = FALSE,
@@ -39,6 +40,8 @@
 \item{colour}{Used to overwrite the \code{colour.by} argument, if desired.}
 
 \item{colour.median}{Colour to use for the posterior median. Overwrites the \code{colour.by} argument.}
+
+\item{fill.alpha}{Opacity applied to the credible intervals. Ranges from 0 (transparent) to 1 (fully opaque).}
 
 \item{order.by}{How should plots be arranged? Use \code{order.by = "species"} to arrange plots by species (groups) names in alphabetical order, or \code{order.by = "response"}, to arrange plots by response thresholds (from most to least sensitive species (groups), as determined by the estimated posterior medians for μ). Only relevant when \code{overlay = FALSE}.}
 
