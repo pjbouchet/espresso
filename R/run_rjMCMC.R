@@ -206,8 +206,8 @@ run_rjMCMC <- function(dat,
                                        }}
                                         
                                        if(i > rj$mcmc$n.burn){
-                                         rj$accept[paste0(ifelse(rj$phase[i - 1] == 1, "mono.", "bi."),
-                                                          "move.", proposed.jump$type)] <- 
+                                         rj$accept[[paste0(ifelse(rj$phase[i - 1] == 1, "mono.", "bi."),
+                                                          "move.", proposed.jump$type)]] <- 
                                          rj$accept[[paste0(ifelse(rj$phase[i - 1] == 1, "mono.", "bi."),
                                                            "move.", proposed.jump$type)]] + 1 }
                                        
@@ -351,7 +351,8 @@ run_rjMCMC <- function(dat,
                                        if(add.remove) rj[[chosen.covariate]][i, ] <- 
                                            beta.params[[chosen.covariate]]
                                        if(i > rj$mcmc$n.burn) 
-                                         rj$accept[["move.covariates"]] <- rj$accept[["move.covariates"]] + 1
+                                         rj$accept[["move.covariates"]] <- 
+                                           rj$accept[["move.covariates"]] + 1
                                        
                                      } else {
                                        
@@ -433,10 +434,10 @@ run_rjMCMC <- function(dat,
                                      if(i > rj$mcmc$n.burn){
                                        
                                        if(ff.prop$to.phase == 1)
-                                       rj$accept["to.monophasic"] <- rj$accept["to.monophasic"] + 1
+                                       rj$accept[["to.monophasic"]] <- rj$accept[["to.monophasic"]] + 1
                                        
                                        if(ff.prop$to.phase == 2)
-                                         rj$accept["to.biphasic"] <- rj$accept["to.biphasic"] + 1
+                                         rj$accept[["to.biphasic"]] <- rj$accept[["to.biphasic"]] + 1
                                      }
                                      
 
