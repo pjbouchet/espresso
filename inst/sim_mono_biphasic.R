@@ -8,11 +8,11 @@ sigma = 20
 psi = 0.2
 omega = 1.5
 npts = 50
-nu1 = 120
-nu2 = 165
+nu1 = 130
+nu2 = 155
 alpha = mean(c(nu1, nu2))
-tau = sqrt(phi^2+sigma^2)
-tau = 15
+# tau = sqrt(phi^2+sigma^2)
+tau = 22
 
 p.response.individ <- matrix(data = 0, nrow = npts, ncol = length(dose.range))
 
