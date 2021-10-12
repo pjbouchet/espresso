@@ -66,7 +66,7 @@ likelihood <- function(biphasic = FALSE,
                        model, 
                        values = NULL, 
                        included.cov = NULL, 
-                       RJ = FALSE, 
+                       RJ = FALSE,
                        lprod = TRUE){
   
   # Log-likelihoods
@@ -153,13 +153,13 @@ likelihood <- function(biphasic = FALSE,
     
     if(any(c("mu.ij", "k.ij") %in% param.name) | RJ){
       LL.1 <- dnorm(x = rj.obj$dat$obs$y_ij, 
-                    mean = if("mu.ij" %in% param.name & !is.null(values)) 
-                      values$mu.ij[cbind(seq_len(nrow(values$mu.ij)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] else if("k.ij" %in% param.name & !is.null(values)) rj.obj$mu.ij[rj.obj$iter["mu.ij"], ,][cbind(seq_along(values$k.ij), values$k.ij)] else rj.obj$t.ij[rj.obj$iter["t.ij"],], 
+                    mean = if("mu.ij" %in% param.name & !is.null(values) & !RJ) 
+                      values$mu.ij[cbind(seq_len(nrow(values$mu.ij)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] else if("k.ij" %in% param.name & !is.null(values) & !RJ) rj.obj$mu.ij[rj.obj$iter["mu.ij"], ,][cbind(seq_along(values$k.ij), values$k.ij)] else rj.obj$t.ij[rj.obj$iter["t.ij"],], 
                     sd = rj.obj$dat$obs$sd, 
                     log = TRUE)
       
       LL.1[is.na(LL.1)] <- 0 
-      if(lprod) LL.1 <- sum(LL.1)
+      if(lprod & !RJ) LL.1 <- sum(LL.1)
       loglikelihood <- loglikelihood + LL.1
     }
     
@@ -174,7 +174,7 @@ likelihood <- function(biphasic = FALSE,
                U = if("alpha" %in% param.name & !is.null(values)) values$alpha[rj.obj$dat$species$trials] else rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials],
                log = TRUE)
       
-      if(lprod) LL.2a <- sum(LL.2a)
+      if(lprod & !RJ) LL.2a <- sum(LL.2a)
       if(!"mu.ij" %in% param.name) loglikelihood <- loglikelihood + LL.2a
       
     }
@@ -190,16 +190,32 @@ likelihood <- function(biphasic = FALSE,
                U = rj.obj$dat$param$dose.range[2],
                log = TRUE)
       
-      if(lprod) LL.2b <- sum(LL.2b)
-      if(!"mu.ij" %in% param.name){
-        loglikelihood <- loglikelihood + LL.2b
-      } else {
-        mu.ij.loglik <- cbind(LL.2a, LL.2b)
-        mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] <- 
-          mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] + loglikelihood
-        if(RJ) loglikelihood <- rowSums(mu.ij.loglik) else loglikelihood <- mu.ij.loglik
-      }
+      if(lprod & !RJ) LL.2b <- sum(LL.2b)
       
+      if(!"mu.ij" %in% param.name){
+        
+        loglikelihood <- loglikelihood + LL.2b
+        
+      } else {
+        
+        mu.ij.loglik <- cbind(LL.2a, LL.2b)
+        
+       # if(RJ | lprod){
+       #   
+       #   mu.ij.loglik <-
+       #     mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] + loglikelihood
+       # 
+       #   loglikelihood <- sum(mu.ij.loglik)
+       #   
+       #   } else {
+         
+         mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] <-
+           mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] + loglikelihood
+         
+        if(RJ | lprod) loglikelihood <- sum(mu.ij.loglik) else loglikelihood <- sum(mu.ij.loglik)
+         
+         # }
+      }
     }
     
     # Note: psi updated via Gibbs sampling so not included here
@@ -256,23 +272,44 @@ likelihood <- function(biphasic = FALSE,
     
     if(any(c("k.ij", "covariates", "psi.i", rj.obj$dat$covariates$names) %in% param.name) | RJ){
       
-      LL.4a <- d_binom(x = if("k.ij" %in% param.name & !is.null(values)) 2 - values$k.ij else 
+      LL.4 <- d_binom(x = if("k.ij" %in% param.name & !is.null(values)) 2 - values$k.ij else 
         2 - rj.obj$k.ij[rj.obj$iter["k.ij"], ], 
-                       size = 1, 
-                       prob = pi.ij, 
-                       log = TRUE)
+        size = 1, 
+        prob = pi.ij, 
+        log = TRUE)
       
-      if(any(c("k.ij", rj.obj$dat$covariates$names) %in% param.name)) loglikelihood <- loglikelihood + LL.4a
+      LL.5 <- purrr::map_dbl(.x = seq_len(rj.obj$dat$whales$n),
+                             .f = ~ sum(LL.4[rj.obj$dat$whales$id == .x]))
+      
+      if(lprod) LL.4 <- sum(LL.4)
+      if(any(c("k.ij", rj.obj$dat$covariates$names) %in% param.name)) 
+        loglikelihood <- loglikelihood + LL.4
       
     }
     
-    if("psi.i" %in% param.name | RJ){
-      
-      LL.4b <- purrr::map_dbl(.x = seq_len(rj.obj$dat$whales$n),
-                              .f = ~ sum(LL.4a[rj.obj$dat$whales$id == .x]))
-      if(lprod) LL.4b <- sum(LL.4b)
-      loglikelihood <- loglikelihood + LL.4b  
+    if("psi.i" %in% param.name & !RJ){
+      if(lprod) LL.5 <- sum(LL.5)
+      loglikelihood <- loglikelihood + LL.5 
     }
+      
+    #   LL.4a <- d_binom(x = if("k.ij" %in% param.name & !is.null(values)) 2 - values$k.ij else 
+    #     2 - rj.obj$k.ij[rj.obj$iter["k.ij"], ], 
+    #                    size = 1, 
+    #                    prob = pi.ij, 
+    #                    log = TRUE)
+    #   
+    #   if(lprod) LL.4a <- sum(LL.4a)
+    #   if(any(c("k.ij", rj.obj$dat$covariates$names) %in% param.name)) 
+    #     loglikelihood <- loglikelihood + LL.4a
+    #   
+    # }
+    # 
+    # if("psi.i" %in% param.name | RJ){
+    #   LL.4b <- purrr::map_dbl(.x = seq_len(rj.obj$dat$whales$n),
+    #                           .f = ~ sum(LL.4a[rj.obj$dat$whales$id == .x]))
+    #   if(lprod) LL.4b <- sum(LL.4b)
+    #   loglikelihood <- loglikelihood + LL.4b  
+    # }
     
     if(lprod) return(sum(loglikelihood, na.rm = TRUE)) else return(unname(loglikelihood))
     
@@ -1321,6 +1358,8 @@ propdens_ff <- function(rj.obj, param){
                  L = rj.obj$dat$param$dose.range[1], 
                  U = rj.obj$dat$param$dose.range[2],
                  log = TRUE))
+  
+  # t.ij omitted as kept the same when jumping from one func. form to another.
 
    
  logprop.bi <- sum(dtnorm(x = unique(param$alpha),
