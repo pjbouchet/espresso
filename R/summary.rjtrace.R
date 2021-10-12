@@ -204,7 +204,8 @@ summary.rjtrace <- function(rj.obj,
       
       tb.out <- purrr::map(.x = tb, "est") %>% 
         do.call(rbind, .) %>% 
-        dplyr::bind_cols(tibble::tibble(chain = as.character(1:rj.obj$mcmc$n.chains)), .) %>% 
+        dplyr::bind_cols(tibble::tibble(chain = rep(as.character(1:rj.obj$mcmc$n.chains), 
+                                                    each = rj.obj$mcmc$n.chains)), .) %>% 
         dplyr::bind_rows(., tb.combined)
       
       print(tb.out)
