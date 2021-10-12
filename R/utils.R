@@ -778,7 +778,7 @@ proposal_ff <- function(rj.obj,
                  U = rj.obj$dat$param$dose.range[2])})[rj.obj$mlist[[rj.obj$current.model]]])
     
     fprop$tau <- rowMeans(inits.tau) + 
-      rtnorm(n = 1, location = 0, scale = scale.adj["tau"], 
+      rtnorm(n = 2, location = 0, scale = scale.adj["tau"], 
              L = rj.obj$config$priors["tau", 1] - rowMeans(inits.tau),
              U = rj.obj$config$priors["tau", 2] - rowMeans(inits.tau))
     
@@ -863,7 +863,7 @@ proposal_ff <- function(rj.obj,
     
     mu.deviates <- rtnorm(n = length(mu.start), 
                           location = 0,
-                          scale = 5, 
+                          scale = scale.adj["mu"], 
                           L = rj.obj$dat$param$dose.range[1] - mu.start,
                           U = rj.obj$dat$param$dose.range[2] - mu.start)
     
@@ -1354,7 +1354,7 @@ propdens_ff <- function(rj.obj, param){
       
       sum(dtnorm(x = param$mu.i,
                  location = param$mu[rj.obj$dat$species$id],
-                 scale = param$scale.adj["phi"],
+                 scale = param$phi,
                  L = rj.obj$dat$param$dose.range[1], 
                  U = rj.obj$dat$param$dose.range[2],
                  log = TRUE))
@@ -1384,7 +1384,7 @@ propdens_ff <- function(rj.obj, param){
           log = TRUE)) +
    
    sum(dtnorm(x = param$tau,
-          location = param$start.tau,
+          location = rowMeans(param$start.tau),
           scale = param$scale.adj["tau"],
           L = rj.obj$config$priors["tau", 1],
           U = rj.obj$config$priors["tau", 2],
