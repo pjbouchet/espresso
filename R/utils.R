@@ -123,7 +123,7 @@ likelihood <- function(biphasic = FALSE,
         U = rj.obj$dat$param$dose.range[2],
         log = TRUE)
       
-      if (any(param.name == "mu.i")) {
+      if (any(param.name == "mu.i") & !RJ) {
         LL.2 <- purrr::map_dbl(.x = seq_len(rj.obj$dat$whales$n), 
                                .f = ~ sum(LL.2[rj.obj$dat$whales$id == .x]))
       } 
@@ -175,7 +175,7 @@ likelihood <- function(biphasic = FALSE,
                log = TRUE)
       
       if(lprod & !RJ) LL.2a <- sum(LL.2a)
-      if(!"mu.ij" %in% param.name) loglikelihood <- loglikelihood + LL.2a
+      if(!"mu.ij" %in% param.name & !RJ) loglikelihood <- loglikelihood + LL.2a
       
     }
     
@@ -192,7 +192,7 @@ likelihood <- function(biphasic = FALSE,
       
       if(lprod & !RJ) LL.2b <- sum(LL.2b)
       
-      if(!"mu.ij" %in% param.name){
+      if(!"mu.ij" %in% param.name & !RJ){
         
         loglikelihood <- loglikelihood + LL.2b
         
@@ -212,7 +212,7 @@ likelihood <- function(biphasic = FALSE,
          mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] <-
            mu.ij.loglik[cbind(seq_len(nrow(mu.ij.loglik)), rj.obj$k.ij[rj.obj$iter["k.ij"], ])] + loglikelihood
          
-        if(RJ | lprod) loglikelihood <- sum(mu.ij.loglik) else loglikelihood <- sum(mu.ij.loglik)
+        if(RJ | lprod) loglikelihood <- sum(mu.ij.loglik) else loglikelihood <- mu.ij.loglik
          
          # }
       }
@@ -282,7 +282,7 @@ likelihood <- function(biphasic = FALSE,
                              .f = ~ sum(LL.4[rj.obj$dat$whales$id == .x]))
       
       if(lprod) LL.4 <- sum(LL.4)
-      if(any(c("k.ij", rj.obj$dat$covariates$names) %in% param.name)) 
+      if(any(c("k.ij", rj.obj$dat$covariates$names) %in% param.name) | RJ) 
         loglikelihood <- loglikelihood + LL.4
       
     }
@@ -754,16 +754,20 @@ proposal_ff <- function(rj.obj,
   
   if(fprop$to.phase == 2){
     
-    fprop$alpha <- sapply(X = inits.bi, FUN = median) + 
-      rtnorm(n = length(inits.bi), 
-             location = 0, 
+    fprop$alpha <- rtnorm(n = length(inits.bi), 
+             location = sapply(X = inits.bi, FUN = median), 
              scale = scale.adj["alpha"], 
-             L = rj.obj$dat$param$dose.range[1] - sapply(X = inits.bi, FUN = median),
-             U = rj.obj$dat$param$dose.range[2] - sapply(X = inits.bi, FUN = median))
+             L = rj.obj$dat$param$dose.range[1],
+             U = rj.obj$dat$param$dose.range[2])[rj.obj$mlist[[rj.obj$current.model]]]
     
-    fprop$alpha <- fprop$alpha[rj.obj$mlist[[rj.obj$current.model]]]
+    fprop$k.ij <- 2 - (fprop$alpha[rj.obj$mlist[[rj.obj$current.model]]][rj.obj$dat$species$trials] > fprop$t.ij)
     
-    fprop$k.ij <- as.numeric(fprop$alpha[rj.obj$mlist[[rj.obj$current.model]]][rj.obj$dat$species$trials] > fprop$t.ij) + 1
+    if (!all(rj.obj$dat$obs$censored == 0)) {
+    
+    fprop$k.ij[rj.obj$dat$obs$censored == 1] <- 2
+    fprop$k.ij[rj.obj$dat$obs$censored == -1] <- 1
+    
+    }
     
     fprop$nu <- 
       rbind(sapply(X = inits.bi, FUN = function(x){
@@ -782,16 +786,22 @@ proposal_ff <- function(rj.obj,
              L = rj.obj$config$priors["tau", 1] - rowMeans(inits.tau),
              U = rj.obj$config$priors["tau", 2] - rowMeans(inits.tau))
     
-    fprop$mu.ij <- cbind(rtnorm(n = rj.obj$dat$trials$n, 
-                                location = fprop$nu[1, rj.obj$dat$species$trials],
-                                scale = fprop$tau[1], 
-                                L = rj.obj$dat$param$dose.range[1], 
-                                U = fprop$alpha[rj.obj$dat$species$trials]),
-                         rtnorm(n = rj.obj$dat$trials$n, 
-                                location = fprop$nu[2, rj.obj$dat$species$trials],
-                                scale = fprop$tau[2], 
-                                L = fprop$alpha[rj.obj$dat$species$trials],
-                                U = rj.obj$dat$param$dose.range[2]))
+    fprop$mu.ij <- matrix(data = NA, nrow = rj.obj$dat$trials$n, ncol = 2)
+    fprop$mu.ij[cbind(1:nrow(fprop$mu.ij), fprop$k.ij)] <- fprop$t.ij
+    
+    fprop$mu.ij[cbind(which(fprop$k.ij == 2), 1)] <- 
+      rtnorm(n = rj.obj$dat$trials$n, 
+             location = fprop$nu[1, rj.obj$dat$species$trials],
+             scale = fprop$tau[1], 
+             L = rj.obj$dat$param$dose.range[1], 
+             U = fprop$alpha[rj.obj$dat$species$trials])[which(fprop$k.ij == 2)]
+    
+    fprop$mu.ij[cbind(which(fprop$k.ij == 1), 2)] <- 
+      rtnorm(n = rj.obj$dat$trials$n, 
+             location = fprop$nu[2, rj.obj$dat$species$trials],
+             scale = fprop$tau[2], 
+             L = fprop$alpha[rj.obj$dat$species$trials],
+             U = rj.obj$dat$param$dose.range[2])[which(fprop$k.ij == 1)]
 
     fprop$psi <- rnorm(n = 1, mean = rj.obj$config$priors["psi", 1], sd = rj.obj$config$priors["psi", 2])
     fprop$omega <- runif(n = 1, min = rj.obj$config$priors["omega", 1], 
@@ -819,8 +829,8 @@ proposal_ff <- function(rj.obj,
     
     if (!all(rj.obj$dat$obs$censored == 0)) {
       
-        fprop$k.ij[rj.obj$dat$obs$censored == 1] <- 2
-        fprop$k.ij[rj.obj$dat$obs$censored == -1] <- 1
+        # fprop$k.ij[rj.obj$dat$obs$censored == 1] <- 2
+        # fprop$k.ij[rj.obj$dat$obs$censored == -1] <- 1
         
         for (a in 1:rj.obj$dat$trials$n) {
           
@@ -848,26 +858,46 @@ proposal_ff <- function(rj.obj,
         }
     }
 
-
+  if(sum(fprop$t.ij[fprop$k.ij == 2] < fprop$alpha[rj.obj$dat$species$trials][fprop$k.ij == 2]) > 0) stop("t.ij cannot be less than alpha when k = 2")
+    if(sum(fprop$t.ij[fprop$k.ij == 1] > fprop$alpha[rj.obj$dat$species$trials][fprop$k.ij == 1]) > 0) stop("t.ij cannot be greater than alpha when k = 1")
+    
   } else if(fprop$to.phase == 1){
 
-    fprop$sigma <- rj.obj$config$var[1] + 
-      rtnorm(n = 1, location = 0, scale = scale.adj["sigma"], 
-             L = rj.obj$config$priors["sigma", 1] - rj.obj$config$var[1],
-             U = rj.obj$config$priors["sigma", 2] - rj.obj$config$var[1])
+    # fprop$sigma <- rj.obj$config$var[1] + 
+    #   rtnorm(n = 1, location = 0, scale = scale.adj["sigma"], 
+    #          L = rj.obj$config$priors["sigma", 1] - rj.obj$config$var[1],
+    #          U = rj.obj$config$priors["sigma", 2] - rj.obj$config$var[1])
     
-    fprop$phi <- rj.obj$config$var[2] + 
-      rtnorm(n = 1, location = 0, scale = scale.adj["phi"], 
-             L = rj.obj$config$priors["phi", 1] - rj.obj$config$var[2],
-             U = rj.obj$config$priors["phi", 2] - rj.obj$config$var[2])
+    fprop$sigma <- rtnorm(n = 1, 
+             location = rj.obj$config$var[1], 
+             scale = scale.adj["sigma"], 
+             L = rj.obj$config$priors["sigma", 1],
+             U = rj.obj$config$priors["sigma", 2])
     
-    mu.deviates <- rtnorm(n = length(mu.start), 
-                          location = 0,
+    fprop$phi <- rtnorm(n = 1, 
+                        location = rj.obj$config$var[2],
+                        scale = scale.adj["phi"], 
+                        L = rj.obj$config$priors["phi", 1],
+                        U = rj.obj$config$priors["phi", 2])
+    
+    # fprop$phi <- rj.obj$config$var[2] + 
+    #   rtnorm(n = 1, location = 0, scale = scale.adj["phi"], 
+    #          L = rj.obj$config$priors["phi", 1] - rj.obj$config$var[2],
+    #          U = rj.obj$config$priors["phi", 2] - rj.obj$config$var[2])
+    
+    # mu.deviates <- rtnorm(n = length(mu.start), 
+    #                       location = 0,
+    #                       scale = scale.adj["mu"], 
+    #                       L = rj.obj$dat$param$dose.range[1] - mu.start,
+    #                       U = rj.obj$dat$param$dose.range[2] - mu.start)
+    
+    fprop$mu <- rtnorm(n = length(mu.start), 
+                          location = mu.start,
                           scale = scale.adj["mu"], 
-                          L = rj.obj$dat$param$dose.range[1] - mu.start,
-                          U = rj.obj$dat$param$dose.range[2] - mu.start)
+                          L = rj.obj$dat$param$dose.range[1],
+                          U = rj.obj$dat$param$dose.range[2])[rj.obj$mlist[[rj.obj$current.model]]]
     
-    fprop$mu <- (mu.start + mu.deviates)[rj.obj$mlist[[rj.obj$current.model]]]
+    # fprop$mu <- (mu.start + mu.deviates)[rj.obj$mlist[[rj.obj$current.model]]]
     
     fprop$mu.i <- rtnorm(n = rj.obj$dat$whales$n,
                          location = fprop$mu[rj.obj$dat$species$id], 
@@ -1362,12 +1392,13 @@ propdens_ff <- function(rj.obj, param){
   # t.ij omitted as kept the same when jumping from one func. form to another.
 
    
- logprop.bi <- sum(dtnorm(x = unique(param$alpha),
-                      location = unique(sapply(X = param$start.bi, FUN = median)[rj.obj$mlist[[rj.obj$current.model]]]),
-                      scale = param$scale.adj["alpha"],
-                      L = rj.obj$dat$param$dose.range[1],
-                      U = rj.obj$dat$param$dose.range[2],
-                      log = TRUE)) +
+ logprop.bi <- 
+   sum(dtnorm(x = unique(param$alpha),
+              location = unique(sapply(X = param$start.bi, FUN = median)[rj.obj$mlist[[rj.obj$current.model]]]),
+              scale = param$scale.adj["alpha"],
+              L = rj.obj$dat$param$dose.range[1],
+              U = rj.obj$dat$param$dose.range[2],
+              log = TRUE)) +
    
    sum(dtnorm(x = unique(param$nu[1, ]),
           location = unique(sapply(param$start.bi, quantile, probs = 0.25, na.rm = TRUE, names = FALSE)[rj.obj$mlist[[rj.obj$current.model]]]),
@@ -1390,20 +1421,6 @@ propdens_ff <- function(rj.obj, param){
           U = rj.obj$config$priors["tau", 2],
           log = TRUE)) +
    
-   sum(dtnorm(x = param$mu.ij[, 1],
-          location = param$nu[1, rj.obj$dat$species$trials],
-          scale = param$tau[1],
-          L = rj.obj$dat$param$dose.range[1],
-          U = param$alpha[rj.obj$dat$species$trials],
-          log = TRUE)) + 
-   
-   sum(dtnorm(x = param$mu.ij[, 2],
-              location = param$nu[2, rj.obj$dat$species$trials],
-              scale = param$tau[2],
-              L = param$alpha[rj.obj$dat$species$trials],
-              U = rj.obj$dat$param$dose.range[2],
-              log = TRUE)) + 
-   
    dnorm(x = param$psi, mean = rj.obj$config$priors["psi", 1], 
          sd = rj.obj$config$priors["psi", 2], log = TRUE) +
 
@@ -1412,13 +1429,45 @@ propdens_ff <- function(rj.obj, param){
          max = rj.obj$config$priors["omega", 2], log = TRUE) + 
    
    sum(dnorm(x = param$psi.i, mean = param$psi, sd = param$omega, log = TRUE))
+ 
+ log.mu_ij1 <- dtnorm(x = param$mu.ij[, 1],
+                      location = param$nu[1, rj.obj$dat$species$trials],
+                      scale = param$tau[1],
+                      L = rj.obj$dat$param$dose.range[1],
+                      U = param$alpha[rj.obj$dat$species$trials],
+                      log = TRUE)
+ 
+ log.mu_ij2 <- dtnorm(x = param$mu.ij[, 2],
+                      location = param$nu[2, rj.obj$dat$species$trials],
+                      scale = param$tau[2],
+                      L = param$alpha[rj.obj$dat$species$trials],
+                      U = rj.obj$dat$param$dose.range[2],
+                      log = TRUE)
+ 
+ if (!all(rj.obj$dat$obs$censored == 0)) {
    
- if (param$to.phase == 2) {
-   return(c(logprop.mono, logprop.bi))
- } else
-   if (param$to.phase == 1) {
-     return(c(logprop.bi, logprop.mono))
-   }
+   log.mu_ij1[rj.obj$dat$obs$censored == -1] <- 
+     dtnorm(x = param$mu.ij[rj.obj$dat$obs$censored == -1, 1],
+       location = param$nu[1, rj.obj$dat$species$trials][rj.obj$dat$obs$censored == -1],
+       scale = 30,
+       L = rj.obj$dat$param$dose.range[1],
+       U = rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1],
+       log = TRUE)
+   
+   log.mu_ij2[rj.obj$dat$obs$censored == 1] <- 
+     dtnorm(x = param$mu.ij[rj.obj$dat$obs$censored == 1, 2],
+            location = param$nu[2, rj.obj$dat$species$trials][rj.obj$dat$obs$censored == 1],
+            scale = 30,
+            L = rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1],
+            U = rj.obj$dat$param$dose.range[2],
+            log = TRUE)
+ }
+   
+ logprop.bi <- logprop.bi + 
+   sum(log.mu_ij1[which(param$k.ij == 2)]) +
+   sum(log.mu_ij2[which(param$k.ij == 1)])
+ 
+return(list(mono = logprop.mono, bi = logprop.bi))
 
 }
 
