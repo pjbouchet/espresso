@@ -304,8 +304,8 @@ run_rjMCMC <- function(dat,
                                      
                                      # Probabilities of addition / removal
                                      pmove <- log(c(switch(as.character(add.remove), 
-                                                           "1" = 1/sum(rj$include.covariates[i - 1, ] == 0), 
-                                                           "0" = 1/sum(rj$include.covariates[i - 1, ] == 1)), 
+                                               "1" = 1/sum(rj$include.covariates[i - 1, ] == 0), 
+                                               "0" = 1/sum(rj$include.covariates[i - 1, ] == 1)), 
                                                     1/sum(proposed.covariates == add.remove)))
                                      
                                      # The `values` argument will be the proposed values when
@@ -338,9 +338,9 @@ run_rjMCMC <- function(dat,
                                                   RJ = TRUE,
                                                   lprod = TRUE)
                                      
-                                     # Posterior ratio - Model move probabilities are given in proposed.jump
-                                     lognum <- loglik.new + R + pmove[2]
-                                     logden <- loglik.cur + R + pmove[1]
+                                     # Posterior ratio
+                                     lognum <- loglik.new + pmove[2] + R
+                                     logden <- loglik.cur + pmove[1]
 
                                      
                                      for (k in rj$dat$covariates$names) rj[[k]][i, ] <- rj[[k]][i - 1, ]
@@ -388,7 +388,7 @@ run_rjMCMC <- function(dat,
                                    # Likelihoods
                                    loglik.new <-
                                      likelihood(biphasic = ifelse(ff.prop$to.phase == 1, FALSE, TRUE),
-                                                param.name = if(ff.prop$to.phase == 1) c("mu", "mu.i", "phi", "sigma") else c("nu", "alpha", "tau", "omega", "psi", "mu.ij", "psi.i", "k.ij"),
+                                                param.name = if(ff.prop$to.phase == 1) c("mu", "mu.i", "phi", "sigma") else c("nu", "alpha", "tau1", "tau2", "omega", "psi", "mu.ij", "psi.i", "k.ij"),
                                                 rj.obj = rj,
                                                 model = rj$mlist[[rj$current.model]],
                                                 values = ff.prop,
@@ -419,13 +419,8 @@ run_rjMCMC <- function(dat,
                                    logpropdens <- propdens_ff(rj.obj = rj, param = ff.prop)
                                    
                                    # Posterior ratio (Jacobian is 1 and p is 1)
-                                   lognum <- loglik.new + 
-                                     logprior.new + 
-                                     logpropdens[1]
-                                   
-                                   logden <- loglik.cur + 
-                                     logprior.cur + 
-                                     logpropdens[2]
+                                   lognum <- loglik.new + logprior.new + logpropdens[[rj$phase[i - 1]]]
+                                   logden <- loglik.cur + logprior.cur + logpropdens[[ff.prop$to.phase]]
                                    
                                    if (runif(1) < exp(lognum - logden)) {
                                      
@@ -531,6 +526,8 @@ run_rjMCMC <- function(dat,
                                  #' ---------------------------------------------------------------------
                                  # Step 4: Update parameters ----
                                  #' ---------------------------------------------------------------------
+  
+                                 if(any(!rj$iter == i)) stop("Mismatched iteration count")
                                  
                                  #'------------------------------
                                  ### covariates ----
@@ -752,6 +749,10 @@ run_rjMCMC <- function(dat,
                                    
                                  } # End covariates.n > 0
                                  
+                                 #'------------------------------
+                                 ### Monophasic ----
+                                 #'------------------------------
+                                 
                                  if(rj$phase[i] == 1){
                                    
                                    #'------------------------------
@@ -946,7 +947,13 @@ run_rjMCMC <- function(dat,
                                    
                                    # rj$iter["phi"] <- rj$iter["phi"] + 1
                                    
-                                 } else {
+                                 } 
+                                 
+                                 #'------------------------------
+                                 ### Biphasic ----
+                                 #'------------------------------
+                                 
+                                 if(rj$phase[i] == 2){
 
                                    if(rj$dat$covariates$n > 0){
                                      
@@ -1368,8 +1375,7 @@ run_rjMCMC <- function(dat,
                                    # rj$iter["k.ij"] <- rj$iter["k.ij"] + 1
                                    
                                  } # End if biphasic
-                                   
-                                 if(any(!rj$iter == i)) stop("Mismatched iteration count")
+
                                  if(rj$config$function.select & sum(rj$alpha[i, ]) == 0 |
                                     rj$config$biphasic & sum(rj$alpha[i, ]) == 0) stop("Zeroes in alpha")
                                } # End RJMCMC
