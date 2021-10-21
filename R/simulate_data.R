@@ -366,7 +366,7 @@ simulate_data <- function(biphasic = FALSE,
   # Species summary
   #' ---------------------------------------------
   
-  species.trials <- sapply(X = seq_along(species.id), 
+  species.trials <- lapply(X = seq_along(species.id), 
                            FUN = function(x) rep(species.id[x], n.trials.per.whale[x])) %>% do.call(c, .)
   
   brsdat <- data.frame(cbind(species.trials, y_ij))
