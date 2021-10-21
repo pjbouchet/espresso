@@ -528,8 +528,8 @@ run_rjMCMC <- function(dat,
                                  #' ---------------------------------------------------------------------
   
                                  if(any(!rj$iter == i)) stop("Mismatched iteration count")
-                                 if(any(rj$t.ij[i, rj$k.ij[i, ] == 1] > rj$alpha[i, rj.obj$dat$species$trials][rj$k.ij[i, ] == 1])) stop("t.ij inconsistent with alpha / k.ij (1)")
-                                 if(any(rj$t.ij[i, rj$k.ij[i, ] == 2] < rj$alpha[i, rj.obj$dat$species$trials][rj$k.ij[i, ] == 2])) stop("t.ij inconsistent with alpha / k.ij (2)")
+                                 if(any(rj$t.ij[i, rj$k.ij[i, ] == 1] > rj$alpha[i, rj$dat$species$trials][rj$k.ij[i, ] == 1])) stop("t.ij inconsistent with alpha / k.ij (1)")
+                                 if(any(rj$t.ij[i, rj$k.ij[i, ] == 2] < rj$alpha[i, rj$dat$species$trials][rj$k.ij[i, ] == 2])) stop("t.ij inconsistent with alpha / k.ij (2)")
                                  
                                  #'------------------------------
                                  ### covariates ----
