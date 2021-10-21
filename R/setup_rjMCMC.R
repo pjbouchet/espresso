@@ -369,32 +369,51 @@ setup_rjMCMC <- function(rj.input,
                                sort(y.obs)})
 
       rj$alpha[1, ] <- sapply(X = inits.bi, FUN = function(x){
-        rtnorm(n = 1, location = median(x, na.rm = TRUE), scale = 1, 
+        rtnorm(n = 1, location = min(x) + (max(x)-min(x))/2, scale = 1, 
                          L = rj.input$param$dose.range[1],
                          U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
       
-      rj$nu[1, , 1] <- 
-        sapply(X = inits.bi, FUN = function(x){
-          rtnorm(n = 1, location = quantile(x = x, probs = 0.25, na.rm = TRUE, names = FALSE), scale = 2, 
+      rj$nu[1, , 1] <-
+        sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
+               FUN = function(x){
+          rtnorm(n = 1, location = mean(inits.bi[[x]][inits.bi[[x]] < rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]]), scale = 2,
                  L = rj.input$param$dose.range[1],
-                 U = median(x, na.rm = TRUE))})[rj$mlist[[rj$current.model]]]
-      
-      rj$nu[1, , 2] <- 
-        sapply(X = inits.bi, FUN = function(x){
-          rtnorm(n = 1, location = quantile(x = x, probs = 0.75, na.rm = TRUE, names = FALSE), scale = 2, 
-                 L = median(x, na.rm = TRUE),
-                 U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
+                 U = rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])})[rj$mlist[[rj$current.model]]]
 
-      inits.tau <- rbind(sapply(X = inits.bi, FUN = function(x){sd(x[x<median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = inits.bi, FUN = function(x){sd(x[x>median(x, na.rm = TRUE)], na.rm = TRUE)}))
+      rj$nu[1, , 2] <-
+        sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
+               FUN = function(x){
+                 rtnorm(n = 1, location = mean(inits.bi[[x]][inits.bi[[x]] > rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]]), scale = 2,
+                        L = rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)],
+                        U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
+      # rj$nu[1, , 1] <- 
+      #   sapply(X = inits.bi, FUN = function(x){
+      #     rtnorm(n = 1, location = quantile(x = x, probs = 0.25, na.rm = TRUE, names = FALSE), scale = 2, 
+      #            L = rj.input$param$dose.range[1],
+      #            U = median(x, na.rm = TRUE))})[rj$mlist[[rj$current.model]]]
+      # 
+      # rj$nu[1, , 2] <- 
+      #   sapply(X = inits.bi, FUN = function(x){
+      #     rtnorm(n = 1, location = quantile(x = x, probs = 0.75, na.rm = TRUE, names = FALSE), scale = 2, 
+      #            L = median(x, na.rm = TRUE),
+      #            U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
+
+      inits.tau <-
+        rbind(sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
+          sd(inits.bi[[x]][inits.bi[[x]] < rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]])}),
+          sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
+            sd(inits.bi[[x]][inits.bi[[x]] > rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]])}))
       
-      inits.tau[is.na(inits.tau)] <- runif(n = sum(is.na(inits.tau)), 
+      
+      # inits.tau <- rbind(sapply(X = inits.bi, FUN = function(x){sd(x[x<median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = inits.bi, FUN = function(x){sd(x[x>median(x, na.rm = TRUE)], na.rm = TRUE)}))
+      
+      inits.tau[is.na(inits.tau)] <- runif(n = sum(is.na(inits.tau)),
                                            min = rj.input$config$priors["tau", 1],
                                            max = rj.input$config$priors["tau", 2])
       
-      rj$tau[1, ] <- rowMeans(inits.tau) + 
-        rtnorm(n = 1, location = 0, scale = 2, 
-               L = rj.input$config$priors["tau", 1] - rowMeans(inits.tau),
-               U = rj.input$config$priors["tau", 2] - rowMeans(inits.tau))
+      rj$tau[1, ] <- rtnorm(n = 1, location = rowMeans(inits.tau), scale = 2, 
+               L = rj.input$config$priors["tau", 1],
+               U = rj.input$config$priors["tau", 2])
 
       rj$psi[1] <- rnorm(n = 1, mean = rj.input$config$priors["psi", 1], 
                          sd = rj.input$config$priors["psi", 2])
