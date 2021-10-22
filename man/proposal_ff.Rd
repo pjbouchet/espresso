@@ -7,8 +7,7 @@
 proposal_ff(
   rj.obj,
   from.phase,
-  scale.adj = setNames(c(1, 1, 2, 3, 3, 5), c("alpha", "nu", "tau", "sigma", "phi",
-    "mu"))
+  prop.scale = list(alpha = 1, mu.ij = 10, omega = 1, phi = 2, sigma = 2)
 )
 }
 \arguments{
