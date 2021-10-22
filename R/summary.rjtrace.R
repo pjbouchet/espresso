@@ -202,10 +202,11 @@ summary.rjtrace <- function(rj.obj,
         dplyr::bind_cols(tibble::tibble(chain = "all"), .)
       tb <- prob_form(obj = rj.obj, do.combine = FALSE)
       
-      tb.out <- purrr::map(.x = tb, "est") %>% 
+      tb.out <- purrr::map(.x = tb, "est")
+      tb.out <- purrr::map(.x = seq_along(tb.out), .f = ~dplyr::mutate(.data = tb.out[[.x]], chain = .x)) %>% 
         do.call(rbind, .) %>% 
-        dplyr::bind_cols(tibble::tibble(chain = rep(as.character(1:rj.obj$mcmc$n.chains), 
-                                                    each = rj.obj$mcmc$n.chains)), .) %>% 
+        dplyr::relocate(chain) %>% 
+        dplyr::mutate(chain = as.character(chain)) %>% 
         dplyr::bind_rows(., tb.combined)
       
       print(tb.out)
