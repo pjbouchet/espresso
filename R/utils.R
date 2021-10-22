@@ -751,14 +751,22 @@ proposal_ff <- function(rj.obj, from.phase,
     fprop$psi.ij <- qnorm(fprop$pi.ij) - cov_effects(rj.obj)
     
     # psi.i
-    fprop$psi.i <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x)
-      mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
+    fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
+    
+    fprop$psi.i <- rnorm(n = length(fprop$psi.i_mean),  mean = fprop$psi.i_mean, sd = 0.25)
+    
+    # fprop$psi.i <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x)
+    #   mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
     
     # psi and omega
     fprop$psi <- mean(fprop$psi.i)
-    fprop$omega <- rtnorm(n = 1, location = 0, scale = prop.scale[["omega"]], 
+    
+    # fprop$omega <- runif(n = 1, min = rj.obj$config$priors["omega", 1],
+    #                      max = rj.obj$config$priors["omega", 2])
+    fprop$omega <- rtnorm(n = 1, location = 1, scale = prop.scale[["omega"]],
                           L = rj.obj$config$priors["omega", 1],
                           U = rj.obj$config$priors["omega", 2])
+
     
     # mu_ij
     fprop$mu.ij <- matrix(data = NA, nrow = rj.obj$dat$trials$n, ncol = 2)
@@ -820,8 +828,11 @@ proposal_ff <- function(rj.obj, from.phase,
    fprop$omega <- rj.obj$omega[rj.obj$iter["omega"]]
    fprop$psi <- rj.obj$psi[rj.obj$iter["psi"]]
    fprop$psi.i <- rj.obj$psi.i[rj.obj$iter["psi.i"], ]
+   fprop$psi.ij <- fprop$psi.i[rj.obj$dat$whales$id] + cov_effects(rj.obj)
    fprop$pi.ij <- rj.obj$pi.ij[rj.obj$iter["pi.ij"], ]
    fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
+   
+   fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
 
    # fprop$mu_ij <- sapply(X = rj.obj$dat$whales$id,
    #                      FUN = function(x)
@@ -1557,11 +1568,16 @@ propdens_ff <- function(rj.obj, param){
                U = rj.obj$dat$param$dose.range[2],
                log = TRUE)) +
     
-    dtnorm(x = param$omega, location = 0,
+    # dunif(x = param$omega, min = rj.obj$config$priors["omega", 1],
+    #       max = rj.obj$config$priors["omega", 2], log = TRUE) +
+    
+    dtnorm(x = param$omega, location = 1,
            scale = param$prop.scale[["omega"]],
            L = rj.obj$config$priors["omega", 1],
            U = rj.obj$config$priors["omega", 2],
            log = TRUE) +
+    
+    sum(dnorm(x = param$psi.i, mean = param$psi.i_mean, sd = 0.25, log = TRUE)) +
     
     # sum(dtnorm(x = param$mu.ij[param$k.ij == 2, 1], 
     #        location = rowMeans(cbind(rj.obj$dat$param$dose.range[1], param$L.alpha[param$k.ij == 2])),
