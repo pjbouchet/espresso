@@ -848,17 +848,26 @@ proposal_ff <- function(rj.obj, from.phase,
    
    fprop$mu <- mean(fprop$mu.i)
    
-   fprop$sigma <- rtnorm(n = 1, location = rj.obj$config$priors["sigma", 1] +
-                           (rj.obj$config$priors["sigma", 2] - rj.obj$config$priors["sigma", 1])/2, 
-                         scale = prop.scale[["sigma"]], 
-                         L = rj.obj$config$priors["sigma", 1],
-                         U = rj.obj$config$priors["sigma", 2])
+   # This makes the moves to monophasic completely deterministic!
+   fprop$phi <- sd(fprop$mu.i)
+   fprop$sigma <- mean(sapply(X = 1:rj.obj$dat$whales$n,
+                         FUN = function(x){
+                           sd(fprop$t.ij[rj.obj$dat$whales$id == x])}))
+
+   # fprop$sigma <- runif(n = 1, min =  rj.obj$config$priors["sigma", 1],  max = rj.obj$config$priors["sigma", 2])
+   # fprop$phi <- runif(n = 1, min =  rj.obj$config$priors["phi", 1],  max = rj.obj$config$priors["phi", 2])
    
-   fprop$phi <- rtnorm(n = 1, location = rj.obj$config$priors["phi", 1] +
-                           (rj.obj$config$priors["phi", 2] - rj.obj$config$priors["phi", 1])/2,
-                       scale = prop.scale[["phi"]], 
-                         L = rj.obj$config$priors["phi", 1],
-                         U = rj.obj$config$priors["phi", 2])
+   # fprop$sigma <- rtnorm(n = 1, location = rj.obj$config$priors["sigma", 1] +
+   #                         (rj.obj$config$priors["sigma", 2] - rj.obj$config$priors["sigma", 1])/2, 
+   #                       scale = prop.scale[["sigma"]], 
+   #                       L = rj.obj$config$priors["sigma", 1],
+   #                       U = rj.obj$config$priors["sigma", 2])
+   
+   # fprop$phi <- rtnorm(n = 1, location = rj.obj$config$priors["phi", 1] +
+   #                         (rj.obj$config$priors["phi", 2] - rj.obj$config$priors["phi", 1])/2,
+   #                     scale = prop.scale[["phi"]], 
+   #                       L = rj.obj$config$priors["phi", 1],
+   #                       U = rj.obj$config$priors["phi", 2])
     
   }
 
@@ -1546,21 +1555,35 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
 
 propdens_ff <- function(rj.obj, param){
 
-  logprop.mono <- sum(dtnorm(x = param$sigma, 
-                             location = rj.obj$config$priors["sigma", 1] +
-                               (rj.obj$config$priors["sigma", 2] - rj.obj$config$priors["sigma", 1])/2, 
-                             scale = param$prop.scale[["sigma"]],
-                             L = rj.obj$config$priors["sigma", 1],
-                             U = rj.obj$config$priors["sigma", 2],
-                             log = TRUE)) + 
-    sum(dtnorm(x = param$phi, 
-               location = rj.obj$config$priors["phi", 1] +
-                 (rj.obj$config$priors["phi", 2] - rj.obj$config$priors["phi", 1])/2, 
-               scale = param$prop.scale[["phi"]],
-               L = rj.obj$config$priors["phi", 1],
-               U = rj.obj$config$priors["phi", 2],
-               log = TRUE))
-  
+  logprop.mono <- 0
+    
+    
+    # dunif(x = param$sigma, 
+    #                     min = rj.obj$config$priors["sigma", 1],
+    #                     max = rj.obj$config$priors["sigma", 2],
+    #                     log = TRUE) + 
+    # dunif(x = param$phi, 
+    #       min = rj.obj$config$priors["phi", 1],
+    #       max = rj.obj$config$priors["phi", 2],
+    #       log = TRUE)
+    
+    
+  # This forced sigma and phi to be proposed around 20/25 –> not right when simulated param is smaller
+    # sum(dtnorm(x = param$sigma, 
+    #                          location = rj.obj$config$priors["sigma", 1] +
+    #                            (rj.obj$config$priors["sigma", 2] - rj.obj$config$priors["sigma", 1])/2, 
+    #                          scale = param$prop.scale[["sigma"]],
+    #                          L = rj.obj$config$priors["sigma", 1],
+    #                          U = rj.obj$config$priors["sigma", 2],
+    #                          log = TRUE)) + 
+    # sum(dtnorm(x = param$phi, 
+    #            location = rj.obj$config$priors["phi", 1] +
+    #              (rj.obj$config$priors["phi", 2] - rj.obj$config$priors["phi", 1])/2, 
+    #            scale = param$prop.scale[["phi"]],
+    #            L = rj.obj$config$priors["phi", 1],
+    #            U = rj.obj$config$priors["phi", 2],
+    #            log = TRUE))
+    # 
   logprop.bi <- sum(dtnorm(x = unique(param$alpha),
                location = unique(sapply(X = param$inits.bi, FUN = function(a){min(a) + (max(a)-min(a))/2})[rj.obj$mlist[[rj.obj$current.model]]]),
                scale = param$prop.scale[["alpha"]], 
@@ -2306,6 +2329,29 @@ print.gvs <- function(gvs.dat){
 }
 
 # Convenience ----------------------------------------------------------------
+
+#' Transmission loss
+
+#' @param r Range in km.
+#' @param a Sound absorption coefficient, in dB per km. This is frequency-dependent, and takes a value of 0.185 for a 3 kHz signal under normal sea conditions.
+
+TL <- function(rge, a = 0.185){ 
+  loss <- 20*log10(rge*1000)
+  loss[loss<0] <- 0
+  loss <- loss+a*rge
+  return(loss)}
+
+# Function to calculate the range corresponding to a given RL
+# Return squared difference between target.TL and actual TL
+
+#' Range finder
+
+#' @param rge Range in km.
+#' @param SL Level of the noise source.
+#' @param target.L Target noise level.
+
+range_finder <- function(rge, SL, target.L){
+  return((SL-TL(rge)-target.L)^2)}
 
 #' Mimick transparent colours
 #' 
