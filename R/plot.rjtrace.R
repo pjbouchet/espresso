@@ -53,6 +53,8 @@ plot.rjtrace <- function(rj.obj,
                          individual = TRUE){
   
   if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
+  if(param.name %in% c("phi", "sigma", "mu")) phase <- 1
+  if(param.name %in% c("alpha", "tau", "psi", "omega", "nu")) phase <- 2
   
   #' ---------------------------------------------
   # Extract the trace and rename columns
@@ -114,16 +116,10 @@ plot.rjtrace <- function(rj.obj,
           gsub(pattern = j, replacement = paste0("(", rj.obj$dat$species$names[j], ")"), 
                x = colnames(mcmc.trace[[nc]])[mu.indices])
       }
-      
-      
-      # for(j in rj.obj$dat$species$names){
-      #   colnames(mcmc.trace[[nc]])[mu.indices] <-
-      #     gsub(pattern = j, replacement = paste0("(", j, ")"), x = colnames(mcmc.trace[[nc]])[mu.indices])
-      # }
     }
   }
   
-  if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]])
+  if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]]) else mpars <- colnames(mcmc.trace[[1]])[startsWith(colnames(mcmc.trace[[1]]), prefix = param.name)]
   if(!rj.obj$config$model.select) mpars <- mpars[!mpars %in% c("model_size", "model_ID")]
   if(!rj.obj$config$covariate.select) mpars <- mpars[!mpars %in% paste0("incl.", rj.obj$dat$covariates$names)]
   if(!rj.obj$config$function.select) mpars <- mpars[!mpars %in% "phase"]
@@ -144,6 +140,19 @@ plot.rjtrace <- function(rj.obj,
       mpars <- mpars[!grepl(pattern = "phi", x = mpars)]
       mpars <- mpars[!grepl(pattern = "sigma", x = mpars)]
     }
+    
+    phase.n <- purrr::map_dbl(.x = 1:length(mcmc.trace), .f = ~mcmc.trace[[.x]][mcmc.trace[[.x]][,"phase"] == phase, ] %>% nrow()) %>%
+      min(.)
+    
+    mcmc.trace <- purrr::map(.x = 1:length(mcmc.trace), 
+                             .f = ~mcmc.trace[[.x]][mcmc.trace[[.x]][, "phase"] == phase, mpars, drop = FALSE])
+    
+    for(ch in seq_len(rj.obj$mcmc$n.chains)){
+      mcmc.trace[[ch]] <- mcmc.trace[[ch]][(nrow(mcmc.trace[[ch]]) - phase.n + 1):nrow(mcmc.trace[[ch]]), , drop = FALSE]}
+    
+    mcmc.trace <- purrr::map(.x = mcmc.trace, .f = ~coda::as.mcmc(.x))
+    mcmc.trace <- coda::as.mcmc.list(mcmc.trace)
+    
   }
   
   if(is.null(param.name)) bpars <- mpars else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
