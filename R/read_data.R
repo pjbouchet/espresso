@@ -28,7 +28,8 @@
 #' 
 #' @export
 #' @param file Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.
-#' @param risk.functions Logical. If \code{TRUE}, a sample of points from the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} are included.
+#' @param risk.functions Logical vector of length 2. If \code{TRUE}, indicating whether to include the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} and Jacobson et al.
+#' @param n.risk Vector of length 2. Number of samples to draw from the Moretti et al. (2014) and Jacobson et al. (2019) dose-response curves, respectively. Defaults to \code{c(10, 10)}.
 #' @param include.species Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.
 #' @param exclude.species Character vector specifying which species should be discarded. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. No species are excluded when this argument is set to the default of \code{NULL}.
 #' @param min.N Minimum number of observations per species. Species with sample sizes smaller than \code{min.N} will be removed.
@@ -71,7 +72,8 @@
 #' @keywords brs gvs rjmcmc dose-response             
 
 read_data <- function(file = NULL,
-                      risk.functions = FALSE,
+                      risk.functions = c(FALSE, FALSE),
+                      n.risk = c(10, 10),
                       include.species = NULL, 
                       exclude.species = NULL,
                       min.N = NULL,
@@ -113,6 +115,8 @@ read_data <- function(file = NULL,
     n.covariates <- length(covariates)
     covariate.names <- covariates
   }
+  
+  if(any(n.risk < 0)) stop("Number of samples must be positive!")
   
   covariate.types <- list(exposed = "f", sonar = "f", behaviour = "f", range = "d")
   covariate.types <- covariate.types[covariate.names] %>% unlist()
@@ -189,6 +193,76 @@ read_data <- function(file = NULL,
   
   rawdat <- rawdat %>% janitor::clean_names()
   
+  #' ---------------------------------------------
+  # Add samples from published risk functions, if necessary 
+  #' ---------------------------------------------
+  
+  if(risk.functions[1]){
+    
+    spline.moretti <- stats::splinefun(x = moretti_dose$probability, y = moretti_dose$rl)
+    pts.moretti <- spline.moretti(seq(0, 1, 0.001))
+    rl.moretti <- sample(x = pts.moretti, size = n.risk[1], replace = TRUE)
+    
+    tbl.moretti <- tibble::tibble(resp_spl = rl.moretti, project = "Moretti_2014", species = "Md", 
+                                  tag_id = paste0("Md_moretti_", sample(1:length(rl.moretti), replace = TRUE)),
+                                  start_time = NA, resp_time = NA, resp_type = "foraging",
+                                  resp_score = 7, resp_se_lcum = NA, max_spl = rl.moretti, max_se_lcum = NA,
+                                  censored = 0, exp_order = 1, exp_duration = 0, exp_signal = "MFA",
+                                  pre_feeding = TRUE, inferred_resp_range = NA, inferred_min_range = NA)
+    
+    tbl.moretti$resp_range <- tbl.moretti$min_range <- purrr::map_dbl(.x = rl.moretti,
+                          .f = ~stats::optimize(f = range_finder, interval = c(0, 30000), SL = 215, target.L = .x)[['minimum']])
+    
+    tbl.moretti <- dplyr::relocate(tbl.moretti, names(rawdat)) %>% dplyr::arrange(tag_id)
+    tbl.moretti <- split(tbl.moretti, tbl.moretti$tag_id) %>% 
+      purrr::map(.x = ., .f = ~dplyr::mutate(.x, exp_order = dplyr::row_number())) %>% 
+      do.call(rbind, .)
+
+    rawdat <- dplyr::bind_rows(rawdat, tbl.pmrf)
+    
+  }
+  
+  if(risk.functions[2]){ # Jacobson et al. (PMRF)
+    
+    pmrf <- jacobson_dose %>% 
+      dplyr::filter(max_rl >= dose.range[1] & max_rl <= dose.range[2]) %>% 
+      dplyr::select(max_rl, q50) %>% dplyr::mutate(q50 = -q50)
+    spline.pmrf <- stats::splinefun(x = pmrf$q50, y = pmrf$max_rl)
+    pts.pmrf <- spline.pmrf(seq(0, 1, 0.001))
+    rl.pmrf <- sample(x = pts.pmrf, size = n.risk[2], replace = TRUE)
+    
+    # q_pmrf <- quantile(x = seq(dose.range[1], dose.range[2]), probs = seq(0, 1, 1/n.risk[2]))
+    # start_pmrf <- runif(n = 1, min = q_pmrf[1], max = q_pmrf[2])
+    # pts_pmrf <- c(start_pmrf, start_pmrf + cumsum(abs(diff(q_pmrf))))
+    # 
+    # spline.pmrf <- stats::splinefun(x = pmrf$max_rl, y = pmrf$q50)
+    # res.pmrf <- spline.pmrf(pts_pmrf)
+    # points(pts_pmrf, res.pmrf, pch = 16, col = "orange")
+    
+    # plot(pmrf$max_rl,pmrf$q50, xlim = dose.range, ylim = c(0,1))
+    # points(pts_pmrf, rep(0, length(pts_pmrf)), col = "red")
+    # points(start_pmrf, 0, col ="blue", pch = 16)
+    # points(pts_pmrf, rep(0, length(pts_pmrf)), col = "green", pch = 16)
+   
+    tbl.pmrf <- tibble::tibble(resp_spl = rl.pmrf, project = "Jacobson_2020", species = "Md", 
+                                  tag_id = paste0("Md_jacobson_", sample(1:length(rl.pmrf), replace = TRUE)),
+                                  start_time = NA, resp_time = NA, resp_type = "avoidance",
+                                  resp_score = 7, resp_se_lcum = NA, max_spl = rl.pmrf, max_se_lcum = NA,
+                                  censored = 0, exp_order = 1, exp_duration = 0, exp_signal = "MFAS",
+                                  pre_feeding = FALSE, inferred_resp_range = NA, inferred_min_range = NA)
+    
+    tbl.pmrf$resp_range <- tbl.pmrf$min_range <- 
+      purrr::map_dbl(.x = rl.pmrf, .f = ~stats::optimize(f = range_finder, interval = c(0, 30000), SL = 215, target.L = .x)[['minimum']])
+    
+    tbl.pmrf <- dplyr::relocate(tbl.pmrf, names(rawdat)) %>% dplyr::arrange(tag_id)
+    tbl.pmrf <- split(tbl.pmrf, tbl.pmrf$tag_id) %>% 
+      purrr::map(.x = ., .f = ~dplyr::mutate(.x, exp_order = dplyr::row_number())) %>% 
+      do.call(rbind, .)
+    
+    rawdat <- dplyr::bind_rows(rawdat, tbl.pmrf)
+    
+  }
+    
   #' ---------------------------------------------
   # Extract relevant columns
   #' ---------------------------------------------
