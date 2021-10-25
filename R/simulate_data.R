@@ -423,7 +423,8 @@ simulate_data <- function(biphasic = FALSE,
     
     param = list(sim = simulation,
                  biphasic = biphasic,
-                 dose.range = dose.range))
+                 dose.range = dose.range,
+                 seed = seed))
   
   if(!biphasic){
     res$param <- append(res$param, list(mu = mu, phi = phi, sigma = sigma))
