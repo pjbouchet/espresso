@@ -253,7 +253,7 @@ setup_rjMCMC <- function(rj.input,
       # Because the model list only has length 1
       rj$current.model <- rj$model[1:tot.iter] <- names(rj.input$config$mlist) 
     }
-    
+
     # Functional form
     if(rj.input$config$function.select) rj$phase[1] <- sample(x = 1:2, size = 1)
     
@@ -340,7 +340,7 @@ setup_rjMCMC <- function(rj.input,
     } 
     
     if(rj.input$config$biphasic | rj.input$config$function.select){
-      
+
     # Model parameters 
     # -- BIPHASIC ----
     
@@ -373,18 +373,20 @@ setup_rjMCMC <- function(rj.input,
                          L = rj.input$param$dose.range[1],
                          U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
       
-      rj$nu[1, , 1] <-
+      rj$nu[1, ,1] <-
         sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
                FUN = function(x){
-          rtnorm(n = 1, location = mean(inits.bi[[x]][inits.bi[[x]] < rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]]), scale = 2,
+          rtnorm(n = 1, 
+                 location = mean(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])]), 
+                 scale = 2,
                  L = rj.input$param$dose.range[1],
-                 U = rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])})[rj$mlist[[rj$current.model]]]
+                 U = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]))})[rj$mlist[[rj$current.model]]]
 
-      rj$nu[1, , 2] <-
+      rj$nu[1, ,2] <-
         sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
                FUN = function(x){
-                 rtnorm(n = 1, location = mean(inits.bi[[x]][inits.bi[[x]] > rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]]), scale = 2,
-                        L = rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)],
+                 rtnorm(n = 1, location = mean(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])]), scale = 2,
+                        L = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]),
                         U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
       # rj$nu[1, , 1] <- 
       #   sapply(X = inits.bi, FUN = function(x){
@@ -400,9 +402,9 @@ setup_rjMCMC <- function(rj.input,
 
       inits.tau <-
         rbind(sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
-          sd(inits.bi[[x]][inits.bi[[x]] < rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]])}),
+          sd(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])])}),
           sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
-            sd(inits.bi[[x]][inits.bi[[x]] > rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]])}))
+            sd(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])])}))
       
       
       # inits.tau <- rbind(sapply(X = inits.bi, FUN = function(x){sd(x[x<median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = inits.bi, FUN = function(x){sd(x[x>median(x, na.rm = TRUE)], na.rm = TRUE)}))
