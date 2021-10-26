@@ -6,7 +6,8 @@
 \usage{
 read_data(
   file = NULL,
-  risk.functions = FALSE,
+  risk.functions = c(FALSE, FALSE),
+  n.risk = c(10, 10),
   include.species = NULL,
   exclude.species = NULL,
   min.N = NULL,
@@ -23,7 +24,9 @@ read_data(
 \arguments{
 \item{file}{Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.}
 
-\item{risk.functions}{Logical. If \code{TRUE}, a sample of points from the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} are included.}
+\item{risk.functions}{Logical vector of length 2. If \code{TRUE}, indicating whether to include the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} and Jacobson et al.}
+
+\item{n.risk}{Vector of length 2. Number of samples to draw from the Moretti et al. (2014) and Jacobson et al. (2019) dose-response curves, respectively. Defaults to \code{c(10, 10)}.}
 
 \item{include.species}{Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.}
 

@@ -10,7 +10,7 @@ configure_rjMCMC(
   covariate.select = FALSE,
   function.select = TRUE,
   biphasic = FALSE,
-  proposal.mh = list(t.ij = 10, mu.i = 10, mu = 2, phi = 3, sigma = 1, nu = 5, tau = 5,
+  proposal.mh = list(t.ij = 10, mu.i = 10, mu = 2, phi = 1, sigma = 1, nu = 5, tau = 5,
     alpha = 1, mu.ij = 1, psi = 1, omega = 1, psi.i = 0.5, k.ij = 0.5),
   proposal.rj = list(rj = 5, dd = 10, cov = 7),
   priors = list(covariates = c(0, 30), sigma = c(0, 45), phi = c(0, 45), omega = c(0,
