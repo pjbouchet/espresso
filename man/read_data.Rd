@@ -13,9 +13,9 @@ read_data(
   min.N = NULL,
   covariates = NULL,
   sonar.groups = list(MFAS = c("MFAS", "MFA", "REAL MFA", "MFAS_DS", "MFA HELO",
-    "REAL MFA HELO", "SOCAL_d", "REAL MFAS", "MF ALARM"), LFAS = NULL),
-  exclude.sonar = c("PRN", "CAS", "ALARM", "HF ALARM", "HFAS", "HF ALARM CAS",
-    "MFAS CAS"),
+    "REAL MFA HELO", "SOCAL_d", "REAL MFAS", "REAL MFA (USS Dewey)"), LFAS = c("LFAS",
+    "LFA", "LFAS_DS", "LFAS_LO", "LFAS_122", "LFAS_185", "HPAS-C", "HPAS-D", "MPAS-C",
+    "HPAC-C", "XHPAS-D", "XHPAS-C", "MPAS-D", "HPASF-C")),
   dose.range = c(60, 215),
   obs.sd = 2.5,
   verbose = TRUE
@@ -37,8 +37,6 @@ read_data(
 \item{covariates}{Contextual covariates. Must be a character string containing one or more of the following: \code{exposed}, \code{sonar}, \code{behaviour} or \code{range}. No covariates are considered when this argument is set to \code{NULL}.}
 
 \item{sonar.groups}{Named list detailing which sonar signals should be grouped a priori.}
-
-\item{exclude.sonar}{Character vector specifying which sonar signals should be excluded.}
 
 \item{dose.range}{Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.}
 

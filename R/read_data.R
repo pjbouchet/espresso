@@ -35,7 +35,6 @@
 #' @param min.N Minimum number of observations per species. Species with sample sizes smaller than \code{min.N} will be removed.
 #' @param covariates Contextual covariates. Must be a character string containing one or more of the following: \code{exposed}, \code{sonar}, \code{behaviour} or \code{range}. No covariates are considered when this argument is set to \code{NULL}.
 #' @param sonar.groups Named list detailing which sonar signals should be grouped a priori.
-#' @param exclude.sonar Character vector specifying which sonar signals should be excluded.
 #' @param dose.range Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date. 
 #' @param obs.sd Measurement uncertainty (expressed as a standard deviation in received levels), in dB re 1μPa.
 #' @param verbose Logical. Whether to print or suppress warning messages.
@@ -79,10 +78,10 @@ read_data <- function(file = NULL,
                       min.N = NULL,
                       covariates = NULL,
                       sonar.groups = list(MFAS = c("MFAS", "MFA", "REAL MFA", "MFAS_DS", "MFA HELO",
-                                                   "REAL MFA HELO", "SOCAL_d", "REAL MFAS", "MF ALARM"),
-                                          LFAS = NULL),
-                      exclude.sonar = c("PRN", "CAS", "ALARM", "HF ALARM", "HFAS", 
-                                        "HF ALARM CAS", "MFAS CAS"),
+                                                   "REAL MFA HELO", "SOCAL_d", "REAL MFAS", "REAL MFA (USS Dewey)"),
+                                          LFAS = c("LFAS", "LFA", "LFAS_DS", "LFAS_LO", "LFAS_122", "LFAS_185",
+                                                   "HPAS-C", "HPAS-D", "MPAS-C", "HPAC-C", "XHPAS-D",
+                                                   "XHPAS-C", "MPAS-D", "HPASF-C")),
                       dose.range = c(60, 215), 
                       obs.sd = 2.5,
                       verbose = TRUE){
@@ -105,9 +104,6 @@ read_data <- function(file = NULL,
     if(!is.list(sonar.groups)) stop("signal.types must be a list")
     if(is.null(names(sonar.groups))) stop("Cannot find names for signal type groups")}
   
-  signal.null <- purrr::map_lgl(.x = sonar.groups, .f = ~is.null(.x))
-  if(sum(signal.null) > 1) stop("Only one NULL element allowed in <signal.types>")
-  
   if(is.null(covariates)){
     n.covariates <- 0
     covariate.names <- NULL
@@ -125,7 +121,7 @@ read_data <- function(file = NULL,
   # Import the species list
   #' ---------------------------------------------
   
-  species.list <- espresso::species_brs %>% 
+  species.list <- species_brs %>% 
     janitor::clean_names(.)
   
   #' ---------------------------------------------
@@ -185,7 +181,7 @@ read_data <- function(file = NULL,
   #' ---------------------------------------------
   
   if(is.null(file)){
-    rawdat <- espresso::example_brs
+    rawdat <- example_brs
     file <- "example_brs"
   } else {
     rawdat <- readr::read_csv(file = file, na = c(" ", "NA"), col_types = readr::cols())
@@ -218,7 +214,7 @@ read_data <- function(file = NULL,
       purrr::map(.x = ., .f = ~dplyr::mutate(.x, exp_order = dplyr::row_number())) %>% 
       do.call(rbind, .)
 
-    rawdat <- dplyr::bind_rows(rawdat, tbl.pmrf)
+    rawdat <- dplyr::bind_rows(rawdat, tbl.moretti)
     
   }
   
@@ -245,11 +241,11 @@ read_data <- function(file = NULL,
     # points(pts_pmrf, rep(0, length(pts_pmrf)), col = "green", pch = 16)
    
     tbl.pmrf <- tibble::tibble(resp_spl = rl.pmrf, project = "Jacobson_2020", species = "Md", 
-                                  tag_id = paste0("Md_jacobson_", sample(1:length(rl.pmrf), replace = TRUE)),
-                                  start_time = NA, resp_time = NA, resp_type = "avoidance",
-                                  resp_score = 7, resp_se_lcum = NA, max_spl = rl.pmrf, max_se_lcum = NA,
-                                  censored = 0, exp_order = 1, exp_duration = 0, exp_signal = "MFAS",
-                                  pre_feeding = FALSE, inferred_resp_range = NA, inferred_min_range = NA)
+                               tag_id = paste0("Md_jacobson_", sample(1:length(rl.pmrf), replace = TRUE)),
+                               start_time = NA, resp_time = NA, resp_type = "avoidance",
+                               resp_score = 7, resp_se_lcum = NA, max_spl = rl.pmrf, max_se_lcum = NA,
+                               censored = 0, exp_order = 1, exp_duration = 0, exp_signal = "MFAS",
+                               pre_feeding = FALSE, inferred_resp_range = NA, inferred_min_range = NA)
     
     tbl.pmrf$resp_range <- tbl.pmrf$min_range <- 
       purrr::map_dbl(.x = rl.pmrf, .f = ~stats::optimize(f = range_finder, interval = c(0, 30000), SL = 215, target.L = .x)[['minimum']])
@@ -302,23 +298,14 @@ read_data <- function(file = NULL,
         dplyr::rename(exposed = exp_order)}
     
     if("sonar" %in% covariate.names){
+
+      if(any(!unlist(sonar.groups) %in% unique(rawdat$exp_signal))) stop("Signal type(s) not recognised.")
       
-      if(!any(unique(brsdat$exp_signal) %in% c(exclude.sonar, unlist(sonar.groups))))
-        stop("Unrecognised sonar type(s).")
+      # Determine which sonar signal types to exclude
+      exclude.sonar <- unique(brsdat$exp_signal)[!unique(brsdat$exp_signal) %in% unname(unlist(sonar.groups))]
       
       brsdat <- brsdat %>% 
         dplyr::filter(!exp_signal %in% exclude.sonar) 
-      
-      if(sum(signal.null) > 0){
-        sonar.groups[[which(signal.null)]] <- 
-          unique(unname(brsdat$exp_signal[!brsdat$exp_signal %in% unlist(sonar.groups[-which(signal.null)])]))
-      } else {
-        if(length(outersect(c(exclude.sonar, unlist(sonar.groups)), unique(brsdat$exp_signal))) > 0){
-          for(j in outersect(c(exclude.sonar, unlist(sonar.groups)), unique(brsdat$exp_signal))){
-            sonar.groups[j] <- j
-          }
-        }
-      }
       
       signal.df <- sonar.groups %>% 
         tibble::enframe() %>% 
