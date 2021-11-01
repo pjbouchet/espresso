@@ -184,7 +184,7 @@ read_data <- function(file = NULL,
     rawdat <- example_brs
     file <- "example_brs"
   } else {
-    rawdat <- readr::read_csv(file = file, na = c(" ", "NA"), col_types = readr::cols())
+    rawdat <- readr::read_csv(file = file, na = c(" ", "", "NA"), col_types = readr::cols())
   }
   
   rawdat <- rawdat %>% janitor::clean_names()
@@ -298,14 +298,13 @@ read_data <- function(file = NULL,
         dplyr::rename(exposed = exp_order)}
     
     if("sonar" %in% covariate.names){
-
-      if(any(!unlist(sonar.groups) %in% unique(rawdat$exp_signal))) stop("Signal type(s) not recognised.")
       
       # Determine which sonar signal types to exclude
       exclude.sonar <- unique(brsdat$exp_signal)[!unique(brsdat$exp_signal) %in% unname(unlist(sonar.groups))]
+      null.sonar <- unname(unlist(sonar.groups))[!unname(unlist(sonar.groups)) %in% unique(brsdat$exp_signal)]
       
       brsdat <- brsdat %>% 
-        dplyr::filter(!exp_signal %in% exclude.sonar) 
+        dplyr::filter(!exp_signal %in% c(exclude.sonar, null.sonar)) 
       
       signal.df <- sonar.groups %>% 
         tibble::enframe() %>% 
@@ -552,7 +551,7 @@ read_data <- function(file = NULL,
     # Contextual factors
     covariates = list(n = n.covariates,
                       names = covariate.names,
-                      signal.types = append(sonar.groups, list(exclude = exclude.sonar))),
+                      signal.types = append(sonar.groups, list(exclude = exclude.sonar, not_found = null.sonar))),
     # Observations
     obs = list(y_ij = y_ij,
                censored = is.censored,
