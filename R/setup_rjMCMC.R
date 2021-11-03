@@ -463,7 +463,7 @@ setup_rjMCMC <- function(rj.input,
     # Censoring
     if (!all(rj.input$obs$censored == 0)) {
 
-      if(rj$phase[1] == 1){
+      if(!rj.input$config$biphasic & !rj.input$config$function.select){
       
       # Right-censored
       rj$t.ij[1, rj.input$obs$censored == 1] <-
@@ -494,7 +494,7 @@ setup_rjMCMC <- function(rj.input,
                 n = 1,
                 location = rj$nu[1, rj.input$species$trials[a], 2],
                 scale = 30,
-                L = rj.input$obs$Rc[a],
+                L = max(rj.input$obs$Rc[a], rj$alpha[1, rj.input$species$trials][a]),
                 U = rj.input$param$dose.range[2])
             }} 
           
@@ -505,7 +505,7 @@ setup_rjMCMC <- function(rj.input,
                 location = rj$nu[1, rj.input$species$trials[a], 1],
                 scale = 30,
                 L = rj.input$param$dose.range[1],
-                U = rj.input$obs$Lc[a])
+                U = min(rj.input$obs$Lc[a], rj$alpha[1, rj.input$species$trials][a]))
               
             }}
 
@@ -517,6 +517,9 @@ setup_rjMCMC <- function(rj.input,
 
     if(any(is.na(rj$t.ij[1, ]))) warning("NA(s) returned as initial values for t.ij")
     if(any(is.infinite(rj$t.ij[1, ]))) warning("Inf returned as initial values for t.ij")
+    
+    if(sum(rj$t.ij[1, rj$k.ij[1, ] == 2] < rj$alpha[1, rj.input$species$trials][rj$k.ij[1, ] == 2]) > 0) stop("[setup] t.ij cannot be less than alpha when k = 2")
+    if(sum(rj$t.ij[1, rj$k.ij[1, ] == 1] > rj$alpha[1, rj.input$species$trials][rj$k.ij[1, ] == 1]) > 0) stop("[setup] t.ij cannot be greater than alpha when k = 1")
     
   } # End if do.update
   
