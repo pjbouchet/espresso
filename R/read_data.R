@@ -303,6 +303,7 @@ read_data <- function(file = NULL,
       exclude.sonar <- unique(brsdat$exp_signal)[!unique(brsdat$exp_signal) %in% unname(unlist(sonar.groups))]
       null.sonar <- unname(unlist(sonar.groups))[!unname(unlist(sonar.groups)) %in% unique(brsdat$exp_signal)]
       
+      
       brsdat <- brsdat %>% 
         dplyr::filter(!exp_signal %in% c(exclude.sonar, null.sonar)) 
       
@@ -310,6 +311,8 @@ read_data <- function(file = NULL,
         tibble::enframe() %>% 
         tidyr::unnest(cols = c(value)) %>% 
         dplyr::rename(sonar = name, signal = value)
+      
+      sonar.groups <- purrr::map(.x = sonar.groups, .f = ~.x[!.x %in% null.sonar])
       
       brsdat <- brsdat %>% 
         dplyr::left_join(x = ., y = signal.df, by = c("exp_signal" = "signal"))
