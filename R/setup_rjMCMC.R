@@ -373,41 +373,33 @@ setup_rjMCMC <- function(rj.input,
                          L = rj.input$param$dose.range[1],
                          U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
       
+      # Add one random deviate from a Uniform distribution here to avoid numerical
+      # issues with NAs when one of the list elements of inits.bi is of
+      # length 1 and doesn't meet the constraint with respect to alpha
       rj$nu[1, ,1] <-
         sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
                FUN = function(x){
-          rtnorm(n = 1, 
-                 location = mean(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])]), 
-                 scale = 2,
-                 L = rj.input$param$dose.range[1],
-                 U = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]))})[rj$mlist[[rj$current.model]]]
-
+                 rtnorm(n = 1, 
+                        location = mean(c(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])], runif(n = 1, min = rj.input$param$dose.range[1], max = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])))), 
+                        scale = 2,
+                        L = rj.input$param$dose.range[1],
+                        U = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]))})[rj$mlist[[rj$current.model]]]
+      
       rj$nu[1, ,2] <-
         sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
                FUN = function(x){
-                 rtnorm(n = 1, location = mean(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])]), scale = 2,
+                 rtnorm(n = 1, 
+                        location = mean(c(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])], runif(n = 1, min = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]), max = rj.input$param$dose.range[2]))), 
+                        scale = 2,
                         L = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]),
                         U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
-      # rj$nu[1, , 1] <- 
-      #   sapply(X = inits.bi, FUN = function(x){
-      #     rtnorm(n = 1, location = quantile(x = x, probs = 0.25, na.rm = TRUE, names = FALSE), scale = 2, 
-      #            L = rj.input$param$dose.range[1],
-      #            U = median(x, na.rm = TRUE))})[rj$mlist[[rj$current.model]]]
-      # 
-      # rj$nu[1, , 2] <- 
-      #   sapply(X = inits.bi, FUN = function(x){
-      #     rtnorm(n = 1, location = quantile(x = x, probs = 0.75, na.rm = TRUE, names = FALSE), scale = 2, 
-      #            L = median(x, na.rm = TRUE),
-      #            U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
+      
 
       inits.tau <-
         rbind(sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
           sd(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])])}),
           sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
             sd(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])])}))
-      
-      
-      # inits.tau <- rbind(sapply(X = inits.bi, FUN = function(x){sd(x[x<median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = inits.bi, FUN = function(x){sd(x[x>median(x, na.rm = TRUE)], na.rm = TRUE)}))
       
       inits.tau[is.na(inits.tau)] <- runif(n = sum(is.na(inits.tau)),
                                            min = rj.input$config$priors["tau", 1],
