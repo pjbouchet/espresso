@@ -438,21 +438,6 @@ propose_jump <- function(rj.obj, move.type, phase) {
     # Bootstrap
     if (move.type == 1) {
       
-      # Rescale the probability values so that none are zero
-      # if(any(rj.obj$config$clust[[1]]$p == 0)){
-      #   
-      #   zero.ind <- which(rj.obj$config$clust[[1]]$p == 0)
-      #   positive.ind <- which(rj.obj$config$clust[[1]]$p > 0)
-      #   
-      #   # Use half of the minimum value
-      #   scale.value <- min(rj.obj$config$clust[[1]]$p[positive.ind]) / 2
-      #   
-      #   rj.obj$config$clust[[1]]$p_scale[zero.ind] <- scale.value / length(zero.ind)
-      #   
-      #   rj.obj$config$clust[[1]]$p_scale[positive.ind] <- 
-      #     rj.obj$config$clust[[1]]$p[positive.ind] - (scale.value * rj.obj$config$clust[[1]]$p[positive.ind])
-      # }
-      
       # Rescale probabilities so they sum to 1
       p1 <- rj.obj$config$clust[[1]]
       if(nrow(p1) >  1) p1 <- p1 %>% dplyr::filter(!model == rj.obj$current.model)
@@ -730,6 +715,19 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     
     fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
     
+    # ++++++++++++++++++++++++++
+    # Important note
+    # ++++++++++++++++++++++++++
+    
+    # The code below was an attempt at proposing alpha values that would meet
+    # the necessary constraints. However, this caused problems in cases when 
+    # model.select = TRUE, in particular in cases where phase = mono at the start
+    # of an iteration, and a proposed move to a different species grouping is accepted.
+    # This means that the values in mu are updated to reflect the new grouping
+    # but the values in alpha, and nu remain the same (as they are not the focus)
+    # of the model jump. This causes numerical issues when proposing to then move to 
+    # a biphasic functional form.
+    
     # L.bound <- purrr::map_dbl(
     #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
     #   .f = ~max(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 1][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
@@ -738,6 +736,7 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
     #   .f = ~ min(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 2][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
     
+
     fprop$alpha <- rtnorm(n = length(inits.bi), 
                           location = sapply(X = inits.bi, FUN = function(a){min(a) + (max(a)-min(a))/2}), 
                           scale = prop.scale[["alpha"]], 
@@ -1219,24 +1218,6 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
       #            censored = rj.obj$dat$obs$censored,
       #            Rc = rj.obj$dat$obs$Rc,
       #            Lc = rj.obj$dat$obs$Lc, row.names = NULL)
-      
-      
-    # L.1 <- rep(rj.obj$dat$param$dose.range[1], rj.obj$dat$trials$n)
-    # U.1 <- L.2 <- rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials]
-    # U.2 <- rep(rj.obj$dat$param$dose.range[2], rj.obj$dat$trials$n)
-    # 
-    # L.2[rj.obj$k.ij[rj.obj$iter["k.ij"], ] == 2 & rj.obj$dat$obs$censored == 1] <-
-    #   apply(X = cbind(L.2[rj.obj$k.ij[rj.obj$iter["k.ij"], ] == 2 & rj.obj$dat$obs$censored == 1],
-    #                   rj.obj$dat$obs$Rc[rj.obj$k.ij[rj.obj$iter["k.ij"], ] == 2 & rj.obj$dat$obs$censored == 1]),
-    #         MARGIN = 1, max)
-    # 
-    # U.1[rj.obj$k.ij[rj.obj$iter["k.ij"], ] == 1 & rj.obj$dat$obs$censored == -1] <-
-    #   apply(X = cbind(U.1[rj.obj$k.ij[rj.obj$iter["k.ij"], ] == 1 & rj.obj$dat$obs$censored == -1],
-    #                   rj.obj$dat$obs$Lc[rj.obj$k.ij[rj.obj$iter["k.ij"], ] == 1 & rj.obj$dat$obs$censored == -1]),
-    #         MARGIN = 1, min)
-    # 
-    # data.frame(alpha = rj.obj$alpha[rj.obj$iter["alpha"],rj.obj$dat$species$trials],
-    #                                 L.1, U.1, L.2, U.2, k = rj.obj$k.ij[rj.obj$iter["k.ij"], ],censored = rj.obj$dat$obs$censored, Rc = rj.obj$dat$obs$Rc, Lc = rj.obj$dat$obs$Lc)
     
     } else if(param.name == "t.ij" & rj.obj$config$function.select) {
       
@@ -1255,24 +1236,6 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
       
       # Sense checks
       if(sum(p.bounds[, 2] < p.bounds[, 1]) > 0) stop("Inconsistent bounds for t_ij")
-      
-      # L.lower <- L.upper <- rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials]
-      # 
-      # L.lower[rj.obj$dat$obs$Rc > L.lower & rj.obj$dat$obs$censored == 1] <-
-      #   rj.obj$dat$obs$Rc[rj.obj$dat$obs$Rc > L.lower & rj.obj$dat$obs$censored == 1]
-      # 
-      # L.lower[rj.obj$dat$obs$Lc < L.lower & rj.obj$dat$obs$censored == -1] <-
-      #   rj.obj$dat$obs$Lc[rj.obj$dat$obs$Lc < L.lower & rj.obj$dat$obs$censored == -1]
-      # 
-      # L.upper[rj.obj$dat$obs$Rc > L.upper & rj.obj$dat$obs$censored == 1] <-
-      #   rj.obj$dat$obs$Rc[rj.obj$dat$obs$Rc > L.upper & rj.obj$dat$obs$censored == 1]
-      # 
-      # L.upper[rj.obj$dat$obs$Lc < L.upper & rj.obj$dat$obs$censored == -1] <-
-      #   rj.obj$dat$obs$Lc[rj.obj$dat$obs$Lc < L.upper & rj.obj$dat$obs$censored == -1]
-      
-     # Check that all is correct
-     # data.frame(alpha = rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials],
-     #            L = cbind(rj.obj$dat$param$dose.range[1], L.lower)[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])], U = cbind(L.upper, rj.obj$dat$param$dose.range[2])[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])], k = rj.obj$k.ij[rj.obj$k.ij[rj.obj$iter["k.ij"], ]], censored = rj.obj$dat$obs$censored)
      
     } else {
       
@@ -1292,12 +1255,6 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
                      scale = rj.obj$config$prop$mh[[param.name]], 
                      L = p.bounds[, 1],
                      U = p.bounds[, 2])
-      
-      # pval <- rtnorm(n = N, 
-      #                location = m, 
-      #                scale = rj.obj$config$prop$mh[[param.name]], 
-      #                L = cbind(rj.obj$dat$param$dose.range[1], L.lower)[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])],
-      #                U = cbind(L.upper, rj.obj$dat$param$dose.range[2])[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])])
     
     } else if(param.name == "t.ij" & !rj.obj$config$function.select | param.name == "mu.i"){
       
@@ -1318,16 +1275,6 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
                                   location = m[, 2],
                                   scale = rj.obj$config$prop$mh[[param.name]],
                                   L = p.bounds[, 3], U = p.bounds[, 4])))
-      
-      # pval <- unname(cbind(rtnorm(n = N,
-      #                             location = m[, 1],
-      #                             scale = rj.obj$config$prop$mh[[param.name]],
-      #                             L = L.1, U = U.1),
-      #                      
-      #                      rtnorm(n = N,
-      #                             location = m[, 2],
-      #                             scale = rj.obj$config$prop$mh[[param.name]],
-      #                             L = L.2, U = U.2)))
       
     } else if(param.name == "nu"){
       
