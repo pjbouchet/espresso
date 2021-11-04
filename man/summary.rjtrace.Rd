@@ -14,7 +14,8 @@
   n.top = 10,
   covariate.prob = TRUE,
   ff.prob = TRUE,
-  rmd = FALSE
+  rmd = FALSE,
+  do.plot = TRUE
 )
 }
 \arguments{
@@ -37,6 +38,8 @@
 \item{ff.prob}{Logical. If \code{TRUE}, returns a summary of posterior probabilities for each functional form (monophasic vs. biphasic).}
 
 \item{rmd}{Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.}
+
+\item{do.plot}{Logical. If \code{TRUE}, returns diagnostic plots in addition to text-based summaries.}
 }
 \value{
 A detailed summary, printed to the R console.
