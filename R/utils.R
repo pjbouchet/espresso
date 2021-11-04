@@ -827,7 +827,7 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
     
     fprop$t_ij <- fprop$t.ij - cov_effects(rj.obj)
-    fprop$mu.i <- unique(sapply(X = dat$whales$id, FUN = function(n) mean(fprop$t_ij[dat$whales$id == n], na.rm = TRUE)))
+    fprop$mu.i <- unique(sapply(X = rj.obj$dat$whales$id, FUN = function(n) mean(fprop$t_ij[rj.obj$dat$whales$id == n], na.rm = TRUE)))
     
     fprop$mu <- sapply(X = rj.obj$mlist[[rj.obj$current.model]],
           FUN = function(sp) mean(fprop$mu.i[rj.obj$dat$species$id %in% which(rj.obj$mlist[[rj.obj$current.model]] == sp)]))
