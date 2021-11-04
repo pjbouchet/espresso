@@ -46,7 +46,7 @@
 #' @keywords brs dose-response rjmcmc 
 
 plot.rjtrace <- function(rj.obj, 
-                         param.name = NULL, 
+                         param.name = NULL,
                          phase = NULL,
                          covariates.incl = FALSE,
                          autocorr = TRUE,
@@ -60,16 +60,19 @@ plot.rjtrace <- function(rj.obj,
   # Extract the trace and rename columns
   #' ---------------------------------------------
   mcmc.trace <- rj.obj$trace
-  
+  all.indices <- NULL
   if(rj.obj$config$function.select | rj.obj$config$biphasic){
     nu.indices <- grep(pattern = "nu.", x = colnames(mcmc.trace[[1]]))
     tau.indices <- grep(pattern = "tau.", x = colnames(mcmc.trace[[1]]))
     alpha.indices <- grep(pattern = "alpha.", x = colnames(mcmc.trace[[1]]))
-    all.indices <- c(nu.indices, alpha.indices)
+    all.indices <- c(all.indices, nu.indices, alpha.indices)
   }
   if(rj.obj$config$function.select | !rj.obj$config$biphasic) {
     mu.indices <- grep(pattern = "mu.", x = colnames(mcmc.trace[[1]]))
+    all.indices <-  c(all.indices, mu.indices)
   }
+  
+  all.indices <- sort(all.indices)
   
   cov.names <- purrr::map2(.x = names(rj.obj$dat$covariates$fL), 
                            .y = purrr::map(.x = rj.obj$dat$covariates$fL, "Lnames"),
@@ -83,40 +86,40 @@ plot.rjtrace <- function(rj.obj,
     
     colnames(mcmc.trace[[nc]])[cov.indices] <-
       gsub(pattern = "_", replacement = " (", x = colnames(mcmc.trace[[nc]])[cov.indices])
-    
     colnames(mcmc.trace[[nc]])[cov.indices] <- paste0(colnames(mcmc.trace[[nc]])[cov.indices], ")")
     
-    if(rj.obj$config$function.select | rj.obj$config$biphasic){
-      
-      colnames(mcmc.trace[[nc]])[nu.indices] <-
-        gsub(pattern = ".lower.", replacement = " (lower) ", x = colnames(mcmc.trace[[nc]])[nu.indices])
-      colnames(mcmc.trace[[nc]])[nu.indices] <-
-        gsub(pattern = ".upper.", replacement = " (upper) ", x = colnames(mcmc.trace[[nc]])[nu.indices])
-      colnames(mcmc.trace[[nc]])[tau.indices] <-
-        gsub(pattern = ".lower", replacement = " (lower)", x = colnames(mcmc.trace[[nc]])[tau.indices])
-      colnames(mcmc.trace[[nc]])[tau.indices] <-
-        gsub(pattern = ".upper", replacement = " (upper)", x = colnames(mcmc.trace[[nc]])[tau.indices])
-      colnames(mcmc.trace[[nc]])[alpha.indices] <-
-        gsub(pattern = "alpha.", replacement = "alpha ", x = colnames(mcmc.trace[[nc]])[alpha.indices])
-      
-      for(j in rj.obj$dat$species$names){
-      colnames(mcmc.trace[[nc]])[all.indices] <-
-        gsub(pattern = j, replacement = paste0("(", j, ")"), x = colnames(mcmc.trace[[nc]])[all.indices])
-      }
-      
+    for(nn in c("mu", "alpha", "nu.lower", "nu.upper")){
+      colnames(mcmc.trace[[nc]])[grepl(pattern = nn, x = colnames(mcmc.trace[[nc]]))] <- 
+        paste0(nn, " (", rj.obj$dat$species$names, ")")
     }
     
-    if (rj.obj$config$function.select | !rj.obj$config$biphasic) {
-      
-      colnames(mcmc.trace[[nc]])[mu.indices] <-
-        gsub(pattern = "mu.", replacement = "mu  ", x = colnames(mcmc.trace[[nc]])[mu.indices])
-      
-      for(j in mu.indices){
-        colnames(mcmc.trace[[nc]])[mu.indices] <-
-          gsub(pattern = j, replacement = paste0("(", rj.obj$dat$species$names[j], ")"), 
-               x = colnames(mcmc.trace[[nc]])[mu.indices])
-      }
-    }
+    # if(rj.obj$config$function.select | rj.obj$config$biphasic){
+    # 
+    # colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.lower", x = colnames(mcmc.trace[[nc]]))] <- 
+    #   gsub(pattern = "nu.lower", replacement = "nu [lower]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.lower", x = colnames(mcmc.trace[[nc]]))])
+    # 
+    # colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.upper", x = colnames(mcmc.trace[[nc]]))] <- 
+    #   gsub(pattern = "nu.upper", replacement = "nu [upper]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.upper", x = colnames(mcmc.trace[[nc]]))])
+    # 
+    # colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.lower", x = colnames(mcmc.trace[[nc]]))] <- 
+    #   gsub(pattern = "tau.lower", replacement = "tau [lower]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.lower", x = colnames(mcmc.trace[[nc]]))])
+    # 
+    # colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.upper", x = colnames(mcmc.trace[[nc]]))] <- 
+    #   gsub(pattern = "tau.upper", replacement = "tau [upper]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.upper", x = colnames(mcmc.trace[[nc]]))])
+    # 
+    # }
+    
+    # if (rj.obj$config$function.select | !rj.obj$config$biphasic) {
+    #   
+    #   colnames(mcmc.trace[[nc]])[mu.indices] <-
+    #     gsub(pattern = "mu.", replacement = "mu  ", x = colnames(mcmc.trace[[nc]])[mu.indices])
+    #   
+    #   for(j in mu.indices){
+    #     colnames(mcmc.trace[[nc]])[mu.indices] <-
+    #       gsub(pattern = j, replacement = paste0("(", rj.obj$dat$species$names[j], ")"), 
+    #            x = colnames(mcmc.trace[[nc]])[mu.indices])
+    #   }
+    # }
   }
   
   if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]]) else mpars <- colnames(mcmc.trace[[1]])[startsWith(colnames(mcmc.trace[[1]]), prefix = param.name)]
@@ -173,27 +176,7 @@ plot.rjtrace <- function(rj.obj,
                ind = individual,
                params = mpars)
       
-      if(autocorr){
-        
-        ac.plot <- bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
-        
-        ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
-          ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
-          ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
-          ggplot2::facet_wrap(ggplot2::vars(Parameter), ncol = 5) + 
-          ggplot2::scale_colour_manual(values = gg_color_hue(n = length(mcmc.trace))) +
-          ggplot2::theme(axis.text = element_text(size = 10, colour = "black"),
-                axis.title = element_text(size = 10, colour = "black"),
-                axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-                axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
-                plot.margin = margin(t = 0.15, r = 1, b = 0.15, l = 0.15, "cm"),
-                legend.position = "top",
-                legend.text = element_text(size = 11)) + 
-          ggplot2::labs(colour = "Chain", y = "Autocorrelation")
-        
-      }
     }
-    
     
   } else {
     
@@ -221,7 +204,6 @@ plot.rjtrace <- function(rj.obj,
     }
     
   }
-  
   
   if(do.filter){
     
@@ -267,12 +249,21 @@ plot.rjtrace <- function(rj.obj,
   }
   
   if(autocorr){
-    ac.plot <- bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars)
+    
+    ac.plot <- bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars[!bpars == "phase"])
 
-    ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
+    tmp.plot <- ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
       ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
       ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
-      ggplot2::facet_wrap(ggplot2::vars(Parameter), ncol = 5) + 
+      ggforce::facet_wrap_paginate(ggplot2::vars(Parameter), ncol = 4, nrow = 4, page = 1)
+    
+    n.pages <- ggforce::n_pages(tmp.plot)
+    
+    for(pg in 1:n.pages){
+    ac.gg <- ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
+      ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
+      ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
+      ggforce::facet_wrap_paginate(ggplot2::vars(Parameter), ncol = 4, nrow = 4, page = pg) + 
       ggplot2::scale_colour_manual(values = gg_color_hue(length(mcmc.trace))) +
       ggplot2::theme(axis.text = element_text(size = 10, colour = "black"),
             axis.title = element_text(size = 10, colour = "black"),
@@ -282,6 +273,8 @@ plot.rjtrace <- function(rj.obj,
             legend.position = "top",
             legend.text = element_text(size = 11)) + 
       ggplot2::labs(colour = "Chain", y = "Autocorrelation")
+    print(ac.gg)
     }
+  }
   
 }
