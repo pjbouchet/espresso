@@ -103,7 +103,6 @@ compile_rjMCMC <- function(rj.object,
 
   if(phase == 1) pn <- "mu" else pn <- "nu"
   dose.range <- seq(rj.object$config$priors[pn, 1], rj.object$config$priors[pn, 2], length = 100)
-
   credible.intervals  <- sort(credible.intervals, decreasing = TRUE)
   
   #' ---------------------------------------------
@@ -215,10 +214,11 @@ compile_rjMCMC <- function(rj.object,
       
       doseresp.values <- lapply(X = sp.names, FUN = function(sp.x) {
         
-        dr.raw <- dplyr::select(mcmc.list[[mcl]], 
-                                c("omega", "psi", "tau.lower", "tau.upper", 
-                                  colnames(mcmc.list[[mcl]])[grepl(pattern = paste0("\\.", sp.x), 
-                                                                   x = colnames(mcmc.list[[mcl]]))])) %>% 
+        dr.raw <- 
+          dplyr::select(mcmc.list[[mcl]], 
+           c("omega", "psi", "tau.lower", "tau.upper",
+             colnames(mcmc.list[[mcl]])[grepl(pattern = paste0("\\.", which(sp.names == sp.x)), 
+              x = colnames(mcmc.list[[mcl]]))])) %>% 
           as.matrix()
         
         if(!is.null(covariate)){
@@ -295,13 +295,13 @@ compile_rjMCMC <- function(rj.object,
           } # End for i loop
           p.response
         })
-      })
+      }) %>% purrr::set_names(x = ., nm = sp.names) 
       # doseresp.values <- list(doseresp.values)
     }
                       # Median
                       p.median <- purrr::map_depth(.x = doseresp.values, 
                                                    .depth = 2,
-                                                   .f = ~ apply(X = .x, MARGIN = 2, FUN = median))
+                                                   .f = ~ apply(X = .x, MARGIN = 2, FUN = median, na.rm = TRUE))
                       
                       # Lower quantiles
                       q.low <- purrr::map_depth(
@@ -311,7 +311,7 @@ compile_rjMCMC <- function(rj.object,
                           tmp <- .x
                           purrr::map(.x = credible.intervals, .f = ~ apply(
                             X = tmp, MARGIN = 2,
-                            FUN = quantile, (50 - .x / 2) / 100
+                            FUN = quantile, (50 - .x / 2) / 100, na.rm = TRUE
                           ))}) 
                       
                       # Upper quantiles
@@ -322,7 +322,7 @@ compile_rjMCMC <- function(rj.object,
                           tmp <- .x
                           purrr::map(.x = credible.intervals, .f = ~ apply(
                             X = tmp, MARGIN = 2,
-                            FUN = quantile, (50 + .x / 2) / 100
+                            FUN = quantile, (50 + .x / 2) / 100, na.rm = TRUE
                           ))}) 
                       
                       
