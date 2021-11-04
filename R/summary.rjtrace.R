@@ -8,6 +8,7 @@
 #' @param covariate.prob Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).
 #' @param ff.prob Logical. If \code{TRUE}, returns a summary of posterior probabilities for each functional form (monophasic vs. biphasic).
 #' @param rmd Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.
+#' @param do.plot Logical. If \code{TRUE}, returns diagnostic plots in addition to text-based summaries.
 #' @inheritParams summary.gvs
 #' 
 #' @return A detailed summary, printed to the R console.
@@ -50,7 +51,8 @@ summary.rjtrace <- function(rj.obj,
                             n.top = 10,
                             covariate.prob = TRUE,
                             ff.prob = TRUE,
-                            rmd = FALSE){
+                            rmd = FALSE,
+                            do.plot = TRUE){
   
   options(tibble.width = Inf) 
   options(pillar.neg = FALSE) 
@@ -95,11 +97,17 @@ summary.rjtrace <- function(rj.obj,
     cat("\nEFFECTIVE SAMPLE SIZES\n")
     cat("--------------------\n")
     
-    print(rj.obj$ess)
-    sufficient.ess <- rj.obj$ess %>% dplyr::filter(ESS >= 100 & !is.na(ESS)) %>% 
-      dplyr::pull(parameter)
-    # print(coda::effectiveSize(rj.obj$trace))
-    # print(mcmcse::ess(rj.obj$trace))
+    for(pp in c("mu", "phi", "sigma", "alpha", "nu.lower", "nu.upper", "tau", "omega", "psi", rj.obj$dat$covariates$names, "model", "phase")){
+      cat("--", pp, "-- \n\n")
+      my.ess <- rj.obj$ess %>%
+        dplyr::filter(grepl(pattern = pp, x = parameter))
+      if(pp %in% c("mu", "alpha", "nu.lower", "nu.upper")){
+        my.ess <- my.ess %>% dplyr::mutate(parameter = rj.obj$dat$species$names) %>%
+          tidyr::pivot_wider(., names_from = parameter, values_from = ESS)}
+      print(my.ess)
+      cat("\n")
+    }
+
   }
   
   if(accept.rate){
@@ -149,12 +157,13 @@ summary.rjtrace <- function(rj.obj,
         print(cvg)
       }
       
+      if(do.plot){
       if(rj.obj$config$model.select){
       # Running means plots for model ID
       mcmcplots::rmeanplot(mcmcout = rj.obj$trace, parms = "model_ID", 
                            plot.title = "", auto.layout = FALSE,
                            col = gg_color_hue(coda::nchain(rj.obj$trace)))
-      }
+      }}
       
     }
   }
@@ -236,6 +245,7 @@ summary.rjtrace <- function(rj.obj,
       print(head(res$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
       cat("\n")
       
+      if(do.plot){
       ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
       if(nrow(ggres) < n.top) n.top <- nrow(ggres)
       gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::parula(max(unlist(ggres$group))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
@@ -260,7 +270,8 @@ summary.rjtrace <- function(rj.obj,
                               combine = TRUE,
                               x.offset = 0.75,
                               x.margin = 1)
-
+      }
+      
       res <- prob_models(input.obj = rj.obj, 
                          n.top = n.top,
                          mlist = rj.obj$mlist, 
@@ -283,6 +294,7 @@ summary.rjtrace <- function(rj.obj,
       min.n <- min(purrr::map_dbl(.x = res, .f = ~nrow(.x$model$m_prob)))
       if(min.n < n.top) warning(paste0("Fewer than ", n.top, " models available in some MCMC chains. n.top set to ", min.n))
       
+      if(do.plot){
       # Posterior probabilities for each ranked model across chains
       pprobs <- purrr::map(.x = seq_len(min(c(min.n, n.top))), 
                            .f = ~sapply(X = seq_len(coda::nchain(rj.obj$trace)),
@@ -335,7 +347,7 @@ summary.rjtrace <- function(rj.obj,
         purrr::walk(.x = gg.tiles, .f = ~print(.x))
         
       }
-
+      }
     } else {
       
       cat("Model selection: FALSE\n")
