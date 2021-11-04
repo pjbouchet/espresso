@@ -732,11 +732,11 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     
     # L.bound <- purrr::map_dbl(
     #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
-    #   .f = ~max(rj.obj$mu.ij[rj$iter["mu.ij"], , 1][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
+    #   .f = ~max(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 1][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
     # 
     # U.bound <- purrr::map_dbl(
     #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
-    #   .f = ~ min(rj.obj$mu.ij[rj$iter["mu.ij"], , 2][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
+    #   .f = ~ min(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 2][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
     
     fprop$alpha <- rtnorm(n = length(inits.bi), 
                           location = sapply(X = inits.bi, FUN = function(a){min(a) + (max(a)-min(a))/2}), 
@@ -793,7 +793,7 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     fprop$nu <- sapply(X = seq_len(rj.obj$dat$species$n),
            FUN = function(x){
              matrix(colMeans(fprop$mu.ij[rj.obj$dat$species$trials %in% 
-                                    which(rj.obj$mlist[[rj$current.model]] == rj.obj$mlist[[rj$current.model]][x]), , drop = FALSE]))})
+                                    which(rj.obj$mlist[[rj.obj$current.model]] == rj.obj$mlist[[rj.obj$current.model]][x]), , drop = FALSE]))})
     
     fprop$tau <- apply(X = fprop$mu.ij, MARGIN = 2, sd) 
     
@@ -829,13 +829,13 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     fprop$t_ij <- fprop$t.ij - cov_effects(rj.obj)
     fprop$mu.i <- unique(sapply(X = dat$whales$id, FUN = function(n) mean(fprop$t_ij[dat$whales$id == n], na.rm = TRUE)))
     
-    fprop$mu <- sapply(X = rj.obj$mlist[[rj$current.model]],
-          FUN = function(sp) mean(fprop$mu.i[rj.obj$dat$species$id %in% which(rj.obj$mlist[[rj$current.model]] == sp)]))
+    fprop$mu <- sapply(X = rj.obj$mlist[[rj.obj$current.model]],
+          FUN = function(sp) mean(fprop$mu.i[rj.obj$dat$species$id %in% which(rj.obj$mlist[[rj.obj$current.model]] == sp)]))
     
     # This makes the moves to monophasic completely deterministic!
     # Need na.rm = TRUE to avoid numerical issues when individuals have only been subject to one exposure
-    fprop$sigma <- mean(unique(sapply(X = dat$whales$id, FUN = function(n) 
-      sd(fprop$t.ij[dat$whales$id == n], na.rm = TRUE))), na.rm = TRUE)
+    fprop$sigma <- mean(unique(sapply(X = rj.obj$dat$whales$id, FUN = function(n) 
+      sd(fprop$t.ij[rj.obj$dat$whales$id == n], na.rm = TRUE))), na.rm = TRUE)
     
     fprop$phi <- mean(sapply(X = unique(rj.obj$dat$species$id), FUN = function(n) 
       sd(fprop$mu.i[rj.obj$dat$species$id == n], na.rm = TRUE)), na.rm = TRUE)
@@ -1181,31 +1181,31 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
                         rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials],
                         rep(rj.obj$dat$param$dose.range[2], rj.obj$dat$trials$n))
       
-      p.bounds[, 1][rj$k.ij[rj$iter["k.ij"],] == 1 & 
+      p.bounds[, 1][rj.obj$k.ij[rj.obj$iter["k.ij"],] == 1 & 
                       rj.obj$dat$obs$censored == 1 & 
                       rj.obj$dat$obs$Rc > p.bounds[, 1]] <- 
-        rj.obj$dat$obs$Rc[rj$k.ij[rj$iter["k.ij"],] == 1 & 
+        rj.obj$dat$obs$Rc[rj.obj$k.ij[rj.obj$iter["k.ij"],] == 1 & 
                             rj.obj$dat$obs$censored == 1 & 
                             rj.obj$dat$obs$Rc > p.bounds[, 1]]
       
-      p.bounds[, 3][rj$k.ij[rj$iter["k.ij"],] == 2 & 
+      p.bounds[, 3][rj.obj$k.ij[rj.obj$iter["k.ij"],] == 2 & 
                       rj.obj$dat$obs$censored == 1 & 
                       rj.obj$dat$obs$Rc > p.bounds[, 3]] <- 
-        rj.obj$dat$obs$Rc[rj$k.ij[rj$iter["k.ij"],] == 2 & 
+        rj.obj$dat$obs$Rc[rj.obj$k.ij[rj.obj$iter["k.ij"],] == 2 & 
                             rj.obj$dat$obs$censored == 1 & 
                             rj.obj$dat$obs$Rc > p.bounds[, 3]]
 
-      p.bounds[, 2][rj$k.ij[rj$iter["k.ij"],] == 1 & 
+      p.bounds[, 2][rj.obj$k.ij[rj.obj$iter["k.ij"],] == 1 & 
                       rj.obj$dat$obs$censored == -1 & 
                       rj.obj$dat$obs$Lc < p.bounds[, 2]] <- 
-        rj.obj$dat$obs$Lc[rj$k.ij[rj$iter["k.ij"],] == 1 & 
+        rj.obj$dat$obs$Lc[rj.obj$k.ij[rj.obj$iter["k.ij"],] == 1 & 
                             rj.obj$dat$obs$censored == -1 & 
                             rj.obj$dat$obs$Lc < p.bounds[, 2]]
       
-      p.bounds[, 4][rj$k.ij[rj$iter["k.ij"],] == 2 & 
+      p.bounds[, 4][rj.obj$k.ij[rj.obj$iter["k.ij"],] == 2 & 
                       rj.obj$dat$obs$censored == -1 & 
                       rj.obj$dat$obs$Lc < p.bounds[, 4]] <- 
-        rj.obj$dat$obs$Lc[rj$k.ij[rj$iter["k.ij"],] == 2 & 
+        rj.obj$dat$obs$Lc[rj.obj$k.ij[rj.obj$iter["k.ij"],] == 2 & 
                             rj.obj$dat$obs$censored == -1 & 
                             rj.obj$dat$obs$Lc < p.bounds[, 4]]
       
@@ -1216,9 +1216,9 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
       # data.frame(p.bounds,
       #            alpha = unname(rj.obj$alpha[rj.obj$iter["alpha"],rj.obj$dat$species$trials]),
       #            k = rj.obj$k.ij[rj.obj$iter["k.ij"], ],
-      #            censored = rj$dat$obs$censored,
-      #            Rc = rj$dat$obs$Rc,
-      #            Lc = rj$dat$obs$Lc, row.names = NULL)
+      #            censored = rj.obj$dat$obs$censored,
+      #            Rc = rj.obj$dat$obs$Rc,
+      #            Lc = rj.obj$dat$obs$Lc, row.names = NULL)
       
       
     # L.1 <- rep(rj.obj$dat$param$dose.range[1], rj.obj$dat$trials$n)
@@ -1236,7 +1236,7 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
     #         MARGIN = 1, min)
     # 
     # data.frame(alpha = rj.obj$alpha[rj.obj$iter["alpha"],rj.obj$dat$species$trials],
-    #                                 L.1, U.1, L.2, U.2, k = rj.obj$k.ij[rj.obj$iter["k.ij"], ],censored = rj$dat$obs$censored, Rc = rj$dat$obs$Rc, Lc = rj$dat$obs$Lc)
+    #                                 L.1, U.1, L.2, U.2, k = rj.obj$k.ij[rj.obj$iter["k.ij"], ],censored = rj.obj$dat$obs$censored, Rc = rj.obj$dat$obs$Rc, Lc = rj.obj$dat$obs$Lc)
     
     } else if(param.name == "t.ij" & rj.obj$config$function.select) {
       
@@ -1272,7 +1272,7 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
       
      # Check that all is correct
      # data.frame(alpha = rj.obj$alpha[rj.obj$iter["alpha"], rj.obj$dat$species$trials],
-     #            L = cbind(rj.obj$dat$param$dose.range[1], L.lower)[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])], U = cbind(L.upper, rj.obj$dat$param$dose.range[2])[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])], k = rj$k.ij[rj.obj$k.ij[rj.obj$iter["k.ij"], ]], censored = rj$dat$obs$censored)
+     #            L = cbind(rj.obj$dat$param$dose.range[1], L.lower)[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])], U = cbind(L.upper, rj.obj$dat$param$dose.range[2])[cbind(1:rj.obj$dat$trials$n, rj.obj$k.ij[rj.obj$iter["k.ij"],])], k = rj.obj$k.ij[rj.obj$k.ij[rj.obj$iter["k.ij"], ]], censored = rj.obj$dat$obs$censored)
      
     } else {
       
@@ -1991,29 +1991,6 @@ print.gvs <- function(gvs.dat){
 
 # Convenience ----------------------------------------------------------------
 
-# sense_check <- function(print.text){
-#   
-#   out <- 
-#     
-#     c(sum(rj$t.ij[rj$iter["t.ij"], rj$dat$obs$censored == 1 & rj$k.ij[rj$iter["k.ij"], ] == 2] < rj$alpha[rj$iter["alpha"], rj.obj$dat$species$trials][rj$dat$obs$censored == 1 & rj$k.ij[rj$iter["k.ij"], ] == 2]),
-#       
-#       sum(rj$t.ij[rj$iter["t.ij"], rj$dat$obs$censored == 1 & rj$k.ij[rj$iter["k.ij"], ] == 1] > rj$alpha[rj$iter["alpha"], rj.obj$dat$species$trials][rj$dat$obs$censored == 1 & rj$k.ij[rj$iter["k.ij"], ] == 1]),
-#       
-#       sum(rj$t.ij[rj$iter["t.ij"], rj$k.ij[rj$iter["k.ij"], ] == 2] < rj$alpha[rj$iter["alpha"], rj.obj$dat$species$trials][rj$k.ij[rj$iter["k.ij"], ] == 2]),
-#       
-#       sum(rj$t.ij[rj$iter["t.ij"], rj$k.ij[rj$iter["k.ij"], ] == 1] > rj$alpha[rj$iter["alpha"], rj.obj$dat$species$trials][rj$k.ij[rj$iter["k.ij"], ] == 1]),
-#       
-#       sum(rj$mu.ij[rj$iter["mu.ij"], , 2] < rj$alpha[rj$iter["alpha"], rj.obj$dat$species$trials]),
-#       sum(rj$mu.ij[rj$iter["mu.ij"], , 1] > rj$alpha[rj$iter["alpha"], rj.obj$dat$species$trials]),
-#       
-#       sum(rj$t.ij[rj$iter["t.ij"], rj$dat$obs$censored == 1 & rj$k.ij[rj$iter["k.ij"], ] == 2] < rj.obj$dat$obs$Rc[rj$dat$obs$censored == 1 & rj$k.ij[rj$iter["k.ij"], ] == 2]),
-#       
-#       sum(rj$t.ij[rj$iter["t.ij"], rj$dat$obs$censored == -1 & rj$k.ij[rj$iter["k.ij"], ] == 1] > rj.obj$dat$obs$Lc[rj$dat$obs$censored == -1 & rj$k.ij[rj$iter["k.ij"], ] == 1]))
-#   
-#   cat(print.text, sum(out), '\n')
-#   return(out)
-# }
-
 sense_check <- function(rj.obj, print.text){
   
   out <- 
@@ -2026,7 +2003,6 @@ sense_check <- function(rj.obj, print.text){
       sum(rj.obj$t.ij[rj.obj$iter["t.ij"], rj.obj$dat$obs$censored == -1] > rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]),
       sum(rj.obj$t.ij[rj.obj$iter["t.ij"], rj.obj$dat$obs$censored == 1] < rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]))
     
-  # cat(print.text, sum(out), '\n')
   return(out)
 }
 
@@ -3326,8 +3302,6 @@ format_group <- function(input.list){
   output.list <- purrr::set_names(output.list, nm = seq_len(length(input.list)))
   
   list.order <- sapply(X = seq_len(max(unlist(output.list))), FUN = function(x) which(unlist(output.list)==x))
-  
-  # list.order <- sapply(X = seq_len(rj$dat$species$n), FUN = function(x) which(unlist(output.list)==x))
   
   groupings <- list()
   for(u in 1:length(output.list)) groupings[[u]] <- rep(u, length = length(output.list[[u]]))
