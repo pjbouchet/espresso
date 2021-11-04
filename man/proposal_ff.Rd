@@ -4,7 +4,11 @@
 \alias{proposal_ff}
 \title{Proposal for jumps between functional forms}
 \usage{
-proposal_ff(rj.obj, from.phase, prop.scale = list(alpha = 1, omega = 1))
+proposal_ff(
+  rj.obj,
+  from.phase,
+  prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25)
+)
 }
 \arguments{
 \item{rj.obj}{Input list.}

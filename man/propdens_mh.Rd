@@ -4,7 +4,7 @@
 \alias{propdens_mh}
 \title{Proposal densities for between-model jumps}
 \usage{
-propdens_mh(rj.obj, param.name, dest, orig)
+propdens_mh(rj.obj, param.name, dest, orig, bounds = NULL)
 }
 \arguments{
 \item{param.name}{Parameter name}

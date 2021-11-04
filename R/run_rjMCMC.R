@@ -191,13 +191,14 @@ run_rjMCMC <- function(dat,
                                          dplyr::mutate(p_scale = rescale_p(p))
                                        }
                                        
+                                       # Save new values
                                        if(rj$phase[i - 1] == 1){
                                        rj$mu[i, ] <- new.params$out$mu
                                        if(rj$config$function.select){
                                          rj$nu[i, ,] <- rj$nu[i - 1, ,]
                                          rj$alpha[i, ] <- rj$alpha[i - 1, ]
                                        }}
-                                       
+
                                        if(rj$phase[i - 1] == 2){
                                        rj$nu[i, ,] <- t(new.params$out$nu)
                                        rj$alpha[i, ] <- new.params$out$alpha
@@ -553,7 +554,7 @@ run_rjMCMC <- function(dat,
                                                       param.name = "exposed",
                                                       rj.obj = rj,
                                                       model = rj$mlist[[rj$current.model]],
-                                                      values = prop.list,
+                                                      values = prop.list["exposed"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
                                                       lprod = TRUE)
@@ -583,7 +584,7 @@ run_rjMCMC <- function(dat,
                                                             (loglik.current + logprior.current))
                                        
                                        if (accept.prob){
-                                         rj[["exposed"]][i, ] <- unlist(prop.list)
+                                         rj[["exposed"]][i, ] <- prop.list[["exposed"]]
                                          if(i > rj$mcmc$n.burn) rj$accept[["exposed"]] <- 
                                              rj$accept[["exposed"]] + 1
                                        } 
@@ -606,7 +607,7 @@ run_rjMCMC <- function(dat,
                                                       param.name = "sonar",
                                                       rj.obj = rj,
                                                       model = rj$mlist[[rj$current.model]],
-                                                      values = prop.list,
+                                                      values = prop.list["sonar"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
                                                       lprod = TRUE)
@@ -636,7 +637,7 @@ run_rjMCMC <- function(dat,
                                                             (loglik.current + logprior.current))
                                        
                                        if (accept.prob){
-                                         rj[["sonar"]][i, ] <- unlist(prop.list)
+                                         rj[["sonar"]][i, ] <- prop.list[["sonar"]]
                                          if(i > rj$mcmc$n.burn) rj$accept[["sonar"]] <- 
                                              rj$accept[["sonar"]] + 1
                                        } 
@@ -659,7 +660,7 @@ run_rjMCMC <- function(dat,
                                                       param.name = "behaviour",
                                                       rj.obj = rj,
                                                       model = rj$mlist[[rj$current.model]],
-                                                      values = prop.list,
+                                                      values = prop.list["behaviour"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
                                                       lprod = TRUE)
@@ -689,7 +690,7 @@ run_rjMCMC <- function(dat,
                                                             (loglik.current + logprior.current))
                                        
                                        if (accept.prob){
-                                         rj[["behaviour"]][i, ] <- unlist(prop.list)
+                                         rj[["behaviour"]][i, ] <- prop.list[["behaviour"]]
                                          if(i > rj$mcmc$n.burn) rj$accept[["behaviour"]] <- 
                                              rj$accept[["behaviour"]] + 1
                                        } 
@@ -712,7 +713,7 @@ run_rjMCMC <- function(dat,
                                                       param.name = "range",
                                                       rj.obj = rj,
                                                       model = rj$mlist[[rj$current.model]],
-                                                      values = prop.list,
+                                                      values = prop.list["range"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
                                                       lprod = TRUE)
@@ -742,7 +743,7 @@ run_rjMCMC <- function(dat,
                                              (loglik.current + logprior.current))
                                        
                                        if (accept.prob){
-                                         rj[["range"]][i, ] <- unlist(prop.list)
+                                         rj[["range"]][i, ] <- prop.list[["range"]]
                                          if(i > rj$mcmc$n.burn) rj$accept[["range"]] <- 
                                              rj$accept[["range"]] + 1
                                        } 
@@ -765,7 +766,7 @@ run_rjMCMC <- function(dat,
                                    loglik.proposed <- likelihood(param.name = "t.ij",
                                                                  rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]], 
-                                                                 values = proposed.t.ij, 
+                                                                 values = proposed.t.ij["t.ij"], 
                                                                  included.cov = NULL,
                                                                  RJ = FALSE,
                                                                  lprod = FALSE)
@@ -781,12 +782,14 @@ run_rjMCMC <- function(dat,
                                    prop.forward <- propdens_mh(rj.obj = rj,
                                                                param.name = "t.ij", 
                                                                dest = proposed.t.ij[[1]], 
-                                                               orig = rj$t.ij[i - 1, ])
+                                                               orig = rj$t.ij[i - 1, ],
+                                                               bounds = proposed.t.ij$p.bounds)
                                    
                                    prop.backward <- propdens_mh(rj.obj = rj,
                                                                 param.name = "t.ij", 
                                                                 dest = rj$t.ij[i - 1, ],
-                                                                orig = proposed.t.ij[[1]])
+                                                                orig = proposed.t.ij[[1]],
+                                                                bounds = proposed.t.ij$p.bounds)
                                    
                                    accept.prob <- runif(rj$dat$trials$n) < 
                                      exp((loglik.proposed + prop.backward) - 
@@ -812,7 +815,7 @@ run_rjMCMC <- function(dat,
                                      loglik.proposed <- likelihood(param.name = "sigma",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.sigma,
+                                                                   values = proposed.sigma["sigma"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -843,7 +846,7 @@ run_rjMCMC <- function(dat,
                                    loglik.proposed <- likelihood(param.name = "mu.i",
                                                                  rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.mu.i,
+                                                                 values = proposed.mu.i["mu.i"],
                                                                  included.cov = NULL,
                                                                  RJ = FALSE,
                                                                  lprod = FALSE)
@@ -894,7 +897,7 @@ run_rjMCMC <- function(dat,
                                      loglik.proposed <- likelihood(param = "mu",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.mu,
+                                                                   values = proposed.mu["mu"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -927,7 +930,7 @@ run_rjMCMC <- function(dat,
                                      loglik.proposed <- likelihood(param.name = "phi",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.phi,
+                                                                   values = proposed.phi["phi"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -986,7 +989,7 @@ run_rjMCMC <- function(dat,
                                                                    param.name = "alpha",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.alpha,
+                                                                   values = proposed.alpha["alpha"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -1025,7 +1028,7 @@ run_rjMCMC <- function(dat,
                                                                    param.name = "nu1",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.nu,
+                                                                   values = proposed.nu["nu"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -1061,7 +1064,7 @@ run_rjMCMC <- function(dat,
                                                                    param.name = "nu2",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.nu,
+                                                                   values = proposed.nu["nu"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -1099,7 +1102,7 @@ run_rjMCMC <- function(dat,
                                                                    param.name = "tau1",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.tau,
+                                                                   values = proposed.tau["tau"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -1138,7 +1141,7 @@ run_rjMCMC <- function(dat,
                                                                    param.name = "tau2",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.tau,
+                                                                   values = proposed.tau["tau"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -1176,7 +1179,7 @@ run_rjMCMC <- function(dat,
                                                                    param.name = "omega",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.omega,
+                                                                   values = proposed.omega["omega"],
                                                                    included.cov = NULL,
                                                                    RJ = FALSE,
                                                                    lprod = TRUE)
@@ -1222,7 +1225,7 @@ run_rjMCMC <- function(dat,
                                                                  param.name = "mu.ij",
                                                                  rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.mu.ij,
+                                                                 values = proposed.mu.ij["mu.ij"],
                                                                  included.cov = NULL,
                                                                  RJ = FALSE,
                                                                  lprod = FALSE)
@@ -1236,13 +1239,17 @@ run_rjMCMC <- function(dat,
                                                                 RJ = FALSE,
                                                                 lprod = FALSE)
                                    
-                                   logprop.forward <- propdens_mh(rj.obj = rj, param.name = "mu.ij",
+                                   logprop.forward <- propdens_mh(rj.obj = rj, 
+                                                                  param.name = "mu.ij",
                                                                   dest = proposed.mu.ij[[1]],
-                                                                  orig = rj$mu.ij[rj$iter["mu.ij"], ,])
+                                                                  orig = rj$mu.ij[rj$iter["mu.ij"], ,],
+                                                                  bounds = proposed.mu.ij$p.bounds)
                                    
-                                   logprop.backward <- propdens_mh(rj.obj = rj, param.name = "mu.ij",
+                                   logprop.backward <- propdens_mh(rj.obj = rj, 
+                                                                   param.name = "mu.ij",
                                                                    dest = rj$mu.ij[rj$iter["mu.ij"], ,],
-                                                                   orig = proposed.mu.ij[[1]])
+                                                                   orig = proposed.mu.ij[[1]],
+                                                                   bounds = proposed.mu.ij$p.bounds)
                                    
                                    accept.prob <-  runif(2 * rj$dat$trials$n) < 
                                      exp((loglik.proposed + logprop.backward) - 
@@ -1282,7 +1289,7 @@ run_rjMCMC <- function(dat,
                                                                  param.name = "psi.i",
                                                                  rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.psi.i,
+                                                                 values = proposed.psi.i["psi.i"],
                                                                  included.cov = NULL,
                                                                  RJ = FALSE,
                                                                  lprod = FALSE)
@@ -1327,7 +1334,7 @@ run_rjMCMC <- function(dat,
                                                                  param.name = "k.ij",
                                                                  rj.obj = rj,
                                                                  model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.k.ij,
+                                                                 values = proposed.k.ij["k.ij"],
                                                                  included.cov = NULL,
                                                                  RJ = FALSE,
                                                                  lprod = FALSE)
