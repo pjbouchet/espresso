@@ -557,7 +557,7 @@ read_data <- function(file = NULL,
     # Contextual factors
     covariates = list(n = n.covariates,
                       names = covariate.names,
-                      signal.types = append(sonar.groups, list(exclude = exclude.sonar, not_found = null.sonar))),
+                      signal.types = if("sonar" %in% covariate.names) append(sonar.groups, list(exclude = exclude.sonar, not_found = null.sonar)) else NULL),
     # Observations
     obs = list(y_ij = y_ij,
                censored = is.censored,
