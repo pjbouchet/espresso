@@ -28,6 +28,7 @@ Imports:
     MCMCvis,
     mcmcplots,
     tools, 
+    ggforce,
     mclust,
     tidyselect, 
     pals,
