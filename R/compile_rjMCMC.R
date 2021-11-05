@@ -216,9 +216,13 @@ compile_rjMCMC <- function(rj.object,
         
         dr.raw <- 
           dplyr::select(mcmc.list[[mcl]], 
-           c("omega", "psi", "tau.lower", "tau.upper",
-             colnames(mcmc.list[[mcl]])[grepl(pattern = paste0("\\.", which(sp.names == sp.x)), 
-              x = colnames(mcmc.list[[mcl]]))])) %>% 
+           c("omega", "psi", "tau.lower", "tau.upper", 
+             paste0("nu.lower.", which(sp.names == sp.x)),
+             paste0("nu.upper.", which(sp.names == sp.x)),
+             paste0("alpha.", which(sp.names == sp.x))
+             # colnames(mcmc.list[[mcl]])[grepl(pattern = paste0("nu.*\\.", which(sp.names == sp.x)), 
+             #  x = colnames(mcmc.list[[mcl]]))]
+             )) %>% 
           as.matrix()
         
         if(!is.null(covariate)){
