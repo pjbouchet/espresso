@@ -42,8 +42,8 @@
 #' }
 #' @keywords brs dose-response rjmcmc 
 
-trace_rjMCMC <- function(rj.dat, 
-                         burn = NULL, 
+trace_rjMCMC <- function(rj.dat,
+                         burn = NULL,
                          thin = 1) {
 
   #' ---------------------------------------------
@@ -133,8 +133,8 @@ trace_rjMCMC <- function(rj.dat,
                                                      nrow = dim(tmp[[ii]])[1], 
                                                      ncol = prod(dim(tmp[[ii]])[2], dim(tmp[[ii]])[3]),
                                                      dimnames = list(NULL,
-                                as.vector(outer(dimnames(tmp[[ii]])[[3]], 
-                                                dimnames(tmp[[ii]])[[2]], FUN = "paste0"))))
+                                as.vector(t(outer(dimnames(tmp[[ii]])[[3]], 
+                                                dimnames(tmp[[ii]])[[2]], FUN = "paste0")))))
                                  }
                                } else {
                                  tmp[[ii]] <- matrix(tmp[[ii]], ncol = 1, dimnames = list(NULL, names(tmp)[ii]))
