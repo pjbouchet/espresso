@@ -29,6 +29,7 @@ Imports:
     mcmcplots,
     tools, 
     ggforce,
+    ggplot2,
     mclust,
     tidyselect, 
     pals,
