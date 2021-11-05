@@ -8,9 +8,13 @@
 #' @param n.burn Number of MCMC iterations to treat as burn-in.
 #' @param n.iter Number of posterior samples.
 #' @param n.chains Number of MCMC chains. Defaults to 3.
+#' @param p.split Probability of performing a group split when \code{model.select = TRUE}.
+#' @param p.merge Probability of performing a group merge when \code{model.select = TRUE}.
+#' @param moves Required move types. 0: Split/merge. 1: Data-driven I. 2: Data-driven II. 3: Independent.
+#' @param move.ratio Relative proportion of each move type.
+#' @param m Frequency at which each move type is proposed, e.g., when \code{m = 100}, a move is proposed every 100th iteration.
 #' @param do.update Logical. Whether to update an existing sampler or set up a new one.
 #' @param start.values Starting values to use when updating an existing sampler and \code{do.update = TRUE}.
-#' @inheritParams run_rjMCMC
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @keywords brs dose-response rjmcmc 

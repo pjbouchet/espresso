@@ -19,6 +19,7 @@
 #' @param sigma Within-whale between-exposure variance in response thresholds.
 #' @param Lc Left-censoring interval. Values of the minimum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Lc}.
 #' @param Rc Right-censoring interval. Values of the maximum realised dose for each exposure are generated as random draws from a Uniform distribution within the bounds defined by `\code{Rc}.
+#' @param Npriors Vector of length two, giving the mean and SD of the Normal priors placed on covariates.
 #' @param seed Random seed (for reproducible results). 
 #' 
 #' @inheritParams read_data

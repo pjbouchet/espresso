@@ -6,6 +6,9 @@
 \usage{
 \method{print}{rjtrace}(rj.obj)
 }
+\arguments{
+\item{rj.obj}{Input object.}
+}
 \description{
 Print method for objects of class \code{rjtrace}
 }

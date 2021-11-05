@@ -64,8 +64,6 @@
 \item{file.format}{Character. File format for output plots on disk. Can be one of \code{png}, \code{jpeg}, \code{tiff} or \code{pdf}. Only used when \code{do.save = TRUE}.}
 
 \item{...}{Additional arguments as passed to \code{\link[ggplot2]{gg.save}}.}
-
-\item{file.dir}{Path to the output directory. This defaults to the current working directory. Only used when \code{do.save = TRUE}.}
 }
 \description{
 Plot \code{dose_response} curve objects produced by \code{\link{compile_rjMCMC}}.

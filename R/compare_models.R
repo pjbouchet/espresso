@@ -144,8 +144,8 @@ compare_models <- function(rj.dat = NULL,
                                    do.call(rbind, .) %>% 
                                    tibble::as_tibble(.) %>% 
                                    dplyr::rename_at(vars(matches("theta")), function(x) "model_ID") %>% 
-                                   dplyr::select(-contains("incl.")) %>% 
-                                   dplyr::select(-contains("size"))})
+                                   dplyr::select(-tidyselect::contains("incl.")) %>% 
+                                   dplyr::select(-tidyselect::contains("size"))})
     
     master.trace$rj <- master.trace$rj %>% 
       dplyr::left_join(x = ., y = master.list$rj$mlist[, c("ID", "model")], by = c("model_ID" = "ID"))
@@ -178,10 +178,10 @@ compare_models <- function(rj.dat = NULL,
     
     # When by.model, only makes senses to subset mu as other params are not grouping dependent
     mu.plot <- master.plot %>% 
-      dplyr::select_at(vars(contains("mu"), "model", "method"))
+      dplyr::select_at(vars(tidyselect::contains("mu"), "model", "method"))
     
     master.plot <- master.plot %>% 
-      dplyr::select_at(vars(-contains("mu")))
+      dplyr::select_at(vars(-tidyselect::contains("mu")))
     
     if(!is.null(plot.model))  mu.plot <- dplyr::filter(mu.plot, model == which.model)
     

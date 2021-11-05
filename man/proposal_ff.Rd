@@ -15,7 +15,7 @@ proposal_ff(
 
 \item{from.phase}{Jump from monophasic to biphasic (1) or from biphasic to monophasic (2).}
 
-\item{scale.adj}{SD used in calls to rtnorm for the following parameters: alpha, nu, sigma, phi, mu}
+\item{prop.scale}{SD used to generate proposed values for \code{alpha}, \code{omega} and \code{psi.i}.}
 }
 \description{
 Generate proposed values for relevant model parameters

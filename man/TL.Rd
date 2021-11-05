@@ -7,9 +7,9 @@
 TL(rge, a = 0.185)
 }
 \arguments{
-\item{a}{Sound absorption coefficient, in dB per km. This is frequency-dependent, and takes a value of 0.185 for a 3 kHz signal under normal sea conditions.}
+\item{rge}{Range in km.}
 
-\item{r}{Range in km.}
+\item{a}{Sound absorption coefficient, in dB per km. This is frequency-dependent, and takes a value of 0.185 for a 3 kHz signal under normal sea conditions.}
 }
 \description{
 Transmission loss

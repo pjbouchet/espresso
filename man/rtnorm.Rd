@@ -16,8 +16,6 @@ rtnorm(n, location, scale, L, U)
 \item{L}{Lower limit of the distribution.}
 
 \item{U}{Upper limit of the distribution.}
-
-\item{log}{Logical. If \code{TRUE}, probabilities p are given as log(p).}
 }
 \description{
 Generate random deviates from a truncated normal distribution with mean equal to \code{location} and standard deviation equal to \code{scale}.

@@ -320,7 +320,7 @@ run_rjMCMC <- function(dat,
                                      
                                      loglik.new <- 
                                        likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
-                                                  param = "covariates",
+                                                  param.name = "covariates",
                                                   rj.obj = rj,
                                                   model = rj$mlist[[rj$current.model]], 
                                                   values = stats::setNames(list(beta.params[[chosen.covariate]]), 
@@ -331,7 +331,7 @@ run_rjMCMC <- function(dat,
                                      
                                      loglik.cur <- 
                                        likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
-                                                  param = "covariates",
+                                                  param.name = "covariates",
                                                   rj.obj = rj,
                                                   model = rj$mlist[[rj$current.model]],
                                                   values = NULL,
@@ -894,7 +894,7 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(param = "mu",
+                                     loglik.proposed <- likelihood(param.name = "mu",
                                                                    rj.obj = rj,
                                                                    model = rj$mlist[[rj$current.model]],
                                                                    values = proposed.mu["mu"],

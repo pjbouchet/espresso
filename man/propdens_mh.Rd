@@ -7,6 +7,8 @@
 propdens_mh(rj.obj, param.name, dest, orig, bounds = NULL)
 }
 \arguments{
+\item{rj.obj}{Input object.}
+
 \item{param.name}{Parameter name}
 
 \item{dest}{Proposed value(s)}

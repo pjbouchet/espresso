@@ -6,6 +6,9 @@
 \usage{
 \method{print}{gvs}(gvs.dat)
 }
+\arguments{
+\item{gvs.dat}{Input object.}
+}
 \description{
 Print method for objects of class \code{gvs}
 }

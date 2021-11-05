@@ -29,7 +29,6 @@ dtnorm <- function(x, location = 0, scale = 1, log = FALSE, L = -Inf, U = Inf) {
 #' @param n Number of observations.
 #' @param location Vector of means.
 #' @param scale Vector of standard deviations.
-#' @param log Logical. If \code{TRUE}, probabilities p are given as log(p).
 #' @param L Lower limit of the distribution.
 #' @param U Upper limit of the distribution.
 
@@ -427,6 +426,8 @@ normal_prior <- function(rj.obj,
 #'
 #' Propose a new model.
 #' 
+#' @param rj.obj Input object.
+#' @param phase Monophasic (1) vs biphasic (2).
 #' @param move.type Type of between-model jump. (0): split/merge, (1): Bootstrap, (2): Cluster, (3): Random
 propose_jump <- function(rj.obj, move.type, phase) {
   
@@ -673,7 +674,7 @@ propose_jump <- function(rj.obj, move.type, phase) {
 #' Generate proposed values for relevant model parameters
 #' @param rj.obj Input list.
 #' @param from.phase Jump from monophasic to biphasic (1) or from biphasic to monophasic (2).
-#' @param scale.adj SD used in calls to rtnorm for the following parameters: alpha, nu, sigma, phi, mu
+#' @param prop.scale SD used to generate proposed values for \code{alpha}, \code{omega} and \code{psi.i}.
 
 proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25)){
   
@@ -1551,6 +1552,7 @@ propdens_rj <- function(rj.obj, param, jump, phase) {
 
 #' Proposal densities for between-model jumps
 #'
+#' @param rj.obj Input object.
 #' @param param.name Parameter name
 #' @param dest Proposed value(s)
 #' @param orig Current value(s) 
@@ -1623,6 +1625,7 @@ propdens_mh <- function(rj.obj, param.name, dest, orig, bounds = NULL) {
 # Trace ----------------------------------------------------------------
 
 #' Print method for objects of class \code{rjtrace}
+#' @param rj.obj Input object.
 #' @export
 print.rjtrace <- function(rj.obj){
   print(summary(rj.obj$trace))
@@ -1633,6 +1636,7 @@ print.rjtrace <- function(rj.obj){
 # Dose-response ----------------------------------------------------------------
 
 #' Print method for objects of class \code{dose_response}
+#' @param dr.object Input object.
 #' @export
 print.dose_response <- function(dr.object){
   if(!"dose_response" %in% class(dr.object)) stop("dr.object must be of class <dose_response>")
@@ -1652,7 +1656,7 @@ is.even <- function(x){ x %% 2 == 0 }
 combAB.fun <- function(n){
   
   # All combinations of two groups
-  id1 <- unlist(lapply(2:(n-1), function(x) combn(1:n, x, simplify = FALSE)), recursive = FALSE) 
+  id1 <- unlist(lapply(2:(n-1), function(x) utils::combn(1:n, x, simplify = FALSE)), recursive = FALSE) 
   
   Ind <- diag(n)
   IndAB <- matrix(NA, ncol = n, nrow = 2*length(id1))
@@ -1676,7 +1680,7 @@ combAB.fun <- function(n){
 combAB_C_D.fun <- function(n){
   
   # All combinations
-  id1 <- unlist(lapply(2:(n-1), function(x)combn(1:n, x, simplify = FALSE)), recursive = FALSE) 
+  id1 <- unlist(lapply(2:(n-1), function(x) utils::combn(1:n, x, simplify = FALSE)), recursive = FALSE) 
   
   Ind <- diag(n)
   IndAB <- matrix(NA, ncol = n, nrow = 0)
@@ -1704,7 +1708,7 @@ comb.groups  <-  function(x, gr){
   nx  <-  length(x)
   ning  <-  nx/gr
   
-  group1  <-  rbind(matrix(rep(x[1],choose(nx-1,ning-1)),nrow=1),combn(x[-1],ning-1))
+  group1  <-  rbind(matrix(rep(x[1],choose(nx-1,ning-1)),nrow=1), utils::combn(x[-1],ning-1))
   ng  <-  ncol(group1)
   
   if(gr > 2){
@@ -1755,7 +1759,7 @@ combAB_C_D.ind <- function(n,id){
 # Function to find all possible combinations for n>=5 using the previous functions 
 all.comb <- function(n){
   
-  id1 <- unlist(lapply(2:(n-1),function(x)combn(1:n,x,simplify=F)),recursive=F) 
+  id1 <- unlist(lapply(2:(n-1),function(x) utils::combn(1:n,x,simplify=F)),recursive=F) 
   id.not1 <- list()
   for (i in 1:length(id1)) id.not1[[i]] <- which(c(1:n) %!in% id1[[i]])
   id1.length <- id.not1.length <- rep(0,length(id1))
@@ -1931,6 +1935,7 @@ get_groupings <- function(species.matrix,
 }
 
 #' Print method for objects of class \code{gvs}
+#' @param gvs.dat Input object.
 #' @export
 print.gvs <- function(gvs.dat){
  print(summary(gvs.dat$trace))
@@ -1956,7 +1961,7 @@ sense_check <- function(rj.obj, print.text){
 
 #' Transmission loss
 
-#' @param r Range in km.
+#' @param rge Range in km.
 #' @param a Sound absorption coefficient, in dB per km. This is frequency-dependent, and takes a value of 0.185 for a 3 kHz signal under normal sea conditions.
 
 TL <- function(rge, a = 0.185){ 
@@ -2640,7 +2645,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
         YAXT_TR <- "n"
       }
       if (Rhat == TRUE | n.eff == TRUE) {
-        summ <- MCMCsummary(object, params = params, excl = excl, 
+        summ <- MCMCvis::MCMCsummary(object, params = params, excl = excl, 
                             ISB = ISB, Rhat = Rhat, n.eff = n.eff)
         if (Rhat == TRUE) {
           rhat <- summ[, grep("Rhat", colnames(summ))]
@@ -2691,7 +2696,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             if (lwp == length(it) * n_chains) {
               wp2 <- wp
             }
-            dpr <- stats::density(wp2)
+            dpr <- density(wp2)
             PPO_x_rng <- range(dpr$x)
             PPO_y_rng <- range(dpr$y)
             tmlt_1c <- matrix(tmlt, ncol = 1)
@@ -2705,7 +2710,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             }
           }
           if (ind == TRUE & n_chains > 1) {
-            dens <- apply(tmlt, 2, stats::density)
+            dens <- apply(tmlt, 2, density)
             max_den_y <- c()
             rng_den_x <- c()
             for (k in 1:NCOL(tmlt)) {
@@ -2755,7 +2760,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             }
           }
           else {
-            dens <- stats::density(rbind(tmlt))
+            dens <- density(rbind(tmlt))
             rng_den_x <- range(dens$x)
             if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
                 is.null(xlim)) {
@@ -2875,7 +2880,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             if (lwp == length(it) * n_chains) {
               wp2 <- wp
             }
-            dpr <- stats::density(wp2)
+            dpr <- density(wp2)
             PPO_x_rng <- range(dpr$x)
             PPO_y_rng <- range(dpr$y)
             tmlt_1c <- matrix(tmlt, ncol = 1)
@@ -2889,7 +2894,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             }
           }
           if (ind == TRUE & n_chains > 1) {
-            dens <- apply(tmlt, 2, stats::density)
+            dens <- apply(tmlt, 2, density)
             max_den_y <- c()
             rng_den_x <- c()
             for (k in 1:NCOL(tmlt)) {
@@ -2939,7 +2944,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             }
           }
           else {
-            dens <- stats::density(rbind(tmlt))
+            dens <- density(rbind(tmlt))
             if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
                 is.null(xlim)) {
               ylim <- range(c(range(dens$y), PPO_y_rng))
@@ -2955,7 +2960,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
                 xlim <- NULL
               }
             }
-            graphics::plot(stats::density(rbind(tmlt)), 
+            graphics::plot(density(rbind(tmlt)), 
                            xlab = xlab_den, ylab = ylab_den, ylim = ylim, 
                            col = COL_DEN, xlim = xlim, lty = lty_den, 
                            lwd = lwd_den, main = "", cex.axis = sz_tick_txt, 
@@ -3048,7 +3053,7 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
           if (lwp == length(it) * n_chains) {
             wp2 <- wp
           }
-          dpr <- stats::density(wp2)
+          dpr <- density(wp2)
           PPO_x_rng <- range(dpr$x)
           PPO_y_rng <- range(dpr$y)
           tmlt_1c <- matrix(tmlt, ncol = 1)
@@ -3159,7 +3164,7 @@ split_count <- function(speciesFrom){
   
   comb.list <- lapply(X = seq_len(length(speciesFrom) - 1),
                       FUN = function(N){
-                        combn(x = speciesFrom, m = N) })
+                        utils::combn(x = speciesFrom, m = N) })
                         # gRbase::combn_prim(x = speciesFrom, m = N) })
   
   res <- purrr::map(.x = comb.list, 
@@ -3187,7 +3192,7 @@ merge_count <- function(speciesFrom){
   # Use simplify = FALSE to return a list, even if only one single pairing is possible
   comb.list <- purrr::map(.x = speciesFrom, .f = ~paste0(.x, collapse = ",")) %>%
     unlist() %>% 
-    combn(x = ., m = 2, simplify = FALSE)
+    utils::combn(x = ., m = 2, simplify = FALSE)
     # gRbase::combn_prim(x = ., m = 2, simplify = FALSE)
   return(comb.list)
 }

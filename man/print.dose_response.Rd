@@ -6,6 +6,9 @@
 \usage{
 \method{print}{dose_response}(dr.object)
 }
+\arguments{
+\item{dr.object}{Input object.}
+}
 \description{
 Print method for objects of class \code{dose_response}
 }

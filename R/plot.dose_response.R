@@ -21,7 +21,6 @@
 #' @param outline.outer Logical. If \code{TRUE}, outline the outermost credible interval bounds.
 #' @param do.save Logical. Whether to save plots on disk.
 #' @param file.format Character. File format for output plots on disk. Can be one of \code{png}, \code{jpeg}, \code{tiff} or \code{pdf}. Only used when \code{do.save = TRUE}.
-#' @param file.dir Path to the output directory. This defaults to the current working directory. Only used when \code{do.save = TRUE}.
 #' @param ... Additional arguments as passed to \code{\link[ggplot2]{gg.save}}.
 #' 
 #' 
