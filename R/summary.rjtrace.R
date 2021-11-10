@@ -141,11 +141,24 @@ summary.rjtrace <- function(rj.obj,
       # Excludes columns with a less than 10 unique value 
       # (e.g., when a model has been specified a priori, or when there are only 2 species,
       # and hence only two possible models)
+
+      gelman.names <- rj.obj$ess %>% 
+        dplyr::filter(ESS >= 10) %>%
+        dplyr::pull(parameter)
+      
+      gelman.exclude <- rj.obj$ess %>% 
+        dplyr::filter(ESS < 10) %>%
+        dplyr::pull(parameter)
+      
       coda.out <- tryCatch(expr = {
-        cvg <- coda::gelman.diag(x = rj.obj$trace[, sufficient.ess],
+        cvg <- coda::gelman.diag(x = rj.obj$trace[, gelman.names],
                                  autoburnin = FALSE, 
                                  multivariate = TRUE)},
         error = function(e){ NA })
+      
+      if(length(gelman.exclude) > 0) cat("Convergence: Not assessed for variable(s):", 
+                                         paste0(gelman.exclude, collapse = ", "),
+      "(insufficient MCMC samples)\n")
       
       if(all(is.na(coda.out))){
         cat("Convergence: Not assessed (insufficient MCMC samples)\n")
