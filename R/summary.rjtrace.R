@@ -97,7 +97,8 @@ summary.rjtrace <- function(rj.obj,
     cat("\nEFFECTIVE SAMPLE SIZES\n")
     cat("--------------------\n")
     
-    for(pp in c("mu", "phi", "sigma", "alpha", "nu.lower", "nu.upper", "tau", "omega", "psi", rj.obj$dat$covariates$names, "model", "phase")){
+    if(rj.obj$config$function.select | !rj.obj$config$biphasic){
+    for(pp in c("mu", "phi", "sigma")){
       cat("--", pp, "-- \n\n")
       my.ess <- rj.obj$ess %>%
         dplyr::filter(grepl(pattern = pp, x = parameter))
@@ -107,7 +108,53 @@ summary.rjtrace <- function(rj.obj,
       print(my.ess)
       cat("\n")
     }
-
+    }
+    
+    if(rj.obj$config$function.select | rj.obj$config$biphasic){
+    for(pp in c("alpha", "nu.lower", "nu.upper", "tau", "omega", "psi")){
+      cat("--", pp, "-- \n\n")
+      my.ess <- rj.obj$ess %>%
+        dplyr::filter(grepl(pattern = pp, x = parameter))
+      if(pp %in% c("mu", "alpha", "nu.lower", "nu.upper")){
+        my.ess <- my.ess %>% dplyr::mutate(parameter = rj.obj$dat$species$names) %>%
+          tidyr::pivot_wider(., names_from = parameter, values_from = ESS)}
+      print(my.ess)
+      cat("\n")
+    }
+    }
+    
+    if(rj.obj$dat$covariates$n > 0){
+      for(pp in c(rj.obj$dat$covariates$names)){
+        cat("--", pp, "-- \n\n")
+        my.ess <- rj.obj$ess %>%
+          dplyr::filter(grepl(pattern = pp, x = parameter))
+        if(pp %in% c("mu", "alpha", "nu.lower", "nu.upper")){
+          my.ess <- my.ess %>% dplyr::mutate(parameter = rj.obj$dat$species$names) %>%
+            tidyr::pivot_wider(., names_from = parameter, values_from = ESS)}
+        print(my.ess)
+        cat("\n")
+      }
+    }
+    
+    if(rj.obj$config$model.select){
+      pp <- "model"
+      cat("--", pp, "-- \n\n")
+      my.ess <- rj.obj$ess %>%
+        dplyr::filter(grepl(pattern = pp, x = parameter))
+      print(my.ess)
+      cat("\n")
+      
+    }
+    
+    if(rj.obj$config$function.select){
+      pp <- "phase"
+      cat("--", pp, "-- \n\n")
+      my.ess <- rj.obj$ess %>%
+        dplyr::filter(grepl(pattern = pp, x = parameter))
+      print(my.ess)
+      cat("\n")
+    }
+    
   }
   
   if(accept.rate){
