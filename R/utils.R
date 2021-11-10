@@ -750,13 +750,13 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     # pi_ij
     fprop$pi.ij <- rep(0.5, rj.obj$dat$trials$n)
 
-    # psi_i
+    # psi_ij
     fprop$psi.ij <- qnorm(fprop$pi.ij) - cov_effects(rj.obj)
     
+    # psi.i
     fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
     
-    fprop$psi.i <- rnorm(n = length(fprop$psi.i_mean), 
-                         mean = fprop$psi.i_mean, sd = prop.scale[["psi.i"]])
+    fprop$psi.i <- rnorm(n = length(fprop$psi.i_mean),  mean = fprop$psi.i_mean, sd = prop.scale[["psi.i"]])
     
     # psi and omega
     fprop$psi <- mean(fprop$psi.i)
@@ -820,12 +820,9 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     fprop$omega <- rj.obj$omega[rj.obj$iter["omega"]]
     fprop$psi <- rj.obj$psi[rj.obj$iter["psi"]]
     fprop$psi.i <- rj.obj$psi.i[rj.obj$iter["psi.i"], ]
-    fprop$pi.ij <- rj.obj$pi.ij[rj.obj$iter["pi.ij"], ]
     fprop$psi.ij <- fprop$psi.i[rj.obj$dat$whales$id] + cov_effects(rj.obj)
+    fprop$pi.ij <- rj.obj$pi.ij[rj.obj$iter["pi.ij"], ]
     fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
-   
-    fprop$na_1 <- fprop$k.ij == 2
-    fprop$na_2 <- fprop$k.ij == 1
     
     fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
     
@@ -1356,10 +1353,7 @@ propdens_ff <- function(rj.obj, param){
            U = rj.obj$config$priors["omega", 2],
            log = TRUE) +
     
-    sum(dnorm(x = param$psi.i, 
-              mean = param$psi.i_mean, 
-              sd = param$prop.scale[["psi.i"]], 
-              log = TRUE)) +
+    sum(dnorm(x = param$psi.i, mean = param$psi.i_mean, sd = param$prop.scale[["psi.i"]], log = TRUE)) +
     
     sum(dunif(x = param$mu.ij[param$na_1, 1],
               min = rj.obj$dat$param$dose.range[1],
