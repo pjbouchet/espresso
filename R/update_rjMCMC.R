@@ -4,7 +4,7 @@
 #'
 #' @param rjdat Input rjMCMC sampler. Must be an object of class \code{rjmcmc}, as returned by \code{\link{run_rjMCMC}}.
 #' @param n.iter Number of posterior samples.
-#' 
+#' @export
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @examples

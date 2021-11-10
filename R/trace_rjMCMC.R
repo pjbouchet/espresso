@@ -117,6 +117,8 @@ trace_rjMCMC <- function(rj.dat,
     if(rj.dat[[j]]$dat$covariates$n > 0){
       colnames(rj.dat[[j]]$include.covariates) <- paste0("incl.", colnames(rj.dat[[j]]$include.covariates))
     }
+    if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_ID <- rep(rj.dat[[j]]$model_ID, mcmc.params$n.iter)
+    if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_size <- rep(rj.dat[[j]]$model_size, mcmc.params$n.iter)
   }
     
   #' ---------------------------------------------
@@ -267,8 +269,8 @@ trace_rjMCMC <- function(rj.dat,
   AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), 
                    .f = ~{
                      
-            move.phase <- cbind(rj.dat[[.x]]$mcmc$move$m[(mcmc.params$n.burn + 1):mcmc.params$tot.iter], 
-                                rj.dat[[.x]]$phase[(mcmc.params$n.burn + 1):mcmc.params$tot.iter])
+            move.phase <- cbind(rj.dat[[.x]]$mcmc$move$m[(burn + 1):mcmc.params$n.iter], 
+                                rj.dat[[.x]]$phase[(burn + 1):mcmc.params$n.iter])
                      
                      ncount <- dplyr::bind_rows(
   tibble::tibble(param = pars.mono, phase = 1),
@@ -333,7 +335,11 @@ trace_rjMCMC <- function(rj.dat,
   #' ---------------------------------------------
   # Effective sample sizes
   #' ---------------------------------------------
-  ESS <- mcmcse::ess(mcmc.trace) %>% 
+  
+  ess.params <- colnames(mcmc.trace[[1]])
+  if(!rj.dat[[1]]$config$model.select) ess.params <- ess.params[!ess.params %in% c("model_ID", "model_size")]
+  if(!rj.dat[[1]]$config$function.select) ess.params <- ess.params[!ess.params == "phase"]
+  ESS <- mcmcse::ess(mcmc.trace[, ess.params]) %>% 
     tibble::enframe(.) %>% 
     dplyr::rename(parameter = name, ESS = value)
   
