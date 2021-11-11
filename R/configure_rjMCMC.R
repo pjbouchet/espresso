@@ -64,9 +64,9 @@ configure_rjMCMC <- function(dat,
                              function.select = TRUE,
                              biphasic = FALSE,
                              proposal.mh = list(t.ij = 10, mu.i = 10, mu = 2, phi = 5, sigma = 5,
-                                                nu = 5, tau = 5, alpha = 1, mu.ij = 1, psi = 1, 
+                                                nu = 5, tau = 5, alpha = 2, mu.ij = 1, psi = 1, 
                                                 omega = 1, psi.i = 0.5, k.ij = 0.5),
-                             proposal.rj = list(rj = 5, dd = 10, cov = 1),
+                             proposal.rj = list(rj = 5, dd = 10, cov = 3),
                              priors = list(covariates = c(0, 30), 
                                            sigma = c(0, 45), 
                                            phi = c(0, 45),
@@ -165,13 +165,13 @@ configure_rjMCMC <- function(dat,
                              priors$psi[2]),
                    prior = c(rep("Uniform", 7), "Normal"))
   
-  if(!function.select){
-    if(biphasic){
-      priors.df <- priors.df %>% 
-    dplyr::filter(param %in% pars.bi) 
-      } else { priors.df <- priors.df %>% 
-    dplyr::filter(param %in% pars.mono) }
-  }
+  # if(!function.select){
+  #   if(biphasic){
+  #     priors.df <- priors.df %>% 
+  #   dplyr::filter(param %in% pars.bi) 
+  #     } else { priors.df <- priors.df %>% 
+  #   dplyr::filter(param %in% pars.mono) }
+  # }
   
   if(dat$covariates$n > 0){
     
