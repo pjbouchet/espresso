@@ -102,7 +102,7 @@ run_rjMCMC <- function(dat,
                                  if(Sys.info()[['sysname']] == "Darwin") utils::setTxtProgressBar(pb, i)
                                  if(Sys.info()[['sysname']] == "Windows"){
                                  sink(paste0(rd.ID, "_log.txt"), append = FALSE)  
-                                 cat("\r", "Iteration ", ii)
+                                 cat("\r", "Iteration ", i)
                                  sink()
                                  }
                                  
