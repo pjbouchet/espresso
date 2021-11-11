@@ -8,7 +8,6 @@ likelihood(
   biphasic = FALSE,
   param.name = NULL,
   rj.obj,
-  model,
   values = NULL,
   included.cov = NULL,
   RJ = FALSE,
@@ -21,8 +20,6 @@ likelihood(
 \item{param.name}{Paramter name. Ignored if \code{values} is specified.}
 
 \item{rj.obj}{rjMCMC object.}
-
-\item{model}{Integer vector determining species groupings for the model of interest.}
 
 \item{values}{List of proposed values, if available.}
 
