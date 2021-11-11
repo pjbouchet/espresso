@@ -53,7 +53,6 @@ d_binom <- function(x, size, prob, log){
 #' @param biphasic Logical. Indicates the type of model for which likelihoods should be calculated.
 #' @param param.name Paramter name. Ignored if \code{values} is specified.
 #' @param rj.obj rjMCMC object.
-#' @param model Integer vector determining species groupings for the model of interest.
 #' @param values List of proposed values, if available.
 #' @param included.cov Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.
 #' @param RJ Logical. If \code{TRUE}, returns the likelihoods associated with between-model jumps. If \code{FALSE}, returns the likelihoods associated with the update step of the Metropolis sampler.
@@ -62,7 +61,6 @@ d_binom <- function(x, size, prob, log){
 likelihood <- function(biphasic = FALSE,
                        param.name = NULL, 
                        rj.obj,
-                       model, 
                        values = NULL, 
                        included.cov = NULL, 
                        RJ = FALSE,
@@ -363,8 +361,10 @@ ff_prior <- function(rj.obj, param = NULL, phase) {
                                      phi = rj.obj$phi[rj.obj$iter["phi"]])
     
     loglik <- dunif(x = c(unique(param$mu), param$sigma, param$phi),
-                         min = rj.obj$config$priors[c(rep("mu", length(unique(param$mu))), "sigma", "phi"), 1],
-                         max = rj.obj$config$priors[c(rep("mu", length(unique(param$mu))), "sigma", "phi"), 2],
+                         min = rj.obj$config$priors[c(rep("mu", length(unique(param$mu))), 
+                                                      "sigma", "phi"), 1],
+                         max = rj.obj$config$priors[c(rep("mu", length(unique(param$mu))), 
+                                                      "sigma", "phi"), 2],
                          log = TRUE)
     
   } else if(phase == 2){
@@ -714,7 +714,7 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
   
   if(fprop$to.phase == 2){
     
-    fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
+    # fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
     
     # ++++++++++++++++++++++++++
     # Important note
@@ -737,9 +737,9 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
     #   .f = ~ min(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 2][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
     
-
     fprop$alpha <- rtnorm(n = length(inits.bi), 
-                          location = sapply(X = inits.bi, FUN = function(a){min(a) + (max(a)-min(a))/2}), 
+                          location = sapply(X = inits.bi, 
+                            FUN = function(a){min(a) + (max(a)-min(a))/2}), 
                           scale = prop.scale[["alpha"]], 
                           L = rj.obj$dat$param$dose.range[1], 
                           U = rj.obj$dat$param$dose.range[2])[rj.obj$mlist[[rj.obj$current.model]]]
@@ -754,9 +754,11 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     fprop$psi.ij <- qnorm(fprop$pi.ij) - cov_effects(rj.obj)
     
     # psi.i
-    fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
+    fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, 
+              FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
     
-    fprop$psi.i <- rnorm(n = length(fprop$psi.i_mean),  mean = fprop$psi.i_mean, sd = prop.scale[["psi.i"]])
+    fprop$psi.i <- rnorm(n = length(fprop$psi.i_mean),
+                         mean = fprop$psi.i_mean, sd = prop.scale[["psi.i"]])
     
     # psi and omega
     fprop$psi <- mean(fprop$psi.i)
@@ -765,7 +767,6 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
                           L = rj.obj$config$priors["omega", 1],
                           U = rj.obj$config$priors["omega", 2])
 
-    
     # mu_ij
     fprop$mu.ij <- matrix(data = NA, nrow = rj.obj$dat$trials$n, ncol = 2)
     fprop$mu.ij[cbind(1:nrow(fprop$mu.ij), fprop$k.ij)] <- fprop$t.ij
@@ -810,8 +811,11 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     
     fprop$alpha <- rj.obj$alpha[rj.obj$iter["alpha"], ]
     L.alpha <- U.alpha <- fprop$alpha[rj.obj$dat$species$trials]
-    L.alpha[rj.obj$dat$obs$censored == -1] <- rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1]
-    U.alpha[rj.obj$dat$obs$censored == 1] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1]
+
+    L.alpha[rj.obj$dat$obs$censored == -1 & L.alpha > rj.obj$dat$obs$Lc] <-
+      rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1 & L.alpha > rj.obj$dat$obs$Lc]
+
+    U.alpha[rj.obj$dat$obs$censored == 1 & U.alpha < rj.obj$dat$obs$Rc] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1 & U.alpha < rj.obj$dat$obs$Rc]
     
     fprop$nu <- if(rj.obj$dat$species$n == 1) matrix(rj.obj$nu[rj.obj$iter["nu"], , ]) else
       t(rj.obj$nu[rj.obj$iter["nu"], , ])
@@ -823,6 +827,9 @@ proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega 
     fprop$psi.ij <- fprop$psi.i[rj.obj$dat$whales$id] + cov_effects(rj.obj)
     fprop$pi.ij <- rj.obj$pi.ij[rj.obj$iter["pi.ij"], ]
     fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
+    
+    fprop$na_1 <- fprop$k.ij == 2
+    fprop$na_2 <- fprop$k.ij == 1
     
     fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
     
@@ -1331,7 +1338,7 @@ proposal_mh <- function(rj.obj, param.name, seed = NULL) {
 
 #' Proposal densities for functional form jumps.
 #'
-#'@param rj.obj Input object.
+#' @param rj.obj Input object.
 #' @param param Parameter values.
 
 propdens_ff <- function(rj.obj, param){
@@ -1339,12 +1346,11 @@ propdens_ff <- function(rj.obj, param){
   logprop.mono <- 0
  
   logprop.bi <- sum(dtnorm(x = unique(param$alpha),
-               location = unique(sapply(X = param$inits.bi, FUN = function(a){min(a) + (max(a)-min(a))/2})[rj.obj$mlist[[rj.obj$current.model]]]),
+               location = unique(sapply(X = param$inits.bi, 
+            FUN = function(a){min(a) + (max(a)-min(a))/2})[rj.obj$mlist[[rj.obj$current.model]]]),
                scale = param$prop.scale[["alpha"]], 
                L = rj.obj$dat$param$dose.range[1],
                U = rj.obj$dat$param$dose.range[2],
-               # L = unique(param$L.bound[rj.obj$mlist[[rj.obj$current.model]]]),
-               # U = unique(param$U.bound[rj.obj$mlist[[rj.obj$current.model]]]),
                log = TRUE)) +
     
     dtnorm(x = param$omega, location = 1,
@@ -1353,15 +1359,20 @@ propdens_ff <- function(rj.obj, param){
            U = rj.obj$config$priors["omega", 2],
            log = TRUE) +
     
-    sum(dnorm(x = param$psi.i, mean = param$psi.i_mean, sd = param$prop.scale[["psi.i"]], log = TRUE)) +
+    sum(dnorm(x = param$psi.i, 
+              mean = param$psi.i_mean, 
+              sd = param$prop.scale[["psi.i"]], 
+              log = TRUE)) +
     
     sum(dunif(x = param$mu.ij[param$na_1, 1],
               min = rj.obj$dat$param$dose.range[1],
-              max = param$L.alpha[param$na_1], log = TRUE)) +
+              max = param$L.alpha[param$na_1], 
+              log = TRUE)) +
 
     sum(dunif(x = param$mu.ij[param$na_2, 2],
               min = param$U.alpha[param$na_2],
-              max = rj.obj$dat$param$dose.range[2], log = TRUE))
+              max = rj.obj$dat$param$dose.range[2], 
+              log = TRUE))
 
   return(list(mono = logprop.mono, bi = logprop.bi))
   
