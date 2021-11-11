@@ -117,8 +117,8 @@ trace_rjMCMC <- function(rj.dat,
     if(rj.dat[[j]]$dat$covariates$n > 0){
       colnames(rj.dat[[j]]$include.covariates) <- paste0("incl.", colnames(rj.dat[[j]]$include.covariates))
     }
-    if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_ID <- rep(rj.dat[[j]]$model_ID, mcmc.params$n.iter)
-    if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_size <- rep(rj.dat[[j]]$model_size, mcmc.params$n.iter)
+    # if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_ID <- rep(rj.dat[[j]]$model_ID, mcmc.params$n.iter)
+    # if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_size <- rep(rj.dat[[j]]$model_size, mcmc.params$n.iter)
   }
     
   #' ---------------------------------------------

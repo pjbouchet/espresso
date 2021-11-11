@@ -251,19 +251,23 @@ plot.rjtrace <- function(rj.obj,
   if(autocorr){
     
     ac.plot <- bayesplot::mcmc_acf(x = mcmc.trace, pars = bpars[!bpars == "phase"])
-
-    tmp.plot <- ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
-      ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
-      ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
-      ggforce::facet_wrap_paginate(ggplot2::vars(Parameter), ncol = 4, nrow = 4, page = 1)
-    
-    n.pages <- ggforce::n_pages(tmp.plot)
+    ac.plot$data$Parameter <- as.character(ac.plot$data$Parameter)
+        
+    # Create dummy faceted plot - to be able to calculate the required number of pages
+    tmp.plot <- tryCatch(expr = {ggplot2::ggplot(data = na.omit(gdat$data), ggplot2::aes(x = Lag, y = AC)) + 
+        ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
+        ggforce::facet_wrap_paginate(ggplot2::vars(Parameter), ncol = 4, nrow = 4, page = 1)},
+        error = function(cond) NULL)
+ 
+    if(is.null(tmp.plot)) n.pages <- 1 else n.pages <- ggforce::n_pages(tmp.plot)
     
     for(pg in 1:n.pages){
     ac.gg <- ggplot2::ggplot(data = na.omit(ac.plot$data), ggplot2::aes(x = Lag, y = AC)) + 
       ggplot2::geom_point(ggplot2::aes(colour = factor(Chain)), alpha = 0.5) +
       ggplot2::geom_line(ggplot2::aes(colour = factor(Chain))) +
-      ggforce::facet_wrap_paginate(ggplot2::vars(Parameter), ncol = 4, nrow = 4, page = pg) + 
+      {if(is.null(tmp.plot)) ggforce::facet_wrap_paginate(ggplot2::vars(Parameter)) } +
+      {if(!is.null(tmp.plot)) ggforce::facet_wrap_paginate(ggplot2::vars(Parameter), 
+                                                           ncol = 4, nrow = 4, page = pg) } + 
       ggplot2::scale_colour_manual(values = gg_color_hue(length(mcmc.trace))) +
       ggplot2::theme(axis.text = element_text(size = 10, colour = "black"),
             axis.title = element_text(size = 10, colour = "black"),
