@@ -80,9 +80,16 @@ run_rjMCMC <- function(dat,
   # Needed to set up the progress bar on Windows
   # See https://stackoverflow.com/questions/7349570/wrapper-to-for-loops-with-progress-bar
   # sink("/dev/null")
+  
+  if(Sys.info()[['sysname']] == "Darwin"){
   sink(tempfile())
   pb <- utils::txtProgressBar(min = 0, max = rj.list[[1]]$mcmc$tot.iter, style = 3)
   sink()
+  }
+  
+  if(Sys.info()[['sysname']] == "Windows"){
+    rd.ID <- paste0("espresso_", sample(1:999999, size = 1))
+    cat(rd.ID, "\n")}
   
   # Launch the loop on multiple cores if needed
   rj.res <- foreach::foreach(nc = seq_len(n.chains)) %dopar% {
@@ -91,8 +98,13 @@ run_rjMCMC <- function(dat,
                                
                                for (i in 2:rj$mcmc$tot.iter) {
                                  
-                                 # Print progress bar
-                                 utils::setTxtProgressBar(pb, i)
+                                 # Print progress bar or output to log file (depending on OS)
+                                 if(Sys.info()[['sysname']] == "Darwin") utils::setTxtProgressBar(pb, i)
+                                 if(Sys.info()[['sysname']] == "Windows"){
+                                 sink(paste0(rd.ID, "_log.txt"), append = FALSE)  
+                                 cat("\r", "Iteration ", ii)
+                                 sink()
+                                 }
                                  
                                  # Start timer
                                  if(i == 2) start.time <- Sys.time()
@@ -138,7 +150,6 @@ run_rjMCMC <- function(dat,
                                                   param.name = if(rj$phase[i - 1] == 1) "mu" else
                                          c("nu", "alpha"),
                                                   rj.obj = rj,
-                                                  model = proposed.jump$model$id,
                                                   values = new.params$out,
                                                   included.cov = NULL,
                                                   RJ = TRUE,
@@ -149,7 +160,6 @@ run_rjMCMC <- function(dat,
                                                   param.name = if(rj$phase[i - 1] == 1) "mu" else
                                          c("nu", "alpha"),
                                                   rj.obj = rj,
-                                                  model = rj$mlist[[rj$current.model]], 
                                                   values = NULL,
                                                   included.cov = NULL,
                                                   RJ = TRUE, 
@@ -261,27 +271,39 @@ run_rjMCMC <- function(dat,
                                      if(add.remove){
                                        
                                        # Coefficients for covariate terms
-                                       beta.params <- sapply(X = chosen.covariate,
-                                                             FUN = function(w)
-                                                               as.matrix(rj[[w]])[i - 1, ],
-                                                             simplify = FALSE, USE.NAMES = TRUE)
+                                       # beta.params <- list(rj[[chosen.covariate]][i - 1, ])
+                                       # names(beta.params) <- chosen.covariate
+                                       # 
+                                       # beta.params <- sapply(X = chosen.covariate,
+                                       #                       FUN = function(w)
+                                       #                         as.matrix(rj[[w]])[i - 1, ],
+                                       #                       simplify = FALSE, USE.NAMES = TRUE)
                                        
-          # Propose new values when a covariate is added
-          beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index] <- rnorm(n = rj$dat$covariates$fL[[chosen.covariate]]$nparam, mean = 0, sd = rj$config$prop$cov)
+                                       # Propose new values when a covariate is added
+                                       # beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index] <- rnorm(n = rj$dat$covariates$fL[[chosen.covariate]]$nparam,
+                                       #         mean = 0, sd = rj$config$prop$cov)
               
+                                       beta.params <- rnorm(n = rj$dat$covariates$fL[[chosen.covariate]]$nparam,
+                                                            mean = 0, sd = rj$config$prop$cov)
                                                               
                                        # Prior
-                                       logprior <- normal_prior(
-                                         rj.obj = rj,
-                                         param.name = chosen.covariate,
-                                         param = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index])
+                                       logprior <- normal_prior(rj.obj = rj,  param.name = chosen.covariate,
+                                         param = beta.params)
+                                         # param = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index])
                                        
                                        # Proposal density
-                                       logpropdens <- sum(dnorm(x = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index], mean = 0, 
-                                                      sd = rj$config$prop$cov, log = TRUE))
+                                       # logpropdens <- sum(dnorm(x = beta.params[[chosen.covariate]][rj$dat$covariates$fL[[chosen.covariate]]$index], mean = 0, 
+                                       #                sd = rj$config$prop$cov, log = TRUE))
+                                       
+                                       logpropdens <- 
+                                         sum(dnorm(x = beta.params, 
+                                                   mean = 0, sd = rj$config$prop$cov, log = TRUE))
                                        
                                        # Ratio of prior / proposal density
                                        R <- logprior - logpropdens
+                                       
+                                       if(rj$dat$covariates$fL[[chosen.covariate]]$nL > 1) 
+                                         beta.params <- c(0, beta.params)
                                        
                                      } else {
                                        
@@ -317,23 +339,24 @@ run_rjMCMC <- function(dat,
                                      # matrix in rj - it is filled with either 1 or 0 
                                      # depending on whether a covariate is included or 
                                      # omitted from the model.
+                                     # param.name here is not taken into account as RJ = TRUE, but is needed to avoid numerical issues (i.e., cannot be NULL)
+                                
                                      
                                      loglik.new <- 
-                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, 
+                                                                    FALSE, TRUE),
                                                   param.name = "covariates",
                                                   rj.obj = rj,
-                                                  model = rj$mlist[[rj$current.model]], 
-                                                  values = stats::setNames(list(beta.params[[chosen.covariate]]), 
-                                                                           chosen.covariate),
+                                                  values = stats::setNames(list(beta.params), chosen.covariate),
                                                   included.cov = proposed.covariates,
                                                   RJ = TRUE,
                                                   lprod = TRUE)
                                      
                                      loglik.cur <- 
-                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
+                                       likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, 
+                                                                    FALSE, TRUE),
                                                   param.name = "covariates",
                                                   rj.obj = rj,
-                                                  model = rj$mlist[[rj$current.model]],
                                                   values = NULL,
                                                   included.cov = rj$include.covariates[i - 1, ], 
                                                   RJ = TRUE,
@@ -349,10 +372,8 @@ run_rjMCMC <- function(dat,
                                      if (runif(1) < exp(lognum - logden)) {
                                        
                                        rj$include.covariates[i, ] <- proposed.covariates
-                                       if(add.remove) rj[[chosen.covariate]][i, ] <- 
-                                           beta.params[[chosen.covariate]]
-                                       if(i > rj$mcmc$n.burn) 
-                                         rj$accept[["move.covariates"]] <- 
+                                       if(add.remove) rj[[chosen.covariate]][i, ] <- beta.params
+                                       if(i > rj$mcmc$n.burn) rj$accept[["move.covariates"]] <- 
                                            rj$accept[["move.covariates"]] + 1
                                        
                                      } else {
@@ -391,7 +412,6 @@ run_rjMCMC <- function(dat,
                                      likelihood(biphasic = ifelse(ff.prop$to.phase == 1, FALSE, TRUE),
                                                 param.name = if(ff.prop$to.phase == 1) c("mu", "mu.i", "phi", "sigma") else c("nu", "alpha", "tau1", "tau2", "omega", "psi", "mu.ij", "psi.i", "k.ij"),
                                                 rj.obj = rj,
-                                                model = rj$mlist[[rj$current.model]],
                                                 values = ff.prop,
                                                 included.cov = NULL,
                                                 RJ = TRUE,
@@ -401,7 +421,6 @@ run_rjMCMC <- function(dat,
                                      likelihood(biphasic = ifelse(rj$phase[i - 1] == 1, FALSE, TRUE),
                                                 param.name = NULL,
                                                 rj.obj = rj,
-                                                model = rj$mlist[[rj$current.model]],
                                                 values = NULL,
                                                 included.cov = NULL,
                                                 RJ = TRUE,
@@ -420,8 +439,11 @@ run_rjMCMC <- function(dat,
                                    logpropdens <- propdens_ff(rj.obj = rj, param = ff.prop)
                                    
                                    # Posterior ratio (Jacobian is 1 and p is 1)
-                                   lognum <- loglik.new + logprior.new + logpropdens[[rj$phase[i - 1]]]
-                                   logden <- loglik.cur + logprior.cur + logpropdens[[ff.prop$to.phase]]
+                                   lognum <- loglik.new + logprior.new +
+                                     logpropdens[[rj$phase[i - 1]]]
+                                   
+                                   logden <- loglik.cur + logprior.cur + 
+                                     logpropdens[[ff.prop$to.phase]]
                                    
                                    if (runif(1) < exp(lognum - logden)) {
                                      
@@ -553,7 +575,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "exposed",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = prop.list["exposed"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -563,7 +584,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "exposed",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = NULL,
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -606,7 +626,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "sonar",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = prop.list["sonar"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -616,7 +635,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "sonar",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = NULL,
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -659,7 +677,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "behaviour",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = prop.list["behaviour"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -669,7 +686,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "behaviour",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = NULL,
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -712,7 +728,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "range",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = prop.list["range"],
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -722,7 +737,6 @@ run_rjMCMC <- function(dat,
                                            likelihood(biphasic = rj$phase[i] == 2,
                                                       param.name = "range",
                                                       rj.obj = rj,
-                                                      model = rj$mlist[[rj$current.model]],
                                                       values = NULL,
                                                       included.cov = NULL,
                                                       RJ = FALSE,
@@ -763,17 +777,16 @@ run_rjMCMC <- function(dat,
                                    #'------------------------------
                                    proposed.t.ij <- proposal_mh(rj.obj = rj, param.name = "t.ij")
                                    
-                                   loglik.proposed <- likelihood(param.name = "t.ij",
-                                                                 rj.obj = rj,
-                                                                 model = rj$mlist[[rj$current.model]], 
-                                                                 values = proposed.t.ij["t.ij"], 
-                                                                 included.cov = NULL,
-                                                                 RJ = FALSE,
-                                                                 lprod = FALSE)
+                                   loglik.proposed <- 
+                                     likelihood(param.name = "t.ij",
+                                                rj.obj = rj,
+                                                values = proposed.t.ij["t.ij"], 
+                                                included.cov = NULL,
+                                                RJ = FALSE,
+                                                lprod = FALSE)
                                    
                                    loglik.current <- likelihood(param.name = "t.ij",
                                                                 rj.obj = rj,
-                                                                model = rj$mlist[[rj$current.model]], 
                                                                 values = NULL,
                                                                 included.cov = NULL,
                                                                 RJ = FALSE,
@@ -812,17 +825,16 @@ run_rjMCMC <- function(dat,
                                      accept.prob <- 0
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(param.name = "sigma",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.sigma["sigma"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(param.name = "sigma",
+                                                  rj.obj = rj,
+                                                  values = proposed.sigma["sigma"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(param.name = "sigma",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -843,17 +855,16 @@ run_rjMCMC <- function(dat,
                                    #'------------------------------
                                    proposed.mu.i <- proposal_mh(rj.obj = rj, param.name = "mu.i")
                                    
-                                   loglik.proposed <- likelihood(param.name = "mu.i",
-                                                                 rj.obj = rj,
-                                                                 model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.mu.i["mu.i"],
-                                                                 included.cov = NULL,
-                                                                 RJ = FALSE,
-                                                                 lprod = FALSE)
+                                   loglik.proposed <- 
+                                     likelihood(param.name = "mu.i",
+                                                rj.obj = rj,
+                                                values = proposed.mu.i["mu.i"],
+                                                included.cov = NULL,
+                                                RJ = FALSE,
+                                                lprod = FALSE)
                                    
                                    loglik.current <- likelihood(param.name = "mu.i", 
                                                                 rj.obj = rj,
-                                                                model = rj$mlist[[rj$current.model]],
                                                                 values = NULL,
                                                                 included.cov = NULL,
                                                                 RJ = FALSE,
@@ -894,17 +905,16 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(param.name = "mu",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.mu["mu"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(param.name = "mu",
+                                                  rj.obj = rj,
+                                                  values = proposed.mu["mu"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(param.name = "mu",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -927,17 +937,16 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(param.name = "phi",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.phi["phi"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(param.name = "phi",
+                                                  rj.obj = rj,
+                                                  values = proposed.phi["phi"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(param.name = "phi",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -985,19 +994,18 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                   param.name = "alpha",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.alpha["alpha"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(biphasic = TRUE,
+                                                  param.name = "alpha",
+                                                  rj.obj = rj,
+                                                  values = proposed.alpha["alpha"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(biphasic = TRUE,
                                                                   param.name = "alpha",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -1024,19 +1032,18 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                   param.name = "nu1",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.nu["nu"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(biphasic = TRUE,
+                                                  param.name = "nu1",
+                                                  rj.obj = rj,
+                                                  values = proposed.nu["nu"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(biphasic = TRUE,
                                                                   param.name = "nu1",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -1060,19 +1067,18 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                   param.name = "nu2",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.nu["nu"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(biphasic = TRUE,
+                                                  param.name = "nu2",
+                                                  rj.obj = rj,
+                                                  values = proposed.nu["nu"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(biphasic = TRUE,
                                                                   param.name = "nu2",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -1098,19 +1104,18 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                   param.name = "tau1",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.tau["tau"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(biphasic = TRUE,
+                                                  param.name = "tau1",
+                                                  rj.obj = rj,
+                                                  values = proposed.tau["tau"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(biphasic = TRUE,
                                                                   param.name = "tau1",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -1137,19 +1142,18 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                   param.name = "tau2",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.tau["tau"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(biphasic = TRUE,
+                                                  param.name = "tau2",
+                                                  rj.obj = rj,
+                                                  values = proposed.tau["tau"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(biphasic = TRUE,
                                                                   param.name = "tau2",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -1175,19 +1179,18 @@ run_rjMCMC <- function(dat,
                                      
                                    } else {
                                      
-                                     loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                   param.name = "omega",
-                                                                   rj.obj = rj,
-                                                                   model = rj$mlist[[rj$current.model]],
-                                                                   values = proposed.omega["omega"],
-                                                                   included.cov = NULL,
-                                                                   RJ = FALSE,
-                                                                   lprod = TRUE)
+                                     loglik.proposed <- 
+                                       likelihood(biphasic = TRUE,
+                                                  param.name = "omega",
+                                                  rj.obj = rj,
+                                                  values = proposed.omega["omega"],
+                                                  included.cov = NULL,
+                                                  RJ = FALSE,
+                                                  lprod = TRUE)
                                      
                                      loglik.current <- likelihood(biphasic = TRUE,
                                                                   param.name = "omega",
                                                                   rj.obj = rj,
-                                                                  model = rj$mlist[[rj$current.model]],
                                                                   values = NULL,
                                                                   included.cov = NULL,
                                                                   RJ = FALSE,
@@ -1221,35 +1224,36 @@ run_rjMCMC <- function(dat,
                                    
                                    proposed.mu.ij <- proposal_mh(rj.obj = rj, param.name = "mu.ij")
                                    
-                                   loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                 param.name = "mu.ij",
-                                                                 rj.obj = rj,
-                                                                 model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.mu.ij["mu.ij"],
-                                                                 included.cov = NULL,
-                                                                 RJ = FALSE,
-                                                                 lprod = FALSE)
+                                   loglik.proposed <- 
+                                     likelihood(biphasic = TRUE,
+                                                param.name = "mu.ij",
+                                                rj.obj = rj,
+                                                values = proposed.mu.ij["mu.ij"],
+                                                included.cov = NULL,
+                                                RJ = FALSE,
+                                                lprod = FALSE)
                                    
                                    loglik.current <- likelihood(biphasic = TRUE,
                                                                 param.name = "mu.ij",
                                                                 rj.obj = rj,
-                                                                model = rj$mlist[[rj$current.model]],
                                                                 values = NULL,
                                                                 included.cov = NULL,
                                                                 RJ = FALSE,
                                                                 lprod = FALSE)
                                    
-                                   logprop.forward <- propdens_mh(rj.obj = rj, 
-                                                                  param.name = "mu.ij",
-                                                                  dest = proposed.mu.ij[[1]],
-                                                                  orig = rj$mu.ij[rj$iter["mu.ij"], ,],
-                                                                  bounds = proposed.mu.ij$p.bounds)
+                                   logprop.forward <- 
+                                     propdens_mh(rj.obj = rj, 
+                                                 param.name = "mu.ij",
+                                                 dest = proposed.mu.ij[[1]],
+                                                 orig = rj$mu.ij[rj$iter["mu.ij"], ,],
+                                                 bounds = proposed.mu.ij$p.bounds)
                                    
-                                   logprop.backward <- propdens_mh(rj.obj = rj, 
-                                                                   param.name = "mu.ij",
-                                                                   dest = rj$mu.ij[rj$iter["mu.ij"], ,],
-                                                                   orig = proposed.mu.ij[[1]],
-                                                                   bounds = proposed.mu.ij$p.bounds)
+                                   logprop.backward <- 
+                                     propdens_mh(rj.obj = rj, 
+                                                 param.name = "mu.ij",
+                                                 dest = rj$mu.ij[rj$iter["mu.ij"], ,],
+                                                 orig = proposed.mu.ij[[1]],
+                                                 bounds = proposed.mu.ij$p.bounds)
                                    
                                    accept.prob <-  runif(2 * rj$dat$trials$n) < 
                                      exp((loglik.proposed + logprop.backward) - 
@@ -1285,19 +1289,18 @@ run_rjMCMC <- function(dat,
                                    
                                    proposed.psi.i <- proposal_mh(rj.obj = rj, param.name = "psi.i")
                                    
-                                   loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                 param.name = "psi.i",
-                                                                 rj.obj = rj,
-                                                                 model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.psi.i["psi.i"],
-                                                                 included.cov = NULL,
-                                                                 RJ = FALSE,
-                                                                 lprod = FALSE)
+                                   loglik.proposed <- 
+                                     likelihood(biphasic = TRUE,
+                                                param.name = "psi.i",
+                                                rj.obj = rj,
+                                                values = proposed.psi.i["psi.i"],
+                                                included.cov = NULL,
+                                                RJ = FALSE,
+                                                lprod = FALSE)
                                    
                                    loglik.current <- likelihood(biphasic = TRUE,
                                                                 param.name = "psi.i", 
                                                                 rj.obj = rj,
-                                                                model = rj$mlist[[rj$current.model]],
                                                                 values = NULL,
                                                                 included.cov = NULL,
                                                                 RJ = FALSE,
@@ -1330,19 +1333,18 @@ run_rjMCMC <- function(dat,
                                    
                                    proposed.k.ij <- proposal_mh(rj.obj = rj, param.name = "k.ij")
                                    
-                                   loglik.proposed <- likelihood(biphasic = TRUE,
-                                                                 param.name = "k.ij",
-                                                                 rj.obj = rj,
-                                                                 model = rj$mlist[[rj$current.model]],
-                                                                 values = proposed.k.ij["k.ij"],
-                                                                 included.cov = NULL,
-                                                                 RJ = FALSE,
-                                                                 lprod = FALSE)
+                                   loglik.proposed <- 
+                                     likelihood(biphasic = TRUE,
+                                                param.name = "k.ij",
+                                                rj.obj = rj,
+                                                values = proposed.k.ij["k.ij"],
+                                                included.cov = NULL,
+                                                RJ = FALSE,
+                                                lprod = FALSE)
                                    
                                    loglik.current <- likelihood(biphasic = TRUE,
                                                                 param.name = "k.ij",
                                                                 rj.obj = rj,
-                                                                model = rj$mlist[[rj$current.model]],
                                                                 values = NULL,
                                                                 included.cov = NULL,
                                                                 RJ = FALSE,
