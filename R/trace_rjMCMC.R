@@ -102,11 +102,11 @@ trace_rjMCMC <- function(rj.dat,
     do.call(rbind, .) %>% 
     dplyr::distinct() %>% 
     dplyr::rename(model = name, group = value) %>% 
-    dplyr::arrange(model) %>% 
-    tibble::rowid_to_column("ID") %>% 
     dplyr::rowwise() %>% 
     dplyr::mutate(N = nb_groups(unlist(group))) %>% 
-    dplyr::ungroup()
+    dplyr::ungroup() %>%
+    dplyr::arrange(N) %>% 
+    tibble::rowid_to_column("ID")
   
   model.l <- as.list(model.list$ID) %>% purrr::set_names(x = ., nm = model.list$model)
   model.g <- as.list(model.list$N) %>% purrr::set_names(x = ., nm = model.list$model)
