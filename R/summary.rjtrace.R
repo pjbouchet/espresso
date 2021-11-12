@@ -220,9 +220,10 @@ summary.rjtrace <- function(rj.obj,
       if(do.plot){
       if(rj.obj$config$model.select){
       # Running means plots for model ID
-      mcmcplots::rmeanplot(mcmcout = rj.obj$trace, parms = "model_ID", 
-                           plot.title = "", auto.layout = FALSE,
-                           col = gg_color_hue(coda::nchain(rj.obj$trace)))
+      mcmcplots::rmeanplot(mcmcout = rj.obj$trace, 
+                           parms = "model_ID", 
+                           auto.layout = FALSE,
+                           col = gg_color_hue(coda::nchain(rj.obj$trace)), main = "Mean model_ID")
       }}
       
     }
