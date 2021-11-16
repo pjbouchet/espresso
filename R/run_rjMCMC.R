@@ -88,8 +88,8 @@ run_rjMCMC <- function(dat,
   }
   
   if(Sys.info()[['sysname']] == "Windows"){
-    rd.ID <- paste0("espresso_", sample(1:999999, size = 1))
-    cat(rd.ID, "\n")}
+    run.ID <- paste0("espresso_", sample(1:999999, size = 1))
+    cat(run.ID, "\n")}
   
   # Launch the loop on multiple cores if needed
   rj.res <- foreach::foreach(nc = seq_len(n.chains)) %dopar% {
@@ -99,10 +99,15 @@ run_rjMCMC <- function(dat,
                                for (i in 2:rj$mcmc$tot.iter) {
                                  
                                  # Print progress bar or output to log file (depending on OS)
-                                 if(Sys.info()[['sysname']] == "Darwin") utils::setTxtProgressBar(pb, i)
+                                 if(Sys.info()[['sysname']] == "Darwin"){
+                                   utils::setTxtProgressBar(pb, i)
+                                   rj$run.ID <- NULL}
+                                 
                                  if(Sys.info()[['sysname']] == "Windows"){
-                                 sink(paste0(rd.ID, "_log.txt"), append = FALSE)  
-                                 cat("\r", "Iteration ", i)
+                                   rj$run.ID <- run.ID
+                                 sink(paste0(run.ID, "_log.txt"), append = FALSE)
+                                 cat("\r", "Iteration: ", i, " (", round(i/rj$mcmc$tot.iter, 0), "%)",
+                                     sep = "")
                                  sink()
                                  }
                                  

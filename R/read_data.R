@@ -73,7 +73,7 @@
 read_data <- function(file = NULL,
                       risk.functions = c(FALSE, FALSE),
                       n.risk = c(10, 10),
-                      include.species = NULL, 
+                      include.species = NULL,
                       exclude.species = NULL,
                       min.N = NULL,
                       covariates = NULL,
@@ -85,7 +85,7 @@ read_data <- function(file = NULL,
                                                    "HPAS-C", "HPAC-C", "HPAS-D", "HPASF-C",
                                                    "MPAS-C", "MPAS-D", "HPAC-C", "XHPAS-D",
                                                    "XHPAS-C")),
-                      dose.range = c(60, 215), 
+                      dose.range = c(60, 215),
                       obs.sd = 2.5,
                       verbose = TRUE){
   
