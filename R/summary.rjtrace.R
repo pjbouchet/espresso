@@ -319,6 +319,11 @@ summary.rjtrace <- function(rj.obj,
       
       if(do.plot){
         
+        ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
+        if(nrow(ggres) < n.top) n.top <- nrow(ggres)
+        gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::brewer.paired(max(3, max(unlist(gg.res.bychain)))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
+        m.matrix <- do.call(rbind, ggres$group)
+        
         if(southall.2019){
           
           # Species that have not been grouped a priori
@@ -366,11 +371,6 @@ summary.rjtrace <- function(rj.obj,
                                   x.margin = 1)
           
         }
-        
-      ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
-      if(nrow(ggres) < n.top) n.top <- nrow(ggres)
-      gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::brewer.paired(max(3, max(unlist(gg.res.bychain)))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
-      m.matrix <- do.call(rbind, ggres$group)
       
       # Re-assign colours
       m.matrix <- t(apply(X = m.matrix, MARGIN = 1, FUN = function(x) 
