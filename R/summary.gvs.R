@@ -4,12 +4,7 @@
 #'
 #' @export
 #' @param gvs.obj Input trace object, as returned by \code{\link{gibbs}}.
-#' @param eff.n Logical. If \code{TRUE}, returns estimates of the effective sample size for each model parameter.
-#' @param accept.rate Logical. If \code{TRUE}, returns the acceptance rate (calculated after burn-in) for each model parameter.
-#' @param convergence Logical. If \code{TRUE}, assesses convergence using the multivariate potential scale reduction factor (Gelman-Rubin statistic), as implemented in \code{\link[coda]{gelman.diag}}.
-#' @param gelman.rubin Threshold for determining convergence based on the Gelman-Rubin statistic. Defaults to \code{1.1}.
-#' @param model.ranks Logical. If \code{TRUE}, returns a summary of posterior model probabilities and associated model rankings.
-#' @param n.top Number of top-ranking models to display when \code{model.ranks = TRUE}.
+#' @inheritParams summary.rjtrace
 #' 
 #' @return A detailed summary, printed to the R console.
 #' @import mclust

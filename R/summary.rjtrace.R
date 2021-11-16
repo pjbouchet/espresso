@@ -5,11 +5,17 @@
 #'
 #' @export
 #' @param rj.obj Input rjMCMC object, as returned by \code{\link{trace_rjMCMC}}.
+#' @param eff.n Logical. If \code{TRUE}, returns estimates of the effective sample size for each model parameter.
+#' @param accept.rate Logical. If \code{TRUE}, returns the acceptance rate (calculated after burn-in) for each model parameter.
+#' @param convergence Logical. If \code{TRUE}, assesses convergence using the multivariate potential scale reduction factor (Gelman-Rubin statistic), as implemented in \code{\link[coda]{gelman.diag}}.
+#' @param gelman.rubin Threshold for determining convergence based on the Gelman-Rubin statistic. Defaults to \code{1.1}.
+#' @param model.ranks Logical. If \code{TRUE}, returns a summary of posterior model probabilities and associated model rankings.
+#' @param n.top Number of top-ranking models to display when \code{model.ranks = TRUE}.
+#' @param southall.2019 Logical. Whether to produce a tile plot showing species groupings, as identified in Southall et al. (2019). This is only relevant if real-world BRS data are being analysed (and therefore, \code{sim = FALSE}).
 #' @param covariate.prob Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).
 #' @param ff.prob Logical. If \code{TRUE}, returns a summary of posterior probabilities for each functional form (monophasic vs. biphasic).
 #' @param rmd Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.
 #' @param do.plot Logical. If \code{TRUE}, returns diagnostic plots in addition to text-based summaries.
-#' @inheritParams summary.gvs
 #' 
 #' @return A detailed summary, printed to the R console.
 #' 
@@ -49,6 +55,7 @@ summary.rjtrace <- function(rj.obj,
                             gelman.rubin = 1.1,
                             model.ranks = TRUE,
                             n.top = 10,
+                            southall.2019 = TRUE,
                             covariate.prob = TRUE,
                             ff.prob = TRUE,
                             rmd = FALSE,
@@ -164,10 +171,14 @@ summary.rjtrace <- function(rj.obj,
     cat("--------------------\n")
     
     AR <- rj.obj$accept %>% 
-      dplyr::select(chain, param, AR, label) %>% 
-      dplyr::arrange(label, param) %>% 
-      dplyr::select(-label) %>% 
+      dplyr::select(chain, param, AR) %>% 
       tidyr::pivot_wider(names_from = param, values_from = AR)
+    
+    # AR <- rj.obj$accept %>% 
+    #   dplyr::select(chain, param, AR, label) %>% 
+    #   dplyr::arrange(label, param) %>% 
+    #   dplyr::select(-label) %>% 
+    #   tidyr::pivot_wider(names_from = param, values_from = AR)
     
     all.NA <- apply(X = AR, MARGIN = 2, FUN = function(x) all(is.na(x)))
     
@@ -307,9 +318,58 @@ summary.rjtrace <- function(rj.obj,
       cat("\n")
       
       if(do.plot){
+        
+        if(southall.2019){
+          
+          # Species that have not been grouped a priori
+          southall.dat <- species_brs %>% 
+            dplyr::filter(NewCode %in% rj.obj$dat$species$names) %>%
+            dplyr::select(NewCode, Southall2019) %>%
+            dplyr::rename(species = NewCode, southall = Southall2019)
+          
+          # Species that have not been grouped a priori
+          if(!is.null(rj.obj$dat$species$groups)){
+            
+            for(j in 1:length(rj.obj$dat$species$groups)){
+              
+              southall.tmp <- species_brs %>% 
+                dplyr::filter(NewCode %in% rj.obj$dat$species$groups[[j]]) %>%
+                dplyr::select(NewCode, Southall2019) %>%
+                dplyr::rename(species = NewCode, southall = Southall2019)
+              
+              if(length(unique(southall.tmp$southall)) > 1)
+                warning("A priori species groupings encompass several functional hearing groups from Southall et al. (2019). colour assignments may not be accurate.")
+              southall.dat <- dplyr::bind_rows(southall.dat,
+                                               tibble::tibble(species = names(rj.obj$dat$species$groups)[j],
+                                                              southall = round(mean(southall.tmp$southall), 0)))
+              
+            }
+          }
+          
+          
+          southall.dat <- southall.dat[match(rj.obj$dat$species$names, southall.dat$species),]
+          southall.m <- matrix(southall.dat$southall, nrow = 1)
+          southall.df <- tidyr::expand_grid(x = seq_len(rj.obj$dat$species$n), y = 1) %>% 
+            dplyr::rowwise() %>% 
+            dplyr::mutate(grouping = southall.m[y, x]) %>% 
+            dplyr::mutate(species = rj.obj$dat$species$names[x]) %>% 
+            dplyr::ungroup()
+          
+          gg.southall <- gg_model(dat = southall.df,
+                                  southall = TRUE,
+                                  post.probs = round(res$model$m_prob$p, 3),
+                                  rj.obj = rj.obj,
+                                  colours = gg.cols,
+                                  n.top = n.top,
+                                  combine = TRUE,
+                                  x.offset = 0.75,
+                                  x.margin = 1)
+          
+        }
+        
       ggres <- dplyr::left_join(x = res$model$m_prob, rj.obj$mlist[, c("model", "group")], by = "model")
       if(nrow(ggres) < n.top) n.top <- nrow(ggres)
-      gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::parula(max(unlist(ggres$group))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
+      gg.cols <- if(max(unlist(ggres$group)) <= 2) pals::brewer.paired(max(3, max(unlist(gg.res.bychain)))) else pals::brewer.paired(max(unlist(ggres$group))) # Brewer paired
       m.matrix <- do.call(rbind, ggres$group)
       
       # Re-assign colours
@@ -324,6 +384,7 @@ summary.rjtrace <- function(rj.obj,
         dplyr::mutate(y = n.top - y + 1)
       
       gg.combined <- gg_model(dat = gg.matrix,
+                              southall = FALSE,
                               post.probs = round(res$model$m_prob$p, 3),
                               rj.obj = rj.obj,
                               colours = gg.cols,
@@ -333,12 +394,29 @@ summary.rjtrace <- function(rj.obj,
                               x.margin = 1)
       }
       
-      res <- prob_models(input.obj = rj.obj, 
+      res.bychain <- prob_models(input.obj = rj.obj, 
                          n.top = n.top,
                          mlist = rj.obj$mlist, 
                          select = rj.obj$config$model.select,
                          do.combine = FALSE,
                          gvs = "gvs" %in% class(rj.obj))
+  
+      shared.models <- purrr::map(.x = res.bychain, .f = ~ {.x[["model"]][["m_prob"]] %>%
+          dplyr::pull(ID)}) %>% do.call(c, .)
+      shared.models <- shared.models[duplicated(shared.models)]
+      shared.ranks <- purrr::map(.x = res.bychain, 
+                                 .f = ~sapply(X = shared.models, FUN = function(x) which(.x[["model"]][["m_prob"]] == x))) %>%
+        do.call(cbind, .) %>% apply(X = ., MARGIN = 1, FUN = function(m) paste(m, collapse = ", "))
+      shared.out <- tibble::tibble(ID = shared.models, rank = shared.ranks)
+      
+      shared.models <- res$model$m_prob %>% 
+        dplyr::filter(ID %in% shared.models) %>%
+        dplyr::select(ID, model) %>%
+        dplyr::left_join(x = ., y = shared.out, by = "ID")
+      
+      cat("Models common to all chains:\n")
+      print(shared.models)
+      cat("\n")
       
       cat("--- Individual chains ---\n", sep = "")
       
@@ -346,32 +424,32 @@ summary.rjtrace <- function(rj.obj,
         if(is.null(n.top)){
           cat("Chain ", nc, ":\n", sep = "") 
         } else {
-          cat("\nTop ", ifelse(nrow(res[[nc]]$model$m_prob) < n.top, nrow(res[[nc]]$model$m_prob), n.top), " models (chain ", nc, "):\n", sep = "")
+          cat("\nTop ", ifelse(nrow(res.bychain[[nc]]$model$m_prob) < n.top, nrow(res.bychain[[nc]]$model$m_prob), n.top), " models (chain ", nc, "):\n", sep = "")
         }
-        print(head(res[[nc]]$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
+        print(head(res.bychain[[nc]]$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
         cat("\n")
       } # End for loop
       
-      min.n <- min(purrr::map_dbl(.x = res, .f = ~nrow(.x$model$m_prob)))
+      min.n <- min(purrr::map_dbl(.x = res.bychain, .f = ~nrow(.x$model$m_prob)))
       if(min.n < n.top) warning(paste0("Fewer than ", n.top, " models available in some MCMC chains. n.top set to ", min.n))
       
       if(do.plot){
       # Posterior probabilities for each ranked model across chains
       pprobs <- purrr::map(.x = seq_len(min(c(min.n, n.top))), 
                            .f = ~sapply(X = seq_len(coda::nchain(rj.obj$trace)),
-                                        function(d) res[[d]]$model$m_prob$p[.x]))
+                                        function(d) res.bychain[[d]]$model$m_prob$p[.x]))
       
       # Species groupings
-      gg.res <- purrr::map(.x = res, 
+      gg.res.bychain <- purrr::map(.x = res.bychain, 
                            .f = ~{
                              rtib <- dplyr::left_join(x = .x$model$m_prob[1:min(c(min.n, n.top)), ],  
                                                       rj.obj$mlist[, c("model", "group")], by = "model")
                              do.call(rbind, rtib$group)})
       
-      gg.cols <- if(max(unlist(gg.res)) <=2) pals::parula(max(unlist(gg.res))) else pals::brewer.paired(max(unlist(gg.res)))
+      gg.cols <- if(max(unlist(gg.res.bychain)) <=2) pals::brewer.paired(max(3, max(unlist(gg.res.bychain)))) else pals::brewer.paired(max(unlist(gg.res.bychain)))
       
       m.matrix <- lapply(X = seq_len(min(c(min.n, n.top))), 
-                         FUN = function(x) do.call(rbind, purrr::map(.x = gg.res, .f = ~.x[x, ])))
+                         FUN = function(x) do.call(rbind, purrr::map(.x = gg.res.bychain, .f = ~.x[x, ])))
       
       # Re-assign colours
       m.matrix <- purrr::map(.x = m.matrix, .f = ~t(apply(X = .x, MARGIN = 1, FUN = function(x) 
@@ -389,6 +467,7 @@ summary.rjtrace <- function(rj.obj,
       
       gg.tiles <- purrr::map(.x = seq_along(gg.matrix), 
                              .f = ~gg_model(dat = gg.matrix[[.x]], 
+                                            southall = FALSE,
                                             post.probs = round(pprobs[[.x]], 3),
                                             colours = gg.cols, 
                                             n.top = min(c(min.n, n.top)), 
@@ -401,10 +480,18 @@ summary.rjtrace <- function(rj.obj,
       
       
       if(!rmd){
-        print(gg.combined)
+        if(southall.2019){
+        print(gg.southall / gg.combined + patchwork::plot_layout(heights = c(1, n.top)))
+        } else {
+          print(gg.combined)
+        }
         patchwork::wrap_plots(gg.tiles)
       } else {
-        print(gg.combined)
+        if(southall.2019){
+          print(gg.southall / gg.combined + patchwork::plot_layout(heights = c(1, n.top)))
+        } else {
+          print(gg.combined)
+        }
         purrr::walk(.x = gg.tiles, .f = ~print(.x))
         
       }

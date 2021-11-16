@@ -77,8 +77,8 @@ compile_rjMCMC <- function(rj.object,
   
   if(!phase %in% c(1,2)) stop("Unrecognised input for argument <phase>.")
   if(!rj.object$config$function.select){
-    if(rj.object$config$biphasic) phase <- 2 else phase <- 1
-  }
+    if(rj.object$config$biphasic & phase == 1) stop("Cannot extract monophasic curves. Please set <phase> to 2.")
+    if(!rj.object$config$biphasic & phase == 2) stop("Cannot extract biphasic curves. Please set <phase> to 1.")}
   
   if(rj.object$dat$covariates$n == 0) covariate <- NULL
   

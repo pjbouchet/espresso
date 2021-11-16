@@ -676,7 +676,257 @@ propose_jump <- function(rj.obj, move.type, phase) {
 #' @param from.phase Jump from monophasic to biphasic (1) or from biphasic to monophasic (2).
 #' @param prop.scale SD used to generate proposed values for \code{alpha}, \code{omega} and \code{psi.i}.
 
-proposal_ff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25)){
+proposal_ff <- function(rj.obj, from.phase, 
+                        prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25, sigma = 10)){
+  
+  fprop <- list()
+  fprop$to.phase <- (2 - from.phase) + 1
+  fprop$t.ij <- rj.obj$t.ij[rj.obj$iter["t.ij"], ]
+  
+  inits.bi <- purrr::map(
+    .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
+    .f = ~ {
+      censored <- rj.obj$dat$obs$censored[rj.obj$dat$species$trials %in%
+                                            which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+      y.obs <- rj.obj$dat$obs$y_ij[rj.obj$dat$species$trials %in%
+                                     which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+      Lc.obs <- rj.obj$dat$obs$Lc[rj.obj$dat$species$trials %in%
+                                    which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+      Rc.obs <- rj.obj$dat$obs$Rc[rj.obj$dat$species$trials %in%
+                                    which(rj.obj$mlist[[rj.obj$current.model]] == .x)]
+      
+      y.obs[is.na(y.obs) & censored == 1] <-
+        runif(
+          n = sum(is.na(y.obs) & censored == 1),
+          min = Rc.obs[is.na(y.obs) & censored == 1],
+          max = rj.obj$dat$param$dose.range[2]
+        )
+      y.obs[is.na(y.obs) & censored == -1] <-
+        runif(
+          n = sum(is.na(y.obs) & censored == -1),
+          min = rj.obj$dat$param$dose.range[1],
+          max = Lc.obs[is.na(y.obs) & censored == -1]
+        )
+      
+      sort(y.obs)
+    })
+  
+  # MONOPHASIC TO BIPHASIC 
+  
+  if(fprop$to.phase == 2){
+    
+    # fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
+    
+    # ++++++++++++++++++++++++++
+    # Important note
+    # ++++++++++++++++++++++++++
+    
+    # The code below was an attempt at proposing alpha values that would meet
+    # the necessary constraints. However, this caused problems in cases when 
+    # model.select = TRUE, in particular in cases where phase = mono at the start
+    # of an iteration, and a proposed move to a different species grouping is accepted.
+    # This means that the values in mu are updated to reflect the new grouping
+    # but the values in alpha, and nu remain the same (as they are not the focus)
+    # of the model jump. This causes numerical issues when proposing to then move to 
+    # a biphasic functional form.
+    
+    # L.bound <- purrr::map_dbl(
+    #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
+    #   .f = ~max(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 1][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
+    # 
+    # U.bound <- purrr::map_dbl(
+    #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
+    #   .f = ~ min(rj.obj$mu.ij[rj.obj$iter["mu.ij"], , 2][which(rj.obj$mlist[[rj.obj$current.model]][rj.obj$dat$species$trials] == .x)]))
+    
+    fprop$alpha <- rtnorm(n = length(inits.bi), 
+                          location = sapply(X = inits.bi, 
+                                            FUN = function(a){min(a) + (max(a)-min(a))/2}), 
+                          scale = prop.scale[["alpha"]], 
+                          L = rj.obj$dat$param$dose.range[1], 
+                          U = rj.obj$dat$param$dose.range[2])[rj.obj$mlist[[rj.obj$current.model]]]
+    
+    # k_ij
+    fprop$k.ij <- 2 - (fprop$alpha[rj.obj$dat$species$trials] > fprop$t.ij)
+    
+    # pi_ij
+    fprop$pi.ij <- rep(0.5, rj.obj$dat$trials$n)
+    
+    # psi_ij
+    fprop$psi.ij <- qnorm(fprop$pi.ij) - cov_effects(rj.obj)
+    
+    # psi.i
+    fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, 
+                               FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
+    
+    fprop$psi.i <- rnorm(n = length(fprop$psi.i_mean),
+                         mean = fprop$psi.i_mean, sd = prop.scale[["psi.i"]])
+    
+    # psi and omega
+    fprop$psi <- mean(fprop$psi.i)
+    
+    fprop$omega <- rtnorm(n = 1, location = 1, scale = prop.scale[["omega"]],
+                          L = rj.obj$config$priors["omega", 1],
+                          U = rj.obj$config$priors["omega", 2])
+    
+    # mu_ij
+    fprop$mu.ij <- matrix(data = NA, nrow = rj.obj$dat$trials$n, ncol = 2)
+    fprop$mu.ij[cbind(1:nrow(fprop$mu.ij), fprop$k.ij)] <- fprop$t.ij
+    
+    L.alpha <- U.alpha <- fprop$alpha[rj.obj$dat$species$trials]
+    
+    L.alpha[rj.obj$dat$obs$censored == -1 & L.alpha > rj.obj$dat$obs$Lc] <- 
+      rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1 & L.alpha > rj.obj$dat$obs$Lc]
+    
+    U.alpha[rj.obj$dat$obs$censored == 1 & U.alpha < rj.obj$dat$obs$Rc] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1 & U.alpha < rj.obj$dat$obs$Rc]
+    
+    fprop$na_1 <- is.na(fprop$mu.ij[, 1])
+    fprop$na_2 <- is.na(fprop$mu.ij[, 2])
+    
+    fprop$mu.ij[is.na(fprop$mu.ij[, 1]), 1] <- 
+      runif(n = sum(is.na(fprop$mu.ij[, 1])),
+            min = rj.obj$dat$param$dose.range[1],
+            max = L.alpha[is.na(fprop$mu.ij[, 1])])
+    
+    fprop$mu.ij[is.na(fprop$mu.ij[,2]), 2] <- 
+      runif(n = sum(is.na(fprop$mu.ij[,2])),
+            min = U.alpha[is.na(fprop$mu.ij[,2])],
+            max = rj.obj$dat$param$dose.range[2])
+    
+    fprop$nu <- sapply(X = seq_len(rj.obj$dat$species$n),
+                       FUN = function(x){
+                         matrix(colMeans(fprop$mu.ij[rj.obj$dat$species$trials %in% 
+                                                       which(rj.obj$mlist[[rj.obj$current.model]] == rj.obj$mlist[[rj.obj$current.model]][x]), , drop = FALSE]))})
+    
+    fprop$tau <- apply(X = fprop$mu.ij, MARGIN = 2, sd) 
+    
+    fprop$mu <- rj.obj$mu[rj.obj$iter["mu"], ]
+    fprop$sigma <- rj.obj$sigma[rj.obj$iter["sigma"]]
+    fprop$phi <- rj.obj$phi[rj.obj$iter["phi"]]
+    fprop$mu.i <- rj.obj$mu.i[rj.obj$iter["mu.i"], ]
+    
+  }
+  
+  # BIPHASIC TO MONOPHASIC 
+  
+  if(fprop$to.phase == 1){
+    
+    fprop$alpha <- rj.obj$alpha[rj.obj$iter["alpha"], ]
+    L.alpha <- U.alpha <- fprop$alpha[rj.obj$dat$species$trials]
+    
+    L.alpha[rj.obj$dat$obs$censored == -1 & L.alpha > rj.obj$dat$obs$Lc] <-
+      rj.obj$dat$obs$Lc[rj.obj$dat$obs$censored == -1 & L.alpha > rj.obj$dat$obs$Lc]
+    
+    U.alpha[rj.obj$dat$obs$censored == 1 & U.alpha < rj.obj$dat$obs$Rc] <- rj.obj$dat$obs$Rc[rj.obj$dat$obs$censored == 1 & U.alpha < rj.obj$dat$obs$Rc]
+    
+    fprop$nu <- if(rj.obj$dat$species$n == 1) matrix(rj.obj$nu[rj.obj$iter["nu"], , ]) else
+      t(rj.obj$nu[rj.obj$iter["nu"], , ])
+    fprop$mu.ij <- rj.obj$mu.ij[rj.obj$iter["mu.ij"], , ]
+    fprop$tau <- rj.obj$tau[rj.obj$iter["tau"], ]
+    fprop$omega <- rj.obj$omega[rj.obj$iter["omega"]]
+    fprop$psi <- rj.obj$psi[rj.obj$iter["psi"]]
+    fprop$psi.i <- rj.obj$psi.i[rj.obj$iter["psi.i"], ]
+    fprop$psi.ij <- fprop$psi.i[rj.obj$dat$whales$id] + cov_effects(rj.obj)
+    fprop$pi.ij <- rj.obj$pi.ij[rj.obj$iter["pi.ij"], ]
+    fprop$k.ij <- rj.obj$k.ij[rj.obj$iter["k.ij"], ]
+    
+    fprop$na_1 <- fprop$k.ij == 2
+    fprop$na_2 <- fprop$k.ij == 1
+    
+    fprop$psi.i_mean <- sapply(X = 1:rj.obj$dat$whales$n, FUN = function(x) mean = mean(fprop$psi.ij[rj.obj$dat$whales$id == x]))
+    
+  
+    fprop$sigma <- rtnorm(n = 1, 
+                          location = rj.obj$config$var[1], 
+                          scale = scale.adj["sigma"], 
+                          L = rj.obj$config$priors["sigma", 1],
+                          U = rj.obj$config$priors["sigma", 2])
+    
+    fprop$phi <- rtnorm(n = 1,
+                        location = rj.obj$config$var[2],
+                        scale = scale.adj["phi"], 
+                        L = rj.obj$config$priors["phi", 1],
+                        U = rj.obj$config$priors["phi", 2])
+    
+    # input.data <- tibble::tibble(species = rj.obj$dat$species$trials,
+    #                              y = rj.obj$dat$obs$y_ij,
+    #                              censored = rj.obj$dat$obs$censored,
+    #                              rc = rj.obj$dat$obs$Rc,
+    #                              lc = rj.obj$dat$obs$Lc)
+    # 
+    # mu.start <- purrr::map_dbl(
+    #   .x = seq_len(nb_groups(rj.obj$mlist[[rj.obj$current.model]])),
+    #   .f = ~ {
+    #     
+    #     sp.data <- input.data %>% 
+    #       dplyr::filter(species == .x)
+    #     
+    #     if(all(is.na(sp.data$y))){
+    #       sp.data %>% 
+    #         dplyr::rowwise() %>% 
+    #         dplyr::mutate(y = ifelse(censored == 1,
+    #                                  runif(n = 1, min = rc, max = rj.obj$config$priors["mu", 2]),
+    #                                  runif(n = 1, min = rj.obj$config$priors["mu", 1], max = lc))) %>% 
+    #         dplyr::ungroup() %>% 
+    #         dplyr::pull(y) %>% 
+    #         mean(., na.rm = TRUE)
+    #     } else {
+    #       mean(sp.data$y, na.rm = TRUE)
+    #     }})
+    # 
+    # 
+    # 
+    # 
+    # 
+    # mu.deviates <- rtnorm(n = length(mu.start), 
+    #                       location = 0,
+    #                       scale = 5, 
+    #                       L = rj.obj$dat$param$dose.range[1] - mu.start,
+    #                       U = rj.obj$dat$param$dose.range[2] - mu.start)
+    # 
+    # fprop$mu <- (mu.start + mu.deviates)[rj.obj$mlist[[rj.obj$current.model]]]
+    # 
+    # fprop$mu.i <- rtnorm(n = rj.obj$dat$whales$n,
+    #                      location = fprop$mu[rj.obj$dat$species$id], 
+    #                      scale = fprop$phi,
+    #                      L = rj.obj$dat$param$dose.range[1], 
+    #                      U = rj.obj$dat$param$dose.range[2])
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    fprop$t_ij <- fprop$t.ij - cov_effects(rj.obj)
+    fprop$mu.i <- unique(sapply(X = rj.obj$dat$whales$id, FUN = function(n) mean(fprop$t_ij[rj.obj$dat$whales$id == n], na.rm = TRUE)))
+    
+    fprop$mu <- sapply(X = rj.obj$mlist[[rj.obj$current.model]],
+                       FUN = function(sp) mean(fprop$mu.i[rj.obj$dat$species$id %in% which(rj.obj$mlist[[rj.obj$current.model]] == sp)]))
+    
+    # This makes the moves to monophasic completely deterministic!
+    # Need na.rm = TRUE to avoid numerical issues when individuals have only been subject to one exposure
+    fprop$sigma <- mean(unique(sapply(X = rj.obj$dat$whales$id, FUN = function(n) 
+      sd(fprop$t.ij[rj.obj$dat$whales$id == n], na.rm = TRUE))), na.rm = TRUE)
+    
+    fprop$phi <- mean(sapply(X = unique(rj.obj$dat$species$id), FUN = function(n) 
+      sd(fprop$mu.i[rj.obj$dat$species$id == n], na.rm = TRUE)), na.rm = TRUE)
+    
+  }
+  
+  fprop$prop.scale <- prop.scale
+  fprop$inits.bi <- inits.bi
+  fprop$L.alpha <- L.alpha
+  fprop$U.alpha <- U.alpha
+  return(fprop) 
+} # End proposal_ff
+
+
+proposal_ff_turnedoff <- function(rj.obj, from.phase, prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25)){
   
   fprop <- list()
   fprop$to.phase <- (2 - from.phase) + 1
@@ -2248,6 +2498,7 @@ p_models <- function(input.trace,
 
 # Function to create a tiled representation of model rankings using ggplot
 gg_model <- function(dat, 
+                     southall,
                      post.probs, 
                      rj.obj, 
                      colours, 
@@ -2258,10 +2509,11 @@ gg_model <- function(dat,
                      x.offset = 0.5, 
                      x.margin = 2){
   
+
   rotate.x <- min(nchar(unique(dat$species))) > 5
   
   # Probability values
-  if(combine){
+  if(combine & !southall){
     p1 <- tibble::tibble(x = rep(max(dat$x) + x.offset, n.top),
                          y = unique(dat$y), 
                          label = post.probs)
@@ -2279,10 +2531,14 @@ gg_model <- function(dat,
     ggplot2::scale_fill_manual(values = colours) + 
     ggplot2::xlab("") +
     {if(!combine) ggplot2::ylab("Chain")} +
-    {if(combine) ggplot2::ylab("Rank")} +
-    ggplot2::scale_y_continuous(breaks = rev(seq_len(n.top)), 
-                                labels = 1:n.top,
-                                expand = c(0, 0)) +
+    {if(combine & southall) ggplot2::ylab("")} +
+    {if(combine & !southall) ggplot2::ylab("Rank")} +
+    {if(!southall) ggplot2::scale_y_continuous(breaks = rev(seq_len(n.top)), 
+                                               labels = 1:n.top,
+                                               expand = c(0, 0))} +
+    {if(southall) ggplot2::scale_y_continuous(breaks = NULL, 
+                                              labels = "",
+                                              expand = c(0, 0))} +
     ggplot2::scale_x_continuous(breaks = seq_len(rj.obj$dat$species$n), 
                                 labels = rj.obj$dat$species$names, 
                                 expand = c(0, 0)) +
@@ -2293,14 +2549,16 @@ gg_model <- function(dat,
                                                angle = 90, vjust = 0.5, hjust = 0.5),
                    plot.margin = margin(t = 1, r = 1, b = 0.25, l = 1, "cm"),
                    legend.position = "top",
-                   # legend.title = element_blank(),
                    legend.text = element_text(size = 12),
                    panel.background = element_rect(fill = "white")) + 
-    {if(rotate.x) ggplot2::theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))} +
+    ggplot2::theme(legend.position = "none") +
+    {if(southall) ggplot2::ggtitle("Southall et al. (2019)") } +
+    {if(!southall) ggplot2::ggtitle("rjMCMC") } +
+    {if(rotate.x & !southall) ggplot2::theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))} +
     
     # Annotation for posterior probabilities
-    ggplot2::geom_text(data = p1, aes(x = x , y = y, label = label), size = p.size, hjust = 0) +
-    ggplot2::geom_text(data = p2, aes(x = x , y = y, label = label), size = p.size) +
+    {if(rotate.x & !southall) ggplot2::geom_text(data = p1, aes(x = x , y = y, label = label), size = p.size, hjust = 0) } +
+    {if(rotate.x & !southall) ggplot2::geom_text(data = p2, aes(x = x , y = y, label = label), size = p.size) } +
     
     labs(fill = "Groups") +
     

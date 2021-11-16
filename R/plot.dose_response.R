@@ -431,7 +431,7 @@ plot.dose_response <- function(dr.object,
   
   interval.list <- interval.list %>% 
     dplyr::select(-grp) %>% 
-    dplyr::left_join(., y = median.list[, c("grp", "colgrp")], by = "colgrp")
+    dplyr::left_join(., y = dplyr::distinct(median.list[, c("grp", "colgrp")]), by = "colgrp")
 
   }
   
@@ -532,6 +532,9 @@ plot.dose_response <- function(dr.object,
     gdat <- interval.list %>% 
       dplyr::filter(quant == plot.quants[qq]) %>% 
       tidyr::unnest(cols = c(value))
+    
+    gdat <- gdat %>% dplyr::group_by(grp) %>%
+      dplyr::slice(1:(2*length(dr.obj$dose.range)))
     
     if(!is.null(covariate)){
       
