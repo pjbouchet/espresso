@@ -50,7 +50,7 @@ update_rjMCMC <- function(rjdat, n.iter = 1000){
   #' -----------------------------------------------
   init.pars <- purrr::map(.x = rjdat[1], .f = ~.x[["mcmc"]][c("n.burn", "n.iter", "tot.iter")]) %>% 
     purrr::flatten()
-  init.ar <- purrr::map(.x = rjdat[1], .f = ~.x[["accept"]]) %>% purrr::flatten()
+  # init.ar <- purrr::map(.x = rjdat[1], .f = ~.x[["accept"]]) %>% purrr::flatten()
   init.times <- purrr::map(.x = rjdat[1], .f = ~.x[["run_time"]])
   
   #' -----------------------------------------------
@@ -75,6 +75,6 @@ update_rjMCMC <- function(rjdat, n.iter = 1000){
     update.res[[nc]]$run_time <- hms::as_hms(init.times[[1]] + update.res[[nc]]$run_time)
     
   }
-  
+
   return(update.res)
 }

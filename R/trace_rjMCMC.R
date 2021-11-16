@@ -117,10 +117,12 @@ trace_rjMCMC <- function(rj.dat,
     if(rj.dat[[j]]$dat$covariates$n > 0){
       colnames(rj.dat[[j]]$include.covariates) <- paste0("incl.", colnames(rj.dat[[j]]$include.covariates))
     }
-    # if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_ID <- rep(rj.dat[[j]]$model_ID, mcmc.params$n.iter)
-    # if(!rj.dat[[j]]$config$model.select) rj.dat[[j]]$model_size <- rep(rj.dat[[j]]$model_size, mcmc.params$n.iter)
+    if(length(rj.dat[[j]]$model_ID) == 1) 
+      rj.dat[[j]]$model_ID <- rep(rj.dat[[j]]$model_ID, mcmc.params$n.iter)
+    if(length(rj.dat[[j]]$model_size) == 1) 
+      rj.dat[[j]]$model_size <- rep(rj.dat[[j]]$model_size, mcmc.params$n.iter)
   }
-    
+  
   #' ---------------------------------------------
   # Extract parameters and burn / thin
   #' ---------------------------------------------
@@ -139,7 +141,8 @@ trace_rjMCMC <- function(rj.dat,
                                                 dimnames(tmp[[ii]])[[2]], FUN = "paste0")))))
                                  }
                                } else {
-                                 tmp[[ii]] <- matrix(tmp[[ii]], ncol = 1, dimnames = list(NULL, names(tmp)[ii]))
+                                 tmp[[ii]] <- matrix(tmp[[ii]], ncol = 1, 
+                                                     dimnames = list(NULL, names(tmp)[ii]))
                                } 
                              }
                              do.call(cbind, tmp)
@@ -237,100 +240,148 @@ trace_rjMCMC <- function(rj.dat,
   #' ---------------------------------------------
   # Acceptance rates
   #' ---------------------------------------------
-  mcmc.params$move$m <- table(mcmc.params$move$m[burn:mcmc.params$tot.iter])
+  n.end <- ifelse(is.update, mcmc.params$n.iter, mcmc.params$tot.iter)
+  mcmc.params$move$m <- table(mcmc.params$move$m[burn:n.end])
   names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
 
-  pars.mono <- c("t.ij", "mu","mu.i", "phi", "sigma", 
-                 paste0("mono.move.", rj.dat[[1]]$config$move$moves), "to.biphasic")
   
-  pars.bi <- c("alpha", "nu", "tau", "omega", "mu.ij.1", "mu.ij.2", "psi.i", "k.ij",
-               paste0("bi.move.", rj.dat[[1]]$config$move$moves), "to.monophasic")
+  ar.pars <- purrr::map(.x = seq_len(mcmc.params$n.chains),
+                        .f = ~{
+                          ar.pars <- 
+                            tibble::tibble(param = 
+                            c("t.ij", "mu","mu.i", "phi", "sigma", 
+                            paste0("mono.move.", rj.dat[[.x]]$config$move$moves), 
+                            "to.biphasic", "alpha", "nu", "tau", "omega", "mu.ij.1", "mu.ij.2",
+                            "psi.i", "k.ij", paste0("bi.move.", rj.dat[[1]]$config$move$moves),
+                            "to.monophasic", "move.covariates", rj.dat[[1]]$dat$covariates$names),
+                               iter = 0)
+                          
+                          for(pname in ar.pars$param){
+                            if(pname %in% names(rj.dat[[.x]]$accept)){
+                              if(pname %in% rj.dat[[.x]]$dat$covariates$names){
+                                ar.pars[ar.pars$param == pname, ]$iter <- 
+                                  sum(mcmc.trace[[.x]][, paste0("incl.", pname)] == 1)
+                              } else if(pname == "to.monophasic"){
+                                ar.pars[ar.pars$param == pname, ]$iter <- 
+                                  sum(mcmc.trace[[.x]][, "phase"] == 2)   
+                              } else if(pname == "to.biphasic"){
+                                ar.pars[ar.pars$param == pname, ]$iter <- 
+                                  sum(mcmc.trace[[.x]][, "phase"] == 1)   
+                              } else {
+                                ar.pars[ar.pars$param == pname, ]$iter <- mcmc.params$n.iter
+                              }
+                            }
+                          }
+                          ar.pars
+                        })
   
-  if(rj.dat[[1]]$dat$covariates$n > 0){
-    
-    cov.tbl <- purrr::map(.x = seq_len(mcmc.params$n.chains),
-                          .f = ~{
-                            tibble::tibble(param = rj.dat[[1]]$dat$covariates$names,
-                                           phase = NA, n.iter = NA) %>% 
-      dplyr::rowwise() %>% 
-        dplyr::mutate(n.iter = dplyr::case_when(
-          param %in% rj.dat[[.x]]$dat$covariates$names ~
-            sum(rj.dat[[.x]]$include.covariates[, paste0("incl.", param)]),
-          TRUE ~ mcmc.params$n.iter))}) 
-    
-    if(rj.dat[[1]]$config$covariate.select){
-      cov.tbl <- purrr::map(.x = cov.tbl, 
-                            .f = ~dplyr::bind_rows(.x, 
-              tibble::tibble(param = "move.covariates", phase = NA, n.iter = rj[[1]]$mcmc$n.iter)))
-    }
-    
-  }
+  ar.vals <- purrr::map(rj.dat, "accept") %>%
+    purrr::map(.x = ., .f = ~tibble::enframe(.x))
   
-  AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), 
-                   .f = ~{
-                     
-            move.phase <- cbind(rj.dat[[.x]]$mcmc$move$m[(burn + 1):mcmc.params$n.iter], 
-                                rj.dat[[.x]]$phase[(burn + 1):mcmc.params$n.iter])
-                     
-                     ncount <- dplyr::bind_rows(
-  tibble::tibble(param = pars.mono, phase = 1),
-  tibble::tibble(param = pars.bi, phase = 2)) %>% 
-  dplyr::rowwise() %>%
-  dplyr::mutate(n.iter = dplyr::case_when(
-    grepl(pattern = "mono.move.0", x = param) ~ sum(move.phase[, 1] == 0 & move.phase[, 2] == 1),
-    grepl(pattern = "mono.move.1", x = param) ~ sum(move.phase[, 1] == 1 & move.phase[, 2] == 1),
-    grepl(pattern = "mono.move.2", x = param) ~ sum(move.phase[, 1] == 2 & move.phase[, 2] == 1),
-    grepl(pattern = "mono.move.3", x = param) ~ sum(move.phase[, 1] == 3 & move.phase[, 2] == 1),
-    grepl(pattern = "bi.move.0", x = param) ~ sum(move.phase[, 1] == 0 & move.phase[, 2] == 2),
-    grepl(pattern = "bi.move.1", x = param) ~ sum(move.phase[, 1] == 1 & move.phase[, 2] == 2),
-    grepl(pattern = "bi.move.2", x = param) ~ sum(move.phase[, 1] == 2 & move.phase[, 2] == 2),
-    grepl(pattern = "bi.move.3", x = param) ~ sum(move.phase[, 1] == 3 & move.phase[, 2] == 2),
-    grepl(pattern = "to.biphasic", x = param) ~ sum(move.phase[, 2] == 1),
-    grepl(pattern = "to.monophasic", x = param) ~ sum(move.phase[, 2] == 2),
-    TRUE ~ sum(move.phase[, 2] == phase)
-  )) %>%
-  dplyr::ungroup() %>% 
-  {if(rj.dat[[1]]$dat$covariates$n > 0) dplyr::bind_rows(., cov.tbl[[.x]]) else .}
+  ar.vals <- purrr::map(.x = seq_len(mcmc.params$n.chains),
+                        .f = ~ ar.vals[[.x]] %>% dplyr::mutate(chain = .x) %>%
+                          dplyr::rename(param = name))
   
-                     rj.dat[[.x]]["accept"] %>% 
-                       purrr::flatten(.) %>% 
-                       tibble::enframe() %>% 
-                       dplyr::mutate(chain = .x) %>% 
-                       tidyr::unnest(cols = c(value)) %>% 
-                       dplyr::rename(param = name) %>% 
-                       dplyr::group_by(chain, param) %>% 
-                       dplyr::summarise(value = round(mean(value), 0), .groups = 'keep') %>% 
-                       dplyr::ungroup() %>% 
-                       dplyr::left_join(., y = ncount, by = "param") %>% 
-                       dplyr::mutate(AR = value / n.iter)
-                     
-                   })
-  
-  AR <- do.call(dplyr::bind_rows, AR)
-  AR <- AR %>% dplyr::rowwise() %>% 
-    dplyr::mutate(label = dplyr::case_when(
-      grepl("mono.move.0", param) ~ 2,
-      grepl("mono.move.1", param) ~ 2,
-      grepl("mono.move.2", param) ~ 2,
-      grepl("mono.move.3", param) ~ 2,
-      grepl("bi.move.0", param) ~ 2,
-      grepl("bi.move.1", param) ~ 2,
-      grepl("bi.move.2", param) ~ 2,
-      grepl("bi.move.3", param) ~ 2,
-      grepl("move.covariates", param) ~ 2,
-      TRUE ~ 1)) %>% 
-    dplyr::mutate(param = dplyr::case_when(
-      grepl("mono.move.0", param) ~ "split/merge (mono)",
-      grepl("mono.move.1", param) ~ "data driven I (mono)",
-      grepl("mono.move.2", param) ~ "data driven II (mono)",
-      grepl("mono.move.3", param) ~ "random (mono)",
-      grepl("bi.move.0", param) ~ "split/merge (bi)",
-      grepl("bi.move.1", param) ~ "data driven I (bi)",
-      grepl("bi.move.2", param) ~ "data driven II (bi)",
-      grepl("bi.move.3", param) ~ "random (bi)",
-      grepl("move.covariates", param) ~ "covariates",
-  TRUE ~ param)) %>% 
-    dplyr::ungroup()
+  AR <- purrr::map2(.x = ar.vals,
+                    .y = ar.pars,
+                    .f = ~{
+                       dplyr::left_join(x = .x, y = .y, by = "param") %>%
+                       dplyr::mutate(value = purrr::map(value, mean)) %>%
+                       tidyr::unnest(. , cols = c(value)) %>%
+                       dplyr::mutate(AR = value / iter)
+                   }) %>% do.call(rbind, .) 
+
+  # pars.mono <- c("t.ij", "mu","mu.i", "phi", "sigma", 
+  #                paste0("mono.move.", rj.dat[[1]]$config$move$moves), "to.biphasic")
+  # 
+  # pars.bi <- c("alpha", "nu", "tau", "omega", "mu.ij.1", "mu.ij.2", "psi.i", "k.ij",
+  #              paste0("bi.move.", rj.dat[[1]]$config$move$moves), "to.monophasic")
+  # 
+  #   if(rj.dat[[1]]$dat$covariates$n > 0){
+  #   
+  #   cov.tbl <- purrr::map(.x = seq_len(mcmc.params$n.chains),
+  #                         .f = ~{
+  #                           tibble::tibble(param = rj.dat[[1]]$dat$covariates$names,
+  #                                          phase = NA, n.iter = NA) %>% 
+  #     dplyr::rowwise() %>% 
+  #       dplyr::mutate(n.iter = dplyr::case_when(
+  #         param %in% rj.dat[[.x]]$dat$covariates$names ~
+  #           sum(rj.dat[[.x]]$include.covariates[, paste0("incl.", param)]),
+  #         TRUE ~ mcmc.params$n.iter))}) 
+  #   
+  #   if(rj.dat[[1]]$config$covariate.select){
+  #     cov.tbl <- purrr::map(.x = cov.tbl, 
+  #                           .f = ~dplyr::bind_rows(.x, 
+  #             tibble::tibble(param = "move.covariates", phase = NA, n.iter = rj[[1]]$mcmc$n.iter)))
+  #   }
+  #   
+  # }
+  # 
+  # AR <- purrr::map(.x = seq_len(mcmc.params$n.chains), 
+  #                  .f = ~{
+  #                    
+  #           move.phase <- cbind(rj.dat[[.x]]$mcmc$move$m[(burn + 1):mcmc.params$n.iter], 
+  #                               rj.dat[[.x]]$phase[(burn + 1):mcmc.params$n.iter])
+  #                    
+  #                    ncount <- dplyr::bind_rows(
+  # tibble::tibble(param = pars.mono, phase = 1),
+  # tibble::tibble(param = pars.bi, phase = 2)) %>% 
+  # dplyr::rowwise() %>%
+  # dplyr::mutate(n.iter = dplyr::case_when(
+  #   grepl(pattern = "mono.move.0", x = param) ~ sum(move.phase[, 1] == 0 & move.phase[, 2] == 1),
+  #   grepl(pattern = "mono.move.1", x = param) ~ sum(move.phase[, 1] == 1 & move.phase[, 2] == 1),
+  #   grepl(pattern = "mono.move.2", x = param) ~ sum(move.phase[, 1] == 2 & move.phase[, 2] == 1),
+  #   grepl(pattern = "mono.move.3", x = param) ~ sum(move.phase[, 1] == 3 & move.phase[, 2] == 1),
+  #   grepl(pattern = "bi.move.0", x = param) ~ sum(move.phase[, 1] == 0 & move.phase[, 2] == 2),
+  #   grepl(pattern = "bi.move.1", x = param) ~ sum(move.phase[, 1] == 1 & move.phase[, 2] == 2),
+  #   grepl(pattern = "bi.move.2", x = param) ~ sum(move.phase[, 1] == 2 & move.phase[, 2] == 2),
+  #   grepl(pattern = "bi.move.3", x = param) ~ sum(move.phase[, 1] == 3 & move.phase[, 2] == 2),
+  #   grepl(pattern = "to.biphasic", x = param) ~ sum(move.phase[, 2] == 1),
+  #   grepl(pattern = "to.monophasic", x = param) ~ sum(move.phase[, 2] == 2),
+  #   TRUE ~ sum(move.phase[, 2] == phase)
+  # )) %>%
+  # dplyr::ungroup() %>% 
+  # {if(rj.dat[[1]]$dat$covariates$n > 0) dplyr::bind_rows(., cov.tbl[[.x]]) else .}
+  # 
+  #                    rj.dat[[.x]]["accept"] %>% 
+  #                      purrr::flatten(.) %>% 
+  #                      tibble::enframe() %>% 
+  #                      dplyr::mutate(chain = .x) %>% 
+  #                      tidyr::unnest(cols = c(value)) %>% 
+  #                      dplyr::rename(param = name) %>% 
+  #                      dplyr::group_by(chain, param) %>% 
+  #                      dplyr::summarise(value = round(mean(value), 0), .groups = 'keep') %>% 
+  #                      dplyr::ungroup() %>% 
+  #                      dplyr::left_join(., y = ncount, by = "param") %>% 
+  #                      dplyr::mutate(AR = value / n.iter)
+  #                    
+  #                  })
+  # 
+  # AR <- do.call(dplyr::bind_rows, AR)
+  # AR <- AR %>% dplyr::rowwise() %>% 
+  #   dplyr::mutate(label = dplyr::case_when(
+  #     grepl("mono.move.0", param) ~ 2,
+  #     grepl("mono.move.1", param) ~ 2,
+  #     grepl("mono.move.2", param) ~ 2,
+  #     grepl("mono.move.3", param) ~ 2,
+  #     grepl("bi.move.0", param) ~ 2,
+  #     grepl("bi.move.1", param) ~ 2,
+  #     grepl("bi.move.2", param) ~ 2,
+  #     grepl("bi.move.3", param) ~ 2,
+  #     grepl("move.covariates", param) ~ 2,
+  #     TRUE ~ 1)) %>% 
+  #   dplyr::mutate(param = dplyr::case_when(
+  #     grepl("mono.move.0", param) ~ "split/merge (mono)",
+  #     grepl("mono.move.1", param) ~ "data driven I (mono)",
+  #     grepl("mono.move.2", param) ~ "data driven II (mono)",
+  #     grepl("mono.move.3", param) ~ "random (mono)",
+  #     grepl("bi.move.0", param) ~ "split/merge (bi)",
+  #     grepl("bi.move.1", param) ~ "data driven I (bi)",
+  #     grepl("bi.move.2", param) ~ "data driven II (bi)",
+  #     grepl("bi.move.3", param) ~ "random (bi)",
+  #     grepl("move.covariates", param) ~ "covariates",
+  # TRUE ~ param)) %>% 
+  #   dplyr::ungroup()
       
   #' ---------------------------------------------
   # Effective sample sizes

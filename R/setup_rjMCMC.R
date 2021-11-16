@@ -40,7 +40,17 @@ setup_rjMCMC <- function(rj.input,
   if(is.null(start.values) & do.update) stop("Missing starting values.")
   if(!is.null(move.ratio) & !"integer" %in% class(move.ratio) & !"list" %in% class(move.ratio)) stop("<move.ratio> must be either an integer vector or a list.")
   if(is.list(move.ratio)) move.ratio <- unlist(move.ratio)
-  if(do.update) tot.iter <- n.iter else tot.iter <- n.iter + n.burn # Total chain length
+
+  
+  if(do.update){
+    
+    tot.iter <- n.iter
+    
+  } else {
+    
+    tot.iter <- n.iter + n.burn
+  }
+    
   
   #' -----------------------------------------------
   # Define move types
