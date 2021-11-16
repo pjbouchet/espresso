@@ -432,7 +432,7 @@ simulate_data <- function(biphasic = FALSE,
   } else {
     res$param <- append(res$param, 
                   list(nu = nu, tau = tau, psi = psi, 
-                  omega = omega, alpha = alpha))
+                  omega = omega, alpha = alpha, k_ij = k_ij, mu_ij = mu_ij, psi_i = psi_i))
   }
   
   if(n.covariates > 0) {
