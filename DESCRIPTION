@@ -1,6 +1,6 @@
 Package: espresso
 Title: Bayesian Inference For Multi-Species Behavioural Dose-response Functions
-Version: 1.5.5
+Version: 1.5.6
 Date: 2021-06-11
 Authors@R: 
     c(person(given = "Phil", family = "Bouchet", role = c("aut", "cre"), email = "pb282@st-andrews.ac.uk"),
@@ -13,6 +13,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 RdMacros: Rdpack
+ByteCompile: true
 Depends:
     R (>= 4.0.0),
     stats
