@@ -86,23 +86,27 @@ create_report <- function(outdir = getwd(),
   
   writeLines(text = "```{r initial, include = FALSE}")
   writeLines(text = "library(espresso)")
+  writeLines(text = "library(patchwork)")
   writeLines(text = paste0("load(\"", file.path(out.dir, "tmp_data.rda"), "\")"))
   writeLines(text = "```")
   
   writeLines(text = "## Results {.tabset}") # Interactive tabs
   
-  if(sum(obj.n == "brsdata") > 0 | sum(obj.n == "brsdata.grp") > 0){
+  if(sum(obj.n == "brsdata") > 0){
     
     writeLines(text = "### Data (original)")
     writeLines(text = "Original")
     writeLines(text = "```{r data, class.output=\"scroll-100\"}")
     writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata")], ")"))
     writeLines(text = "```")
-    writeLines(text = "### Data (grouped)")
-    writeLines(text = "```{r data_grouped, class.output=\"scroll-100\"}")
-    writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata.grp")], ")"))
-    writeLines(text = "```")
-    
+  }
+  
+  if(sum(obj.n == "brsdata.grp") > 0){
+  
+  writeLines(text = "### Data (grouped)")
+  writeLines(text = "```{r data_grouped, class.output=\"scroll-100\"}")
+  writeLines(text = paste0("summary(", names(obj.n)[which(obj.n == "brsdata.grp")], ")"))
+  writeLines(text = "```")
   }
   
   if(sum(obj.n == "rjtrace") > 0){
