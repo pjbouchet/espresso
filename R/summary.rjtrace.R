@@ -325,7 +325,7 @@ summary.rjtrace <- function(rj.obj,
                          gvs = "gvs" %in% class(rj.obj))
       sink()
       
-      cat("--- All chains (n = ", coda::nchain(rj.obj$trace), ") --- \n", sep = "")
+      cat("--- All chains (n = ", coda::nchain(rj.obj$trace), ") ----------------------- \n", sep = "")
       if(!is.null(n.top)) cat("\nTop ", n.top, " models:\n", sep = "")
       print(head(res$model$m_prob, ifelse(is.null(n.top), 9999, n.top)))
       cat("\n")
@@ -417,26 +417,46 @@ summary.rjtrace <- function(rj.obj,
                          gvs = "gvs" %in% class(rj.obj))
       sink()
       
-      shared.models <- purrr::map(.x = res.bychain, .f = ~ {.x[["model"]][["m_prob"]] %>%
-          dplyr::pull(ID)}) %>% Reduce(intersect, .) %>% sort() 
+
+      model.tabs <- purrr::map(.x = res.bychain, .f = ~ {.x[["model"]][["m_prob"]] %>%
+          dplyr::pull(ID)}) %>% unlist() %>% janitor::tabyl()
+      
+      # Models common to all chains
+      common.models <- model.tabs[model.tabs$n == rj.obj$mcmc$n.chains, 1]
+      shared.models <- model.tabs[model.tabs$n > 1, 1]
+      
+      # common.models <- purrr::map(.x = res.bychain, .f = ~ {.x[["model"]][["m_prob"]] %>%
+      #     dplyr::pull(ID)}) %>% Reduce(intersect, .) %>% sort() 
+      
+      common.ranks <- purrr::map(.x = res.bychain, .f = ~{
+        sapply(X = common.models, FUN = function(x) which(.x[["model"]][["m_prob"]] == x))}) %>%
+        do.call(cbind, .) %>%
+        apply(X = ., MARGIN = 1, FUN = function(m) paste(m, collapse = ", "))
+      common.out <- tibble::tibble(ID = common.models, rank = common.ranks)
+      common.models <- res$model$m_prob %>% 
+        dplyr::filter(ID %in% common.models) %>%
+        dplyr::select(ID, model) %>%
+        dplyr::left_join(x = ., y = common.out, by = "ID")
       
       shared.ranks <- purrr::map(.x = res.bychain, .f = ~{
         sapply(X = shared.models, FUN = function(x) which(.x[["model"]][["m_prob"]] == x))}) %>%
         do.call(cbind, .) %>%
         apply(X = ., MARGIN = 1, FUN = function(m) paste(m, collapse = ", "))
-      
       shared.out <- tibble::tibble(ID = shared.models, rank = shared.ranks)
-      
       shared.models <- res$model$m_prob %>% 
         dplyr::filter(ID %in% shared.models) %>%
         dplyr::select(ID, model) %>%
         dplyr::left_join(x = ., y = shared.out, by = "ID")
       
       cat("Models common to all chains:\n")
+      print(common.models)
+      cat("\n")
+      
+      cat("Models shared by at least 2 chains:\n")
       print(shared.models)
       cat("\n")
       
-      cat("--- Individual chains ---\n", sep = "")
+      cat("--- Individual chains -----------------------\n", sep = "")
       
       for(nc in seq_len(coda::nchain(rj.obj$trace))){
         if(is.null(n.top)){
