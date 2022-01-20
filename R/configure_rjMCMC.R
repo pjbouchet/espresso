@@ -6,8 +6,9 @@
 #' \describe{
 #'   \item{Variance}{Returns empirical estimates of between-whale (φ) and within-whale between-exposure (σ) variation, which are needed to generate starting values for the MCMC chains}
 #'   \item{Proposals}{Defines the means and standard deviations of relevant proposal distributions and priors}
-#'   \item{Clustering}{Performs a cluster analysis using \code{n.rep} bootstrap replicates of the input data, in order to parameterise between-model jumps. The analysis is run using \code{\link[mclust]{Mclust}} on both (1) species means and (2) raw observations. These respectively provide estimates of the probability distributions of (1) unique groupings, and (2) numbers of groups, where the latter ranges from \code{n = 1} when all species belong to the same group, to \code{n = n.species} when each species is treated individually.}
+#'   \item{Clustering}{Performs a cluster analysis using \code{n.rep} bootstrap replicates of the input data, in order to initialise between-model jumps. The analysis is run using \code{\link[mclust]{Mclust}} \insertCite{Scrucca2016}{espresso} on both (1) species means and (2) raw observations. These respectively provide estimates of the probability distributions of (1) unique groupings, and (2) numbers of groups, where the latter ranges from \code{n = 1} when all species belong to the same group, to \code{n = n.species} when each species is treated individually.}
 #' }
+#' @importFrom Rdpack reprompt
 #' @export 
 #' @param dat Input BRS data. Must be an object of class \code{brsdata}.
 #' @param model.select Logical. If \code{TRUE}, between-model jumps will be allowed in the rjMCMC sampler. This argument can be set to \code{FALSE} to impose a species grouping and constrain parameter estimation accordingly.
@@ -19,10 +20,7 @@
 #' @param priors Named list giving the means and standard deviations for Normal priors and the lower and upper bounds for Uniform priors. Relevant parameters for the monophasic model are as follows: \code{sigma} (Uniform), \code{phi} (Uniform). Parameters for the biphasic model include: \code{alpha} (Uniform), \code{omega} (Uniform), \code{tau} (Uniform), \code{psi} (Normal). Normal priors are placed on contextual \code{covariates}.
 #' @param p.split Probability of choosing to split a group of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in a single group. \code{p.split} and \code{p.merge} must sum to \code{1}. 
 #' @param p.merge Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.
-#' @param moves Integer indicating which between-model moves to implement. 0 = split/merge, 1 = data driven Type I, 2 = data driven Type II, 3 = random.
-#' @param move.ratio Relative proportion of calls to data-driven (type I and II) and independence samplers.
-#' @param m Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.
-#' @param bootstrap Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increase efficiency when reconfiguring the sampler. 
+#' @param bootstrap Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increases efficiency when re-configuring the sampler. 
 #' @param n.rep Number of replicate bootstrap datasets used for clustering (see \code{Details}).
 #' 
 #' @return A list object of class \code{rjconfig} identical to the input \code{brsdata} object, with an additional \code{config} element composed of:
@@ -36,7 +34,8 @@
 #'   \code{prior} \tab Mean and standard deviation of the Normal priors placed on covariates \cr
 #'   \code{...} \tab Other elements pulled from the \code{brsdata} object \cr
 #'  }
-#' 
+#' @references
+#' \insertAllCited{}
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{run_rjMCMC}}
 #' @examples
@@ -64,20 +63,18 @@ configure_rjMCMC <- function(dat,
                              function.select = TRUE,
                              biphasic = FALSE,
                              proposal.mh = list(t.ij = 10, mu.i = 10, mu = 5, phi = 5, sigma = 5,
-                                                nu = 5, tau = 5, alpha = 2, mu.ij = 1, psi = 1, 
-                                                omega = 1, psi.i = 0.5, k.ij = 0.5),
+                                                nu = 5, tau = 5, alpha = 2, mu.ij = 5, psi = 1, 
+                                                omega = 2, psi.i = 2, k.ij = 0.5),
                              proposal.rj = list(rj = 5, dd = 10, cov = 3),
                              priors = list(covariates = c(0, 30), 
+                                           alpha = c(110, 160),
                                            sigma = c(0, 45), 
                                            phi = c(0, 45),
-                                           omega = c(0, 2),
+                                           omega = c(0, 5),
                                            tau = c(0, 45),
                                            psi = c(0, 1)), 
                              p.split = 0.5,
                              p.merge = 0.5,
-                             moves = 0,
-                             move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
-                             m = 100,
                              bootstrap = TRUE,
                              n.rep = 1000){
   
@@ -85,7 +82,10 @@ configure_rjMCMC <- function(dat,
   # Perform function checks
   #' -----------------------------------------------
   
-  priors$alpha <- dat$param$dose.range
+  if(dat$param$sim) biphasic <- dat$param$biphasic
+  
+  # priors$alpha <- dat$param$dose.range
+  # priors$alpha <- c(110, 160)
   
   if(!"brsdata" %in% class(dat)){
     if(!"rjconfig" %in% class(dat)) stop("Input data must be of class <brsdata> or <rjconfig>.")}
@@ -106,11 +106,6 @@ configure_rjMCMC <- function(dat,
   if(dat$species$n == 1) model.select <- FALSE
   
   if(function.select) biphasic <- TRUE
-  
-  if(length(moves) == 1){
-    m <- 1
-    move.ratio <- NULL
-  }
   
   #' -----------------------------------------------
   # Estimate variance parameters from the data
@@ -176,7 +171,8 @@ configure_rjMCMC <- function(dat,
   if(dat$covariates$n > 0){
     
     for (j in dat$covariates$names){
-      proposal.mh[[j]] <- ifelse(j == "range", 0.1, 2)
+      # proposal.mh[[j]] <- ifelse(j == "range", 0.1, 2)
+      proposal.mh[[j]] <- ifelse(j == "range", 3, 10)
       priors.df <- dplyr::bind_rows(priors.df, 
                                        tibble::tibble(param = j,
                                                       lower_or_mean = priors$covariates[1],
@@ -240,18 +236,6 @@ configure_rjMCMC <- function(dat,
                              dplyr::select(-c(data, Ns)) %>% 
                              tidyr::unnest(sample)}) 
     
-    # Original implementation – not reliable
-    # boot.tbl <- rsample::bootstraps(data = boot.dat, times = n.rep, strata = "species", apparent = TRUE) %>% 
-    #   purrr::map(.x = .$splits, .f = ~rsample::analysis(.x))
-    
-    # Compute average per species
-    # boot.avg <- purrr::map(.x = boot.tbl, 
-    #                        .f = ~{
-    #                          .x %>% 
-    #                            dplyr::group_by(species) %>% 
-    #                            dplyr::summarise(y = median(y, na.rm = TRUE), .groups = "keep") %>% 
-    #                            dplyr::ungroup()})
-    
     cat("Performing cluster analysis ...\n")
     
     # Model-based clustering (equal variance)
@@ -259,16 +243,6 @@ configure_rjMCMC <- function(dat,
                            .f = ~mclust::Mclust(data = as.numeric(na.omit(.x$y)), 
                                                 G = seq_len(dat$species$n), 
                                                 modelNames = c("E"), verbose = FALSE))
-    
-    # datClust.avg <- purrr::map(.x = boot.avg,
-    #                            .f = ~{
-    #                              # If all species randomly have the same average, algorithm gets stuck
-    #                              if(length(unique(as.numeric(na.omit(.x$y)))) == 1) 
-    #                                G_mix <- 1 else G_mix <- seq_len(dat$species$n)
-    #                                mclust::Mclust(data = as.numeric(na.omit(.x$y)), 
-    #                                               G = G_mix, modelNames = c("E"), verbose = FALSE)})
-    
-    # // Bootstrap moves 
     
     datGroups <- purrr::map(.x = 1:length(datClust), 
                        .f = ~{
@@ -295,27 +269,12 @@ configure_rjMCMC <- function(dat,
                            
                            } else {class.list <- clustClassif}
                            
-                           # res.out <- 
-                           #   
-                           #   purrr::map(.x = seq_len(dat$species$n),
-                           #              .f = ~table(class.list[dat$species$trials == .x])) %>% 
-                           #   purrr::map(.x = ., .f = ~names(.x)[which.max(.x)]) %>% 
-                           #   purrr::map_dbl(.x = ., .f = ~which(dat$species$names == .x)) %>% 
-                           #   relabel()
-                           
                            res.out <- 
                              
                              purrr::map(.x = seq_len(dat$species$n),
                                         .f = ~table(class.list[dat$species$trials == .x])) %>% 
                              purrr::map_dbl(.x = ., .f = ~as.numeric(names(.x)[which.max(.x)])) %>% 
-                             # purrr::map_dbl(.x = ., .f = ~which(dat$species$names == .x)) %>% 
                              relabel()
-
-                             # purrr::map(.x = unique(class.list),
-                             #            .f = ~table(dat$species$trials[which(class.list == .x)])) %>% 
-                             # purrr::map(.x = ., .f = ~names(.x)[which.max(.x)]) %>% 
-                             # purrr::map_dbl(.x = ., .f = ~which(dat$species$names == .x)) %>% 
-                             # relabel()
                            
                            if(length(res.out) == 1) res.out <- rep(res.out, length = dat$species$n)
                            
@@ -328,37 +287,6 @@ configure_rjMCMC <- function(dat,
           .f = ~ vec_to_model(input.vector = .x, sp.names = dat$species$names)) %>%
       do.call(c, .)
     
-    # datGroups <- purrr::map(.x = 1:length(datClust.avg), 
-    #                         .f = ~{
-    #                           
-    #                           # Use a Multinomial distribution to classify species into groups 
-    #                           # based on the assignment probabilities returned by the clustering algorithm
-    #                           if(!is.null(datClust.avg[[.x]])){
-    #                             clustClassif <- sapply(X = 1:nrow(datClust.avg[[.x]]$z), 
-    #                                                    FUN = function(x) stats::rmultinom(n = 1, size = 1, prob = datClust.avg[[.x]]$z[x,]))
-    #                             
-    #                             if("matrix" %in% class(clustClassif)) clustClassif <- 
-    #                                 apply(X = clustClassif, MARGIN = 2, FUN = function(x) which(x == 1))
-    #                             
-    #                             # The above groups do not necessarily have the same labels as the ones used
-    #                             # in the other RJ functions - so must relabel them.
-    #                             # First identify which species are in which groups
-    #                             class.list <- list()
-    #                             for(u in unique(clustClassif)) class.list[[u]] <- which(clustClassif == u)
-    #                             class.list <- purrr::compact(class.list)
-    #                             
-    #                             # Relabel and find matching group from master list
-    #                             res.out <- format_group(input.list = class.list)
-    #                             
-    #                             res.out <- res.out$group %>% relabel(.)
-    #                           } else {
-    #                             res.out <- 1 
-    #                           }})
-    # 
-    # names(datGroups) <- purrr::map(.x = datGroups, 
-    #                                .f = ~ vec_to_model(input.vector = .x, sp.names = dat$species$names)) %>%
-    #   do.call(c, .)
-    
     p.ClustModels <- table(names(datGroups)) / n.rep
     p.ClustModels <- as.data.frame(p.ClustModels) %>% 
       tibble::as_tibble() %>% 
@@ -366,8 +294,6 @@ configure_rjMCMC <- function(dat,
       dplyr::mutate(model = as.character(model)) %>% 
       dplyr::arrange(-p) %>% 
       dplyr::mutate(p_scale = rescale_p(p))
-    
-    # // Cluster moves 
     
     n.Clust <- purrr::map_dbl(.x = datClust, .f = ~which.max(.x$BIC[seq_len(dat$species$n)]))
     p.Clust <- sapply(X = seq_len(dat$species$n), 
@@ -387,15 +313,15 @@ configure_rjMCMC <- function(dat,
     p.Clust <- tibble::tibble(cluster = NA, p = 1)
     if(dat$species$n == 1) mlist <- datGroups <- list(rep(1, dat$species$n)) else 
       mlist <- datGroups <- list(seq_len(dat$species$n)) 
-    names(mlist) <- names(datGroups) <- vec_to_model(input.vector = unlist(mlist),
-                                                     sp.names = dat$species$names)
+    names(mlist) <- names(datGroups) <- vec_to_model(input.vector = unlist(mlist), sp.names = dat$species$names)
     p.ClustModels$model <- names(mlist)
     p.Clust$cluster <- ifelse(is.null(dat$species$groups), dat$species$n, length(dat$species$groups))
     
   }
-    
+    nglist <- purrr::map(.x = mlist, .f = ~nb_groups(.x))
   }
   
+
   if(bootstrap){
     
     dat$config$var <- NULL
@@ -408,15 +334,13 @@ configure_rjMCMC <- function(dat,
     
     dat$config <- append(dat$config, list(
                        prop = list(rj = proposal.rj$rj, dd = proposal.rj$dd, mh = proposal.mh),
-                       move = list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
-                                   moves = moves,
-                                   ratio = move.ratio, 
-                                   freq = m),
+                       move = list(prob = setNames(c(p.split, p.merge), c("split", "merge"))),
                        model.select = model.select,
                        function.select = function.select,
                        biphasic = biphasic,
                        boot = datGroups,
                        mlist = mlist,
+                       nglist = nglist,
                        clust = list(p.ClustModels, p.Clust),
                        covariate.select = covariate.select))
 
@@ -431,8 +355,7 @@ configure_rjMCMC <- function(dat,
     }
     
     dat$config$prop <- list(dd = proposal.rj$dd, mh = proposal.mh)
-    dat$config$move <- list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
-                                   ratio = move.ratio, freq = m)
+    dat$config$move <- list(prob = setNames(c(p.split, p.merge), c("split", "merge")))
     dat$config$model.select <-  model.select
     dat$config$covariate.select <- covariate.select
   } 

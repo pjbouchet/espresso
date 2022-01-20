@@ -10,16 +10,13 @@ configure_rjMCMC(
   covariate.select = FALSE,
   function.select = TRUE,
   biphasic = FALSE,
-  proposal.mh = list(t.ij = 10, mu.i = 10, mu = 2, phi = 5, sigma = 5, nu = 5, tau = 5,
-    alpha = 2, mu.ij = 1, psi = 1, omega = 1, psi.i = 0.5, k.ij = 0.5),
+  proposal.mh = list(t.ij = 10, mu.i = 10, mu = 5, phi = 5, sigma = 5, nu = 5, tau = 5,
+    alpha = 2, mu.ij = 5, psi = 1, omega = 2, psi.i = 2, k.ij = 0.5),
   proposal.rj = list(rj = 5, dd = 10, cov = 3),
-  priors = list(covariates = c(0, 30), sigma = c(0, 45), phi = c(0, 45), omega = c(0,
-    2), tau = c(0, 45), psi = c(0, 1)),
+  priors = list(covariates = c(0, 30), alpha = c(60, 215), sigma = c(0, 45), phi = c(0,
+    45), omega = c(0, 5), tau = c(0, 45), psi = c(0, 1)),
   p.split = 0.5,
   p.merge = 0.5,
-  moves = 0,
-  move.ratio = list(dd1 = 3, dd2 = 1, random = 1),
-  m = 100,
   bootstrap = TRUE,
   n.rep = 1000
 )
@@ -45,13 +42,7 @@ configure_rjMCMC(
 
 \item{p.merge}{Probability of choosing to merge two groups of species when initiating a split-merge move. This parameter is constrained to be \code{1} when all species are in their own groups. \code{p.split} and \code{p.merge} must sum to \code{1}.}
 
-\item{moves}{Integer indicating which between-model moves to implement. 0 = split/merge, 1 = data driven Type I, 2 = data driven Type II, 3 = random.}
-
-\item{move.ratio}{Relative proportion of calls to data-driven (type I and II) and independence samplers.}
-
-\item{m}{Integer. Frequency (every \code{m} iterations) at which data-driven (type I and II) and independence samplers are triggered.}
-
-\item{bootstrap}{Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increase efficiency when reconfiguring the sampler.}
+\item{bootstrap}{Logical, defaults to TRUE. Whether to perform bootstrap clustering. As this step can be time-consuming, setting this argument to \code{FALSE} increases efficiency when re-configuring the sampler.}
 
 \item{n.rep}{Number of replicate bootstrap datasets used for clustering (see \code{Details}).}
 }
@@ -76,7 +67,7 @@ The function performs three actions:
 \describe{
 \item{Variance}{Returns empirical estimates of between-whale (φ) and within-whale between-exposure (σ) variation, which are needed to generate starting values for the MCMC chains}
 \item{Proposals}{Defines the means and standard deviations of relevant proposal distributions and priors}
-\item{Clustering}{Performs a cluster analysis using \code{n.rep} bootstrap replicates of the input data, in order to parameterise between-model jumps. The analysis is run using \code{\link[mclust]{Mclust}} on both (1) species means and (2) raw observations. These respectively provide estimates of the probability distributions of (1) unique groupings, and (2) numbers of groups, where the latter ranges from \code{n = 1} when all species belong to the same group, to \code{n = n.species} when each species is treated individually.}
+\item{Clustering}{Performs a cluster analysis using \code{n.rep} bootstrap replicates of the input data, in order to initialise between-model jumps. The analysis is run using \code{\link[mclust]{Mclust}} \insertCite{Scrucca2016}{espresso} on both (1) species means and (2) raw observations. These respectively provide estimates of the probability distributions of (1) unique groupings, and (2) numbers of groups, where the latter ranges from \code{n = 1} when all species belong to the same group, to \code{n = n.species} when each species is treated individually.}
 }
 }
 \examples{
@@ -96,6 +87,9 @@ mydat.config <- configure_rjMCMC(dat = mydat,
                                  n.rep = 100)
 summary(mydat.config)
 }
+}
+\references{
+\insertAllCited{}
 }
 \seealso{
 \code{\link{run_rjMCMC}}

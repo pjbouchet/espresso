@@ -4,16 +4,16 @@
 \alias{proposal_rj}
 \title{Proposal for between-model jumps}
 \usage{
-proposal_rj(rj.obj, jump, phase, huelsenbeck = TRUE)
+proposal_rj(jump, huelsenbeck = FALSE)
 }
 \arguments{
-\item{rj.obj}{Input list.}
-
 \item{jump}{Proposed model jump, as defined by \code{\link{propose_jump}}.}
 
-\item{phase}{Monphasic (1) or biphasic (2).}
-
 \item{huelsenbeck}{Defines the type of proposal.}
+
+\item{rj.obj}{Input list.}
+
+\item{phase}{Monphasic (1) or biphasic (2).}
 }
 \description{
 Generate proposed values for relevant model parameters

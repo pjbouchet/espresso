@@ -577,7 +577,8 @@ plot.dose_response <- function(dr.object,
         if(!overlay & do.facet) { gplot <- gplot + facet_wrap(~ grp) }
         
         # Output plots separately
-        if(!overlay & !do.facet){ gplot <- gplot + ggforce::facet_wrap_paginate(~ grp, ncol = 1, nrow = 1) }
+        if(!overlay & !do.facet){ gplot <- 
+          gplot + ggforce::facet_wrap_paginate(~ grp, ncol = 1, nrow = 1) }
        
       }
     }

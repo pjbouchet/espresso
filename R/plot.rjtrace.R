@@ -160,6 +160,8 @@ plot.rjtrace <- function(rj.obj,
   
   if(is.null(param.name)) bpars <- mpars else bpars <- purrr::map(.x = param.name, .f = ~colnames(mcmc.trace[[1]])[grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))]) %>% unlist()
   
+  mpars <- mpars[!grepl(pattern = "accept", x = mpars)]
+  bpars <- bpars[!grepl(pattern = "accept", x = bpars)]
   
   if(is.null(param.name)){
     

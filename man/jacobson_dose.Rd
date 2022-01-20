@@ -8,6 +8,9 @@
 data(jacobson_dose)
 }
 \description{
-Derived from Jacobson et al. (2019). “Quantifying the response of Blainville’s beaked whales to Naval sonar exercises in Hawaii."
+Derived from \insertCite{Jacobson2019;textual}{espresso}.
+}
+\references{
+\insertAllCited{}
 }
 \keyword{datasets}

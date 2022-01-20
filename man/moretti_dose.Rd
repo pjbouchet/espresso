@@ -8,6 +8,9 @@
 data(moretti_dose)
 }
 \description{
-Derived from Moretti et al. (2014). “A Risk Function for Behavioral Disruption of Blainville’s Beaked Whales (Mesoplodon Densirostris) from Mid-Frequency Active Sonar.” PloS One 9 (1): e85064."
+Derived from \insertCite{Moretti2014;textual}{espresso}.
+}
+\references{
+\insertAllCited{}
 }
 \keyword{datasets}

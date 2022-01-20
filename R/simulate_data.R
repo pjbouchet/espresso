@@ -137,7 +137,7 @@ simulate_data <- function(biphasic = FALSE,
   if(!is.null(covariates) & !"list" %in% class(covariates)) stop("Erroneous format for input covariates.")
   
   if (n.covariates > 0) {
-    covariate.L <- list(exposed = 2, sonar = 2, behaviour = 3, range = 1)
+    covariate.L <- list(exposed = 2, sonar = 2, behaviour = 2, range = 1)
     for(cc in covariate.names){
       if (!length(covariates[[cc]]) == covariate.L[[cc]])
         stop(paste0("Wrong parameter input for <", cc, "> covariate."))
@@ -211,7 +211,7 @@ simulate_data <- function(biphasic = FALSE,
     covariates.list$sonar = sample(x = c("LFAS", "MFAS"), size = n.trials, replace = TRUE)
     if(!is.null(seed)) set.seed(seed) 
     covariates.list$behaviour = sapply(seq_len(n.trials), sample,
-                         x = c("Feed", "Migrate", "Rest"),
+                         x = c("Feeding", "Non-feeding"),
                          size = 1)
     if(!is.null(seed)) set.seed(seed) 
     covariates.list$range = sample(x = seq(0.1, 40, length = 1000), size = n.trials, replace = TRUE)
@@ -240,6 +240,8 @@ simulate_data <- function(biphasic = FALSE,
                               } else { covariates.df[, .x, drop = FALSE] }}) %>% 
       purrr::set_names(., covariate.names)
     
+    dummy.df <- t(do.call(cbind, dummy.cov))
+    
     # Factor levels
     fL <- sapply(covariate.names, 
                  FUN = function(x) factor_levels(covname = x, dat = covariates.df), 
@@ -258,13 +260,13 @@ simulate_data <- function(biphasic = FALSE,
 
   if(!biphasic){
     if(!is.null(seed)) set.seed(seed) 
-    mu.i <- rtnorm(n = n.whales, location = rep(mu, n.per.species), 
+    mu.i <- rt_norm(n = n.whales, location = rep(mu, n.per.species), 
                    scale = phi, L = dose.range[1], U = dose.range[2])
     
     # Contextual covariates: 
     # History of exposure (factor, 2 levels)
     # Sonar signal frequency (factor, 2 levels)
-    # Behavioural mode (factor, 3 levels)
+    # Behavioural mode (factor, 2 levels)
     # Range (continuous)
   
     mu.ij <- mu.i[whale.id]
@@ -278,7 +280,7 @@ simulate_data <- function(biphasic = FALSE,
       
     }
     if(!is.null(seed)) set.seed(seed) 
-    t.ij <- rtnorm(n = n.trials, location = mu.ij, scale = sigma, L = dose.range[1], U = dose.range[2])
+    t.ij <- rt_norm(n = n.trials, location = mu.ij, scale = sigma, L = dose.range[1], U = dose.range[2])
     if(!is.null(seed)) set.seed(seed) 
     y_ij <- rnorm(n = n.trials, mean = t.ij, sd = obs.sd)
     
@@ -325,14 +327,14 @@ simulate_data <- function(biphasic = FALSE,
     # Simulate for each trial the value of the lower and upper mixture components
     mu_ij <- matrix(data = 0, nrow = n.trials, ncol = 2)
     if(!is.null(seed)) set.seed(seed) 
-    mu_ij[, 1] <- rtnorm(n = n.trials, 
+    mu_ij[, 1] <- rt_norm(n = n.trials, 
                          location = purrr::map_dbl(nu, 1)[species.id[whale.id]],
                          scale = tau[1], 
                          L = dose.range[1], 
                          U = alpha[species.id[whale.id]])
     
     if(!is.null(seed)) set.seed(seed) 
-    mu_ij[, 2] <- rtnorm(n = n.trials, 
+    mu_ij[, 2] <- rt_norm(n = n.trials, 
                          location = purrr::map_dbl(nu, 2)[species.id[whale.id]],
                          scale = tau[2], 
                          L = alpha[species.id[whale.id]], 
@@ -447,7 +449,8 @@ simulate_data <- function(biphasic = FALSE,
                                   values = covariates.list[covariate.names],
                                   index = I.covariates, 
                                   df = covariates.df,
-                                  dummy = dummy.cov))
+                                  dummy = dummy.cov,
+                                  dummy.df = dummy.df))
     
     names(res$covariates$coefs) <- covariate.names
     res$covariates$fL <- fL

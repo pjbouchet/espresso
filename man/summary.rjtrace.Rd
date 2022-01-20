@@ -12,8 +12,10 @@
   gelman.rubin = 1.1,
   model.ranks = TRUE,
   n.top = 10,
+  southall.2019 = TRUE,
   covariate.prob = TRUE,
   ff.prob = TRUE,
+  x.off = 0.1,
   rmd = FALSE,
   do.plot = TRUE
 )
@@ -33,9 +35,13 @@
 
 \item{n.top}{Number of top-ranking models to display when \code{model.ranks = TRUE}.}
 
+\item{southall.2019}{Logical. Whether to produce a tile plot showing species groupings, as identified in \insertCite{Southall2019;textual}{espresso}. This is only relevant if real-world BRS data are being analysed (and therefore, \code{sim = FALSE}).}
+
 \item{covariate.prob}{Logical. If \code{TRUE}, returns a summary of posterior inclusion probabilities (PIPs).}
 
 \item{ff.prob}{Logical. If \code{TRUE}, returns a summary of posterior probabilities for each functional form (monophasic vs. biphasic).}
+
+\item{x.off}{Offset for probability values in tile plots.}
 
 \item{rmd}{Logical. This is used to create a different layout of plots when exporting results using \code{\link{create_report}}.}
 
@@ -45,7 +51,7 @@
 A detailed summary, printed to the R console.
 }
 \description{
-Summary method for objects of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}. Produces a text-based summary of: (1) effective sample sizes, (2) acceptance rates, (3) model convergence, (4) posterior model probabilities, and (5) posterior inclusion probabilities (PIPs) for contextual covariates (where appripriate).
+Summary method for objects of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}. Produces a text-based summary of: (1) effective sample sizes, (2) acceptance rates, (3) model convergence, (4) posterior model probabilities, and (5) posterior inclusion probabilities (PIPs) for contextual covariates (where appropriate).
 }
 \examples{
 \dontrun{
@@ -72,6 +78,9 @@ rj <- run_rjMCMC(dat = mydat.config,
                  do.update = FALSE)
 summary(rj)
 }
+}
+\references{
+\insertAllCited{}
 }
 \seealso{
 \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.rjdata}}

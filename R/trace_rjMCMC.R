@@ -86,6 +86,9 @@ trace_rjMCMC <- function(rj.dat,
   params <- c(params, "include.covariates")
   params <- c(params,  "model_ID", "model_size")
   params <- c(params,  "phase")
+  if(rj.dat[[1]]$config$model.select) params <- c(params,  "accept.model")
+  if(rj.dat[[1]]$config$covariate.select) params <- c(params,  "accept.covariates")
+  if(rj.dat[[1]]$config$function.select) params <- c(params,  "accept.phase")
   
   run_times <- purrr::map(.x = 1:length(rj.dat), .f = ~rj.dat[[.x]]$run_time) %>% 
     purrr::set_names(x = ., nm = paste0("Chain ", 1:length(rj.dat))) %>% 
@@ -103,7 +106,7 @@ trace_rjMCMC <- function(rj.dat,
     dplyr::distinct() %>% 
     dplyr::rename(model = name, group = value) %>% 
     dplyr::rowwise() %>% 
-    dplyr::mutate(N = nb_groups(unlist(group))) %>% 
+    dplyr::mutate(N = dplyr::n_distinct(unlist(group))) %>% 
     dplyr::ungroup() %>%
     dplyr::arrange(N) %>% 
     tibble::rowid_to_column("ID")
@@ -154,6 +157,17 @@ trace_rjMCMC <- function(rj.dat,
   } else {
     mu.indices <- grep(pattern = "mu.", x = colnames(mcmc.trace[[1]]))
   }
+  
+  mcmc.trace <- purrr::map(.x = seq_len(length(mcmc.trace)),
+             .f = ~ {
+               if(rj.dat[[1]]$config$model.select) mcmc.trace[[.x]][, "accept.model"] <- 
+                   cumsum(mcmc.trace[[.x]][, "accept.model"])
+               if(rj.dat[[1]]$config$covariate.select) mcmc.trace[[.x]][, "accept.covariates"] <- 
+                   cumsum(mcmc.trace[[.x]][, "accept.covariates"])
+               if(rj.dat[[1]]$config$function.select) mcmc.trace[[.x]][, "accept.phase"] <- 
+                   cumsum(mcmc.trace[[.x]][, "accept.phase"])
+               mcmc.trace[[.x]]
+             })
   
   # Discard burn-in and thin chain(s) if desired
   for(nc in seq_len(length(mcmc.trace))){
@@ -240,56 +254,58 @@ trace_rjMCMC <- function(rj.dat,
   #' ---------------------------------------------
   # Acceptance rates
   #' ---------------------------------------------
-  n.end <- ifelse(is.update, mcmc.params$n.iter, mcmc.params$tot.iter)
-  mcmc.params$move$m <- table(mcmc.params$move$m[burn:n.end])
-  names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
-
   
-  ar.pars <- purrr::map(.x = seq_len(mcmc.params$n.chains),
-                        .f = ~{
-                          ar.pars <- 
-                            tibble::tibble(param = 
-                            c("t.ij", "mu","mu.i", "phi", "sigma", 
-                            paste0("mono.move.", rj.dat[[.x]]$config$move$moves), 
-                            "to.biphasic", "alpha", "nu", "tau", "omega", "mu.ij.1", "mu.ij.2",
-                            "psi.i", "k.ij", paste0("bi.move.", rj.dat[[1]]$config$move$moves),
-                            "to.monophasic", "move.covariates", rj.dat[[1]]$dat$covariates$names),
-                               iter = 0)
-                          
-                          for(pname in ar.pars$param){
-                            if(pname %in% names(rj.dat[[.x]]$accept)){
-                              if(pname %in% rj.dat[[.x]]$dat$covariates$names){
-                                ar.pars[ar.pars$param == pname, ]$iter <- 
-                                  sum(mcmc.trace[[.x]][, paste0("incl.", pname)] == 1)
-                              } else if(pname == "to.monophasic"){
-                                ar.pars[ar.pars$param == pname, ]$iter <- 
-                                  sum(mcmc.trace[[.x]][, "phase"] == 2)   
-                              } else if(pname == "to.biphasic"){
-                                ar.pars[ar.pars$param == pname, ]$iter <- 
-                                  sum(mcmc.trace[[.x]][, "phase"] == 1)   
-                              } else {
-                                ar.pars[ar.pars$param == pname, ]$iter <- mcmc.params$n.iter
-                              }
-                            }
-                          }
-                          ar.pars
-                        })
+  AR <- 1 - coda::rejectionRate(mcmc.trace)
   
-  ar.vals <- purrr::map(rj.dat, "accept") %>%
-    purrr::map(.x = ., .f = ~tibble::enframe(.x))
-  
-  ar.vals <- purrr::map(.x = seq_len(mcmc.params$n.chains),
-                        .f = ~ ar.vals[[.x]] %>% dplyr::mutate(chain = .x) %>%
-                          dplyr::rename(param = name))
-  
-  AR <- purrr::map2(.x = ar.vals,
-                    .y = ar.pars,
-                    .f = ~{
-                       dplyr::left_join(x = .x, y = .y, by = "param") %>%
-                       dplyr::mutate(value = purrr::map(value, mean)) %>%
-                       tidyr::unnest(. , cols = c(value)) %>%
-                       dplyr::mutate(AR = value / iter)
-                   }) %>% do.call(rbind, .) 
+  # n.end <- ifelse(is.update, mcmc.params$n.iter, mcmc.params$tot.iter)
+  # # mcmc.params$move$m <- table(mcmc.params$move$m[burn:n.end])
+  # # names(mcmc.params$move$m) <- paste0("move.", names(mcmc.params$move$m))
+  # 
+  # ar.pars <- purrr::map(.x = seq_len(mcmc.params$n.chains),
+  #                       .f = ~{
+  #                         ar.pars <- 
+  #                           tibble::tibble(param = 
+  #                           c("t.ij", "mu","mu.i", "phi", "sigma", 
+  #                           paste0("mono.move.", rj.dat[[.x]]$config$move$moves), 
+  #                           "to.biphasic", "alpha", "nu", "tau", "omega", "mu.ij.1", "mu.ij.2",
+  #                           "psi.i", "k.ij", paste0("bi.move.", rj.dat[[1]]$config$move$moves),
+  #                           "to.monophasic", "move.covariates", rj.dat[[1]]$dat$covariates$names),
+  #                              iter = 0)
+  #                         
+  #                         for(pname in ar.pars$param){
+  #                           if(pname %in% names(rj.dat[[.x]]$accept)){
+  #                             if(pname %in% rj.dat[[.x]]$dat$covariates$names){
+  #                               ar.pars[ar.pars$param == pname, ]$iter <- 
+  #                                 sum(mcmc.trace[[.x]][, paste0("incl.", pname)] == 1)
+  #                             } else if(pname == "to.monophasic"){
+  #                               ar.pars[ar.pars$param == pname, ]$iter <- 
+  #                                 sum(mcmc.trace[[.x]][, "phase"] == 2)   
+  #                             } else if(pname == "to.biphasic"){
+  #                               ar.pars[ar.pars$param == pname, ]$iter <- 
+  #                                 sum(mcmc.trace[[.x]][, "phase"] == 1)   
+  #                             } else {
+  #                               ar.pars[ar.pars$param == pname, ]$iter <- mcmc.params$n.iter
+  #                             }
+  #                           }
+  #                         }
+  #                         ar.pars
+  #                       })
+  # 
+  # ar.vals <- purrr::map(rj.dat, "accept") %>%
+  #   purrr::map(.x = ., .f = ~tibble::enframe(.x))
+  # 
+  # ar.vals <- purrr::map(.x = seq_len(mcmc.params$n.chains),
+  #                       .f = ~ ar.vals[[.x]] %>% dplyr::mutate(chain = .x) %>%
+  #                         dplyr::rename(param = name))
+  # 
+  # AR <- purrr::map2(.x = ar.vals,
+  #                   .y = ar.pars,
+  #                   .f = ~{
+  #                      dplyr::left_join(x = .x, y = .y, by = "param") %>%
+  #                      dplyr::mutate(value = purrr::map(value, mean)) %>%
+  #                      tidyr::unnest(. , cols = c(value)) %>%
+  #                      dplyr::mutate(AR = value / iter)
+  #                  }) %>% do.call(rbind, .) 
 
   # pars.mono <- c("t.ij", "mu","mu.i", "phi", "sigma", 
   #                paste0("mono.move.", rj.dat[[1]]$config$move$moves), "to.biphasic")
@@ -390,9 +406,11 @@ trace_rjMCMC <- function(rj.dat,
   ess.params <- colnames(mcmc.trace[[1]])
   if(!rj.dat[[1]]$config$model.select) ess.params <- ess.params[!ess.params %in% c("model_ID", "model_size")]
   if(!rj.dat[[1]]$config$function.select) ess.params <- ess.params[!ess.params == "phase"]
+  sink(tempfile())
   ESS <- mcmcse::ess(mcmc.trace[, ess.params]) %>% 
     tibble::enframe(.) %>% 
     dplyr::rename(parameter = name, ESS = value)
+  sink()
   
   if(!rj.dat[[1]]$config$model.select) 
     ESS <- ESS %>% dplyr::filter(!parameter %in% c("model_ID", "model_size"))

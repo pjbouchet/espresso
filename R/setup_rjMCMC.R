@@ -10,9 +10,6 @@
 #' @param n.chains Number of MCMC chains. Defaults to 3.
 #' @param p.split Probability of performing a group split when \code{model.select = TRUE}.
 #' @param p.merge Probability of performing a group merge when \code{model.select = TRUE}.
-#' @param moves Required move types. 0: Split/merge. 1: Data-driven I. 2: Data-driven II. 3: Independent.
-#' @param move.ratio Relative proportion of each move type.
-#' @param m Frequency at which each move type is proposed, e.g., when \code{m = 100}, a move is proposed every 100th iteration.
 #' @param do.update Logical. Whether to update an existing sampler or set up a new one.
 #' @param start.values Starting values to use when updating an existing sampler and \code{do.update = TRUE}.
 #' @author Phil J. Bouchet
@@ -25,9 +22,6 @@ setup_rjMCMC <- function(rj.input,
                          n.chains = 3,
                          p.split,
                          p.merge,
-                         moves,
-                         move.ratio,
-                         m,
                          do.update = FALSE,
                          start.values = NULL) {
   
@@ -38,97 +32,60 @@ setup_rjMCMC <- function(rj.input,
   if(!do.update & !"rjconfig" %in% class(rj.input)) 
     stop("Input data must be initialised using <rj_initialise>.")
   if(is.null(start.values) & do.update) stop("Missing starting values.")
-  if(!is.null(move.ratio) & !"integer" %in% class(move.ratio) & !"list" %in% class(move.ratio)) stop("<move.ratio> must be either an integer vector or a list.")
-  if(is.list(move.ratio)) move.ratio <- unlist(move.ratio)
-
   
-  if(do.update){
-    
-    tot.iter <- n.iter
-    
-  } else {
-    
-    tot.iter <- n.iter + n.burn
-  }
-    
+  if(do.update) tot.iter <- n.iter else tot.iter <- n.iter + n.burn
   
-  #' -----------------------------------------------
-  # Define move types
-  #' -----------------------------------------------
+  rj <- vector(mode = "list", length = 29)
+  names(rj) <- c("mcmc", "t.ij", "sigma", "phi", "mu.i", "mu", "mu.ij", "psi.i", "k.ij", 
+                 "pi.ij", "nu",   "tau",  "alpha", "psi", "omega", "include.covariates",
+                 "exposed", "sonar", "behaviour", "range", "beta", "phase", "model",
+                 "mlist", "nglist", "abbrev", "dat",  "config", "update")
   
-  # Type 0: Split/merge
-  # Type 1: Data-driven Type I
-  # Type 2: Data-driven Type II
-  # Type 3: Random
-  
-  modelmoves <- numeric(length = tot.iter)
-  
-  if(length(moves) == 1){
-    modelmoves <- rep(moves, tot.iter)
-  } else if (length(moves) > 1){
-    if(m < tot.iter){
-      move.iters <- seq(from = m, to = tot.iter, by = m)
-    } else {
-      move.iters <- rep(0, tot.iter)
-    }
-    move.ratio <- unlist(move.ratio)
-    modelmoves[move.iters] <- rep(unlist(sapply(X = which(move.ratio > 0), 
-                                                FUN = function(a) rep(a, each = move.ratio[a]))),
-                                  length.out = length(move.iters))
-  }
-  
-  modelmoves.tab <- table(modelmoves[(n.burn+1):tot.iter]) %>% 
-    tibble::enframe() %>% 
-    dplyr::rename(move = name, n = value) %>% 
-    dplyr::mutate(move = dplyr::case_when(move == "0" ~ "split-merge",
-                                          move == "1" ~ "data-driven (Type I)",
-                                          move == "2" ~ "data-driven (Type II)",
-                                          move == "3" ~ "random")) 
-  
-  rj <- list(mcmc = list(n.chains = n.chains,
+  rj$mcmc <- list(n.chains = n.chains,
                          n.burn = n.burn,
                          n.iter = n.iter,
                          tot.iter = tot.iter,
                          iter.rge = paste0(n.burn + 1, ":", tot.iter),
-                         move = list(prob = setNames(c(p.split, p.merge), c("split", "merge")),
-                                     m = modelmoves,
-                                     tab = modelmoves.tab)))
+                         move = list(prob = setNames(c(p.split, p.merge), c("split", "merge"))))
   
   #' -----------------------------------------------
   # Create data matrices and vectors
   #' -----------------------------------------------
   
-  rj <- append(rj, list(t.ij = matrix(data = 0, nrow = tot.iter, 
-                                      ncol = rj.input$trials$n)))
+  rj$t.ij = matrix(data = 0, nrow = tot.iter, ncol = rj.input$trials$n)
   
   if(!rj.input$config$biphasic | rj.input$config$function.select){
     
-    rj <- append(rj, list(mu.i = matrix(data = 0, nrow = tot.iter, ncol = rj.input$whales$n),
-                          mu = matrix(data = 0, nrow = tot.iter, ncol = rj.input$species$n),
-                          phi = numeric(tot.iter),
-                          sigma = numeric(tot.iter)))
+    rj$mu.i <- matrix(data = 0, nrow = tot.iter, ncol = rj.input$whales$n)
+    rj$mu <- matrix(data = 0, nrow = tot.iter, ncol = rj.input$species$n)
+    rj$phi <- numeric(tot.iter)
+    rj$sigma <- numeric(tot.iter)
+  
+  } else {
+    
+    rj$mu.i <- rj$mu <- rj$phi <- rj$sigma <- NULL
+    
   }
   
   if(rj.input$config$biphasic){
-    
-    rj <- append(rj, list(mu.ij = array(data = 0, dim = c(tot.iter, rj.input$trials$n, 2)),
-                          psi.i = matrix(data = 0, nrow = tot.iter, ncol = rj.input$whales$n),
-                          k.ij = matrix(data = 0, nrow = tot.iter, ncol = rj.input$trials$n),
-                          pi.ij = matrix(data = 0, nrow = tot.iter, ncol = rj.input$trials$n),
-                          nu = array(data = 0, dim = c(tot.iter, rj.input$species$n, 2),
-                                     dimnames = list(NULL, 
-                                                     paste0(".", seq_len(rj.input$species$n)),
-                                                     # paste0(" (", rj.input$species$names, ")"),
-                                                     c("nu.lower", "nu.upper"))),
-                          tau = matrix(data = 0, nrow = tot.iter, ncol = 2),
-                          alpha = matrix(data = 0, nrow = tot.iter, ncol = rj.input$species$n),
-                          psi = numeric(tot.iter),
-                          omega = numeric(tot.iter)))
-
+  
+    rj$mu.ij <- array(data = 0, dim = c(tot.iter, rj.input$trials$n, 2))
+    rj$psi.i <- matrix(data = 0, nrow = tot.iter, ncol = rj.input$whales$n)
+    rj$k.ij <- matrix(data = 0, nrow = tot.iter, ncol = rj.input$trials$n)
+    rj$pi.ij <- matrix(data = 0, nrow = tot.iter, ncol = rj.input$trials$n)
+    rj$nu <- array(data = 0, dim = c(tot.iter, rj.input$species$n, 2),
+                                     dimnames = list(NULL, paste0(".", seq_len(rj.input$species$n)),
+                                                     c("nu.lower", "nu.upper")))
+    rj$tau <- matrix(data = 0, nrow = tot.iter, ncol = 2)
+    rj$alpha <- matrix(data = 0, nrow = tot.iter, ncol = rj.input$species$n)
+    rj$psi <- numeric(tot.iter)
+    rj$omega <- numeric(tot.iter)
+  } else{
+    rj$mu.ij <- rj$psi.i <- rj$k.ij <- rj$pi.ij <- rj$nu <- rj$tau <- rj$alpha <- 
+      rj$psi <- rj$omega  <- NULL
   }
  
   # Covariates, if present
-  
   if (rj.input$covariates$n > 0) {
     for (j in rj.input$covariates$names) {
       rj[[j]] <- matrix(
@@ -145,10 +102,12 @@ setup_rjMCMC <- function(rj.input,
   } else {
     rj$include.covariates <- matrix(data = 0, nrow = tot.iter, ncol = 1)
     rj$beta <- matrix(data = 0, nrow = tot.iter, ncol = 1)
+    rj$exposed <- rj$sonar <- rj$behaviour <- rj$range <- NULL
   }
   
   rj$model <- rj$phase <- numeric(tot.iter)
   rj$mlist <- rj.input$config$mlist
+  rj$nglist <- rj.input$config$nglist
 
   if(!rj.input$config$function.select){
     if(rj.input$config$biphasic) rj$phase <- rep(2, tot.iter) else rj$phase <- rep(1, tot.iter)
@@ -173,7 +132,6 @@ setup_rjMCMC <- function(rj.input,
     colnames(rj$pi.ij) <- paste0("pi.ij.", seq_len(rj.input$trials$n))
     colnames(rj$tau) <- c("tau.lower", "tau.upper")
     colnames(rj$alpha) <- paste0("alpha.", seq_len(rj.input$species$n))
-    # colnames(rj$alpha) <- paste0("alpha (", rj.input$species$names, ")")
   }
   
   if(is.null(rj.input$species$abbrev)) {
@@ -193,56 +151,49 @@ setup_rjMCMC <- function(rj.input,
     colnames(rj$include.covariates) <- "beta"
   }
   
-  # Acceptance rates
-  rj$accept <- list()
-  
-  if(!rj.input$config$biphasic | rj.input$config$function.select){
-    rj$accept <- append(rj$accept, 
-                        list(t.ij = numeric(rj.input$trials$n),
-                             mu.i = numeric(rj.input$whales$n), 
-                             mu = 0, 
-                             phi = 0, 
-                             sigma = 0))
-  }
-  
-  if(rj.input$config$biphasic){
-    rj$accept <- append(rj$accept, list(mu.ij.1 = numeric(rj.input$trials$n), 
-                                        mu.ij.2 = numeric(rj.input$trials$n), 
-                                        psi.i = numeric(rj.input$whale$n), 
-                                        k.ij = numeric(rj.input$trials$n), 
-                                        nu = c(0, 0),
-                                        tau = c(0, 0),
-                                        alpha = 0, 
-                                        omega = 0))}
-                   
-  if(rj.input$config$covariate.select){
-    rj$accept <- append(rj$accept, list(move.covariates = numeric(1)))}
-  
-  if(rj.input$covariates$n > 0){
-    cl <- as.list(numeric(rj.input$covariates$n))
-    names(cl) <- rj.input$covariates$names
-    rj$accept <- append(rj$accept, cl)
-  }
-  
-  if(rj.input$config$model.select){
-    ml <- as.list(rep(0, length(rj.input$config$move$moves)))
-    names(ml) <- paste0("move.", rj.input$config$move$moves) 
-    if(rj.input$config$function.select){
-      ml <- append(ml, ml)
-      names(ml) <- paste0(c("mono.", "bi."), names(ml))
-    } else {
-      if(rj.input$config$biphasic){
-        names(ml) <- paste0("bi.", names(ml))
-      } else {
-        names(ml) <- paste0("mono.", names(ml)) 
-      }
-    }
-    rj$accept <- append(rj$accept, ml)
-  }
-  
-  if(rj.input$config$function.select){
-    rj$accept <- append(rj$accept, list(to.monophasic = 0, to.biphasic = 0))
-  }
+  # # Acceptance rates
+  # rj$accept <- list()
+  # 
+  # if(!rj.input$config$biphasic | rj.input$config$function.select){
+  #   rj$accept <- append(rj$accept, 
+  #                       list(t.ij = numeric(rj.input$trials$n),
+  #                            mu.i = numeric(rj.input$whales$n), 
+  #                            mu = 0, 
+  #                            phi = 0, 
+  #                            sigma = 0))
+  # }
+  # 
+  # if(rj.input$config$biphasic){
+  #   rj$accept <- append(rj$accept, list(mu.ij.1 = numeric(rj.input$trials$n), 
+  #                                       mu.ij.2 = numeric(rj.input$trials$n), 
+  #                                       psi.i = numeric(rj.input$whale$n), 
+  #                                       k.ij = numeric(rj.input$trials$n), 
+  #                                       nu = c(0, 0),
+  #                                       tau = c(0, 0),
+  #                                       alpha = 0, 
+  #                                       omega = 0))}
+  #                  
+  # if(rj.input$config$covariate.select){
+  #   rj$accept <- append(rj$accept, list(move.covariates = numeric(1)))}
+  # 
+  # if(rj.input$covariates$n > 0){
+  #   cl <- as.list(numeric(rj.input$covariates$n))
+  #   names(cl) <- rj.input$covariates$names
+  #   rj$accept <- append(rj$accept, cl)
+  # }
+  # 
+  # if(rj.input$config$model.select){
+  #   if(rj.input$config$function.select){
+  #     ml <- list(mono.move.0 = 0, bi.move.0 = 0)
+  #   } else {
+  #     if(rj.input$config$biphasic) ml <- list(bi.move.0 = 0) else ml <- list(mono.move.0 = 0)
+  #   }
+  #   rj$accept <- append(rj$accept, ml)
+  # }
+  # 
+  # if(rj.input$config$function.select){
+  #   rj$accept <- append(rj$accept, list(to.monophasic = 0, to.biphasic = 0))
+  # }
 
   #' -----------------------------------------------
   # Generate starting values
@@ -252,6 +203,7 @@ setup_rjMCMC <- function(rj.input,
     
     for(it in names(start.values)){
       if(it == "mlist") rj[[it]] <- start.values[[it]]
+      if(it == "nglist") rj[[it]] <- start.values[[it]]
       if(is.null(dim(rj[[it]]))) rj[[it]][1] <- start.values[[it]][1] 
       if(length(dim(rj[[it]])) == 2) rj[[it]][1, ] <- start.values[[it]]
       if(length(dim(rj[[it]])) == 3) rj[[it]][1, ,] <- start.values[[it]]
@@ -261,13 +213,19 @@ setup_rjMCMC <- function(rj.input,
     
     # Model ID
     if (rj.input$config$model.select) {
-      rj$current.model <- rj$model[1] <-
-        sample(x = rj.input$config$clust[[1]]$model, size = 1, prob = rj.input$config$clust[[1]]$p_scale)
+      rj$current.model <- 
+        rj$model[1] <-
+        sample(x = rj.input$config$clust[[1]]$model, 
+               size = 1, 
+               prob = rj.input$config$clust[[1]]$p_scale)
     } else {
       # Because the model list only has length 1
       rj$current.model <- rj$model[1:tot.iter] <- names(rj.input$config$mlist) 
     }
 
+    rj$current.groups <- rj$mlist[[rj$current.model]]
+    rj$current.ng <- length(unique(rj$current.groups))
+    
     # Functional form
     if(rj.input$config$function.select) rj$phase[1] <- sample(x = 1:2, size = 1)
     
@@ -289,12 +247,12 @@ setup_rjMCMC <- function(rj.input,
     if(!rj.input$config$biphasic | rj.input$config$function.select){
       
     rj$sigma[1] <- rj.input$config$var[1] + 
-      rtnorm(n = 1, location = 0, scale = 3, 
+      rt_norm(n = 1, location = 0, scale = 3, 
              L = rj.input$config$priors["sigma", 1] - rj.input$config$var[1],
              U = rj.input$config$priors["sigma", 2] - rj.input$config$var[1])
     
     rj$phi[1] <- rj.input$config$var[2] + 
-      rtnorm(n = 1, location = 0, scale = 3, 
+      rt_norm(n = 1, location = 0, scale = 3, 
              L = rj.input$config$priors["phi", 1] - rj.input$config$var[2],
              U = rj.input$config$priors["phi", 2] - rj.input$config$var[2])
     
@@ -305,7 +263,7 @@ setup_rjMCMC <- function(rj.input,
                    lc = rj.input$obs$Lc)
     
     mu.start <- purrr::map_dbl(
-      .x = seq_len(nb_groups(rj$mlist[[rj$current.model]])),
+      .x = seq_len(nb_groups(rj$current.groups)),
       .f = ~ {
         
         sp.data <- input.data %>% 
@@ -324,18 +282,18 @@ setup_rjMCMC <- function(rj.input,
           mean(sp.data$y, na.rm = TRUE)
         }})
 
-    mu.deviates <- rtnorm(n = length(mu.start), 
+    mu.deviates <- rt_norm(n = length(mu.start), 
                    location = 0,
                    scale = 5, 
                    L = rj.input$param$dose.range[1] - mu.start,
                    U = rj.input$param$dose.range[2] - mu.start)
     
-    rj$mu[1, ] <- (mu.start + mu.deviates)[rj$mlist[[rj$current.model]]]
+    rj$mu[1, ] <- (mu.start + mu.deviates)[rj$current.groups]
     
     # rj$mu[1,] <- mu.start + mu.deviates[sapply(X = mu.start, 
     #                         FUN = function(x) which(unique(mu.start) == x), simplify = TRUE)]
     
-    rj$mu.i[1, ] <- rtnorm(n = rj.input$whales$n,
+    rj$mu.i[1, ] <- rt_norm(n = rj.input$whales$n,
                            location = rj$mu[1, rj.input$species$id], 
                            scale = rj$phi[1],
                            L = rj.input$param$dose.range[1], 
@@ -344,7 +302,7 @@ setup_rjMCMC <- function(rj.input,
     mu.ij.config <- rj$mu.i[1, rj.input$whales$id]
     
     # The scale needs to be large here to prevent numerical issues (returning Inf)
-    rj$t.ij[1, ] <- rtnorm(n = rj.input$trials$n, 
+    rj$t.ij[1, ] <- rt_norm(n = rj.input$trials$n, 
                            location = mu.ij.config, 
                            scale = 30,
                            # rj$sigma[1],
@@ -358,19 +316,19 @@ setup_rjMCMC <- function(rj.input,
     # Model parameters 
     # -- BIPHASIC ----
     
-      # inits.bi <- purrr::map(.x = seq_len(nb_groups(rj$mlist[[rj$current.model]])),
-      #       .f = ~sort(rj.input$obs$y_ij[rj.input$species$trials %in% which(rj$mlist[[rj$current.model]] == .x)]))
+      # inits.bi <- purrr::map(.x = seq_len(nb_groups(rj$current.groups)),
+      #       .f = ~sort(rj.input$obs$y_ij[rj.input$species$trials %in% which(rj$current.groups == .x)]))
       
-      inits.bi <- purrr::map(.x = seq_len(nb_groups(rj$mlist[[rj$current.model]])),
+      inits.bi <- purrr::map(.x = seq_len(nb_groups(rj$current.groups)),
                              .f = ~{
                                censored <- rj.input$obs$censored[rj.input$species$trials %in% 
-                                            which(rj$mlist[[rj$current.model]] == .x)]
+                                            which(rj$current.groups == .x)]
                                y.obs <- rj.input$obs$y_ij[rj.input$species$trials %in% 
-                                           which(rj$mlist[[rj$current.model]] == .x)]
+                                           which(rj$current.groups == .x)]
                                Lc.obs <- rj.input$obs$Lc[rj.input$species$trials %in% 
-                                           which(rj$mlist[[rj$current.model]] == .x)]
+                                           which(rj$current.groups == .x)]
                                Rc.obs <- rj.input$obs$Rc[rj.input$species$trials %in% 
-                                           which(rj$mlist[[rj$current.model]] == .x)]
+                                           which(rj$current.groups == .x)]
                                y.obs[is.na(y.obs) & censored == 1] <- 
                                  runif(n = sum(is.na(y.obs) & censored == 1),
                                        min = Rc.obs[is.na(y.obs) & censored == 1],
@@ -383,45 +341,48 @@ setup_rjMCMC <- function(rj.input,
                                sort(y.obs)})
 
       rj$alpha[1, ] <- sapply(X = inits.bi, FUN = function(x){
-        rtnorm(n = 1, location = min(x) + (max(x)-min(x))/2, scale = 1, 
+        rt_norm(n = 1, location = min(x) + (max(x)-min(x))/2, scale = 1, 
                          L = rj.input$param$dose.range[1],
-                         U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
+                         U = rj.input$param$dose.range[2])})[rj$current.groups]
       
       # Add one random deviate from a Uniform distribution here to avoid numerical
       # issues with NAs when one of the list elements of inits.bi is of
       # length 1 and doesn't meet the constraint with respect to alpha
       rj$nu[1, ,1] <-
-        sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
+        sapply(X = seq_len(nb_groups(rj$current.groups)), 
                FUN = function(x){
-                 rtnorm(n = 1, 
-                        location = mean(c(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])], runif(n = 1, min = rj.input$param$dose.range[1], max = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])))), 
+                 rt_norm(n = 1, 
+                        location = mean(c(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$current.groups == x)])], runif(n = 1, min = rj.input$param$dose.range[1], max = unique(rj$alpha[1, which(rj$current.groups == x)])))), 
                         scale = 2,
                         L = rj.input$param$dose.range[1],
-                        U = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]))})[rj$mlist[[rj$current.model]]]
+                        U = unique(rj$alpha[1, which(rj$current.groups == x)]))})[rj$current.groups]
       
       rj$nu[1, ,2] <-
-        sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), 
+        sapply(X = seq_len(nb_groups(rj$current.groups)), 
                FUN = function(x){
-                 rtnorm(n = 1, 
-                        location = mean(c(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])], runif(n = 1, min = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]), max = rj.input$param$dose.range[2]))), 
+                 rt_norm(n = 1, 
+                        location = mean(c(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$current.groups == x)])], runif(n = 1, min = unique(rj$alpha[1, which(rj$current.groups == x)]), max = rj.input$param$dose.range[2]))), 
                         scale = 2,
-                        L = unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)]),
-                        U = rj.input$param$dose.range[2])})[rj$mlist[[rj$current.model]]]
+                        L = unique(rj$alpha[1, which(rj$current.groups == x)]),
+                        U = rj.input$param$dose.range[2])})[rj$current.groups]
       
 
       inits.tau <-
-        rbind(sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
-          sd(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])])}),
-          sapply(X = seq_len(nb_groups(rj$mlist[[rj$current.model]])), FUN = function(x){
-            sd(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$mlist[[rj$current.model]] == x)])])}))
+        rbind(sapply(X = seq_len(nb_groups(rj$current.groups)), FUN = function(x){
+          sd(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$current.groups == x)])])}),
+          sapply(X = seq_len(nb_groups(rj$current.groups)), FUN = function(x){
+            sd(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$current.groups == x)])])}))
       
       inits.tau[is.na(inits.tau)] <- runif(n = sum(is.na(inits.tau)),
                                            min = rj.input$config$priors["tau", 1],
                                            max = rj.input$config$priors["tau", 2])
       
-      rj$tau[1, ] <- rtnorm(n = 1, location = rowMeans(inits.tau), scale = 2, 
-               L = rj.input$config$priors["tau", 1],
-               U = rj.input$config$priors["tau", 2])
+      rj$tau[1, ] <- 
+        rt_norm(n = 2, 
+                             location = rowMeans(inits.tau),
+                             scale = 2, 
+                             L = rj.input$config$priors["tau", 1],
+                             U = rj.input$config$priors["tau", 2])
 
       rj$psi[1] <- rnorm(n = 1, mean = rj.input$config$priors["psi", 1], 
                          sd = rj.input$config$priors["psi", 2])
@@ -449,13 +410,13 @@ setup_rjMCMC <- function(rj.input,
 
     rj$pi.ij[1, ] <- pnorm(q = psi_ij)  
     
-    rj$mu.ij[1, , 1] <- unname(rtnorm(n = rj.input$trials$n, 
+    rj$mu.ij[1, , 1] <- unname(rt_norm(n = rj.input$trials$n, 
            location = rj$nu[1, , 1][rj.input$species$trials],
            scale = rj$tau[1, 1], 
            L = rj.input$param$dose.range[1], 
            U = rj$alpha[1, rj.input$species$trials]))
 
-    rj$mu.ij[1, , 2] <- unname(rtnorm(n = rj.input$trials$n, 
+    rj$mu.ij[1, , 2] <- unname(rt_norm(n = rj.input$trials$n, 
           location = rj$nu[1, , 2][rj.input$species$trials],
           scale = rj$tau[1, 2], 
           L = rj$alpha[1, rj.input$species$trials],
@@ -473,7 +434,7 @@ setup_rjMCMC <- function(rj.input,
       
       # Right-censored
       rj$t.ij[1, rj.input$obs$censored == 1] <-
-        rtnorm(n = sum(rj.input$obs$censored == 1),
+        rt_norm(n = sum(rj.input$obs$censored == 1),
               location = mu.ij.config[rj.input$obs$censored == 1],
               scale = 30,
               L = rj.input$obs$Rc[rj.input$obs$censored == 1], 
@@ -481,7 +442,7 @@ setup_rjMCMC <- function(rj.input,
       
       # Left-censored
       rj$t.ij[1, rj.input$obs$censored == -1] <-
-        rtnorm(n = sum(rj.input$obs$censored == -1),
+        rt_norm(n = sum(rj.input$obs$censored == -1),
                location = mu.ij.config[rj.input$obs$censored == -1],
                scale = 30,
                L = rj.input$param$dose.range[1],
@@ -496,7 +457,7 @@ setup_rjMCMC <- function(rj.input,
           
           if (rj.input$obs$censored[a] == 1){
             if(rj$mu.ij[1, a, 2] < rj.input$obs$Rc[a]){
-              rj$mu.ij[1, a, 2] <- rtnorm(
+              rj$mu.ij[1, a, 2] <- rt_norm(
                 n = 1,
                 location = rj$nu[1, rj.input$species$trials[a], 2],
                 scale = 30,
@@ -506,7 +467,7 @@ setup_rjMCMC <- function(rj.input,
           
           if (rj.input$obs$censored[a] == -1){
             if(rj$mu.ij[1, a, 1] > rj.input$obs$Lc[a]){ 
-              rj$mu.ij[1, a, 1] <- rtnorm(
+              rj$mu.ij[1, a, 1] <- rt_norm(
                 n = 1,
                 location = rj$nu[1, rj.input$species$trials[a], 1],
                 scale = 30,
@@ -529,32 +490,36 @@ setup_rjMCMC <- function(rj.input,
     
   } # End if do.update
   
-  # Iteration
-  mod.par <- tibble::tibble(param = c("alpha", "k.ij", "mu", "mu.i", "mu.ij",     
-                           "nu", "omega", "phi", "pi.ij", "psi", "psi.i",
-                           "sigma", "t.ij", "tau",   
-                           # if(rj.input$covariates$n > 0) 
-                             "covariates", # Need this term even when no covariates
-                           rj.input$covariates$names)) %>% 
-    dplyr::mutate(monophasic = c(0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 
-                                 # if (rj.input$covariates$n > 0)
-                                   1, 
-                                 rep(1, rj.input$covariates$n)),
-                    biphasic = c(1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 
-                                 # if (rj.input$covariates$n > 0) 
-                                   1,  
-                                 rep(1, rj.input$covariates$n)))
-
-  if(!rj.input$config$function.select){
-    if(rj.input$config$biphasic) 
-      mod.par <- mod.par %>% dplyr::filter(biphasic == 1) else 
-        mod.par <- mod.par %>% dplyr::filter(monophasic == 1)
-  } else {
-    mod.par <- mod.par %>% dplyr::filter(biphasic + monophasic > 0)
-  }
+  # Acceptance rates for model, covariate, and functional form moves
+  if(rj.input$config$model.select) rj$accept.model <- numeric(tot.iter)
+  if(rj.input$config$covariate.select) rj$accept.covariates <- numeric(tot.iter)
+  if(rj.input$config$function.select) rj$accept.phase <- numeric(tot.iter)
   
-  rj$iter <- rep(1, nrow(mod.par))
-  names(rj$iter) <- mod.par$param
+  
+  # Iteration
+  # mod.par <- tibble::tibble(param = c("alpha", "k.ij", "mu", "mu.i", "mu.ij",     
+  #                          "nu", "omega", "phi", "pi.ij", "psi", "psi.i",
+  #                          "sigma", "t.ij", "tau", "covariates", # Need this term even when no covariates
+  #                          rj.input$covariates$names)) %>% 
+  #   dplyr::mutate(monophasic = c(0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 
+  #                                # if (rj.input$covariates$n > 0)
+  #                                  1, 
+  #                                rep(1, rj.input$covariates$n)),
+  #                   biphasic = c(1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 
+  #                                # if (rj.input$covariates$n > 0) 
+  #                                  1,  
+  #                                rep(1, rj.input$covariates$n)))
+  # 
+  # if(!rj.input$config$function.select){
+  #   if(rj.input$config$biphasic) 
+  #     mod.par <- mod.par %>% dplyr::filter(biphasic == 1) else 
+  #       mod.par <- mod.par %>% dplyr::filter(monophasic == 1)
+  # } else {
+  #   mod.par <- mod.par %>% dplyr::filter(biphasic + monophasic > 0)
+  # }
+  # 
+  # rj$iter <- rep(1, nrow(mod.par))
+  # names(rj$iter) <- mod.par$param
   
   # Finally, store the data
   rj$dat <- rj.input

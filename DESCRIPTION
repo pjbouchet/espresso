@@ -1,6 +1,7 @@
 Package: espresso
+Type: Package
 Title: Bayesian Inference For Multi-Species Behavioural Dose-response Functions
-Version: 1.5.6
+Version: 1.5.10
 Date: 2021-06-11
 Authors@R: 
     c(person(given = "Phil", family = "Bouchet", role = c("aut", "cre"), email = "pb282@st-andrews.ac.uk"),
@@ -19,21 +20,22 @@ Depends:
     stats
 Imports:
     Rdpack,
-    tidyverse, 
-    magrittr, 
-    rjags, 
-    janitor, 
+    tidyverse,
+    magrittr,
+    rjags,
+    janitor,
     partitions,
-    coda, 
-    plyr, 
+    coda,
+    Rfast,
+    plyr,
     fastDummies,
     MCMCvis,
     mcmcplots,
-    tools, 
+    tools,
     ggforce,
     ggplot2,
     mclust,
-    tidyselect, 
+    tidyselect,
     pals,
     copula,
     numbers,
@@ -47,3 +49,4 @@ Imports:
     mcmcse
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
+LinkingTo: Rcpp

@@ -1,9 +1,12 @@
 #' Dose-response curve for Blainville's beaked whale
 #'
-#' Derived from Moretti et al. (2014). “A Risk Function for Behavioral Disruption of Blainville’s Beaked Whales (Mesoplodon Densirostris) from Mid-Frequency Active Sonar.” PloS One 9 (1): e85064."
+#' Derived from \insertCite{Moretti2014;textual}{espresso}.
 #'
 #' @name moretti_dose
+#' @importFrom Rdpack reprompt
 #' @usage data(moretti_dose)
+#' @references
+#' \insertAllCited{}
 #' @docType data
 #' @keywords datasets
 NULL

@@ -4,14 +4,10 @@
 \alias{propose_jump}
 \title{Proposal for between-model jumps}
 \usage{
-propose_jump(rj.obj, move.type, phase)
+propose_jump(rj.obj)
 }
 \arguments{
 \item{rj.obj}{Input object.}
-
-\item{move.type}{Type of between-model jump. (0): split/merge, (1): Bootstrap, (2): Cluster, (3): Random}
-
-\item{phase}{Monophasic (1) vs biphasic (2).}
 }
 \description{
 Propose a new model.

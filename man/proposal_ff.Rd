@@ -7,7 +7,7 @@
 proposal_ff(
   rj.obj,
   from.phase,
-  prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25)
+  prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25, sigma = 10)
 )
 }
 \arguments{

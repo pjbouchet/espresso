@@ -12,6 +12,8 @@ normal_prior(rj.obj, param.name, param = NULL)
 \item{param.name}{Parameter name}
 
 \item{param}{Parameter values}
+
+\item{priors}{Prior values}
 }
 \description{
 Probability density for a Normal distribution.

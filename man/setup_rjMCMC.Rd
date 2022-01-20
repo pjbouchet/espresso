@@ -11,9 +11,6 @@ setup_rjMCMC(
   n.chains = 3,
   p.split,
   p.merge,
-  moves,
-  move.ratio,
-  m,
   do.update = FALSE,
   start.values = NULL
 )
@@ -30,12 +27,6 @@ setup_rjMCMC(
 \item{p.split}{Probability of performing a group split when \code{model.select = TRUE}.}
 
 \item{p.merge}{Probability of performing a group merge when \code{model.select = TRUE}.}
-
-\item{moves}{Required move types. 0: Split/merge. 1: Data-driven I. 2: Data-driven II. 3: Independent.}
-
-\item{move.ratio}{Relative proportion of each move type.}
-
-\item{m}{Frequency at which each move type is proposed, e.g., when \code{m = 100}, a move is proposed every 100th iteration.}
 
 \item{do.update}{Logical. Whether to update an existing sampler or set up a new one.}
 

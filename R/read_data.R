@@ -25,11 +25,11 @@
 #'  } 
 #'
 #' An example data file is included in the package. See \code{\link{example_brs}} for details.
-#' 
+#' @importFrom Rdpack reprompt
 #' @export
 #' @param file Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.
-#' @param risk.functions Logical vector of length 2. If \code{TRUE}, indicating whether to include the risk functions derived in \href{Moreti et al. (2014)}{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0085064} and Jacobson et al.
-#' @param n.risk Vector of length 2. Number of samples to draw from the Moretti et al. (2014) and Jacobson et al. (2019) dose-response curves, respectively. Defaults to \code{c(10, 10)}.
+#' @param risk.functions Logical vector of length 2. If \code{TRUE}, indicating whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso} and \insertCite{Jacobson2019;textual}{espresso}.
+#' @param n.risk Vector of length 2. Number of samples to draw from the \insertCite{Moretti2014;textual}{espresso} and \insertCite{Jacobson2019;textual}{espresso} dose-response curves, respectively. Defaults to \code{c(10, 10)}.
 #' @param include.species Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.
 #' @param exclude.species Character vector specifying which species should be discarded. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. No species are excluded when this argument is set to the default of \code{NULL}.
 #' @param min.N Minimum number of observations per species. Species with sample sizes smaller than \code{min.N} will be removed.
@@ -51,6 +51,8 @@
 #'   \code{param} \tab General parameters. \cr
 #'  }
 #' @import magrittr
+#' @references
+#' \insertAllCited{}
 #' @author Phil J. Bouchet
 #' @seealso \code{\link{simulate_data}} \code{\link{example_brs}} \code{\link{summary.brsdata}}
 #' @examples
@@ -68,6 +70,7 @@
 #'                   exclude.species = "Sperm whale",
 #'                   min.N = 2)
 #' }
+
 #' @keywords brs gvs rjmcmc dose-response             
 
 read_data <- function(file = NULL,
@@ -94,6 +97,7 @@ read_data <- function(file = NULL,
   #' ---------------------------------------------
   
   simulation <- FALSE
+  n.risk[!risk.functions] <- 0
   
   #' ---------------------------------------------
   # Perform function checks
@@ -229,19 +233,6 @@ read_data <- function(file = NULL,
     spline.pmrf <- stats::splinefun(x = pmrf$q50, y = pmrf$max_rl)
     pts.pmrf <- spline.pmrf(seq(0, 1, 0.001))
     rl.pmrf <- sample(x = pts.pmrf, size = n.risk[2], replace = TRUE)
-    
-    # q_pmrf <- quantile(x = seq(dose.range[1], dose.range[2]), probs = seq(0, 1, 1/n.risk[2]))
-    # start_pmrf <- runif(n = 1, min = q_pmrf[1], max = q_pmrf[2])
-    # pts_pmrf <- c(start_pmrf, start_pmrf + cumsum(abs(diff(q_pmrf))))
-    # 
-    # spline.pmrf <- stats::splinefun(x = pmrf$max_rl, y = pmrf$q50)
-    # res.pmrf <- spline.pmrf(pts_pmrf)
-    # points(pts_pmrf, res.pmrf, pch = 16, col = "orange")
-    
-    # plot(pmrf$max_rl,pmrf$q50, xlim = dose.range, ylim = c(0,1))
-    # points(pts_pmrf, rep(0, length(pts_pmrf)), col = "red")
-    # points(start_pmrf, 0, col ="blue", pch = 16)
-    # points(pts_pmrf, rep(0, length(pts_pmrf)), col = "green", pch = 16)
    
     tbl.pmrf <- tibble::tibble(resp_spl = rl.pmrf, project = "Jacobson_2020", species = "Md", 
                                tag_id = paste0("Md_jacobson_", sample(1:length(rl.pmrf), replace = TRUE)),
@@ -481,6 +472,8 @@ read_data <- function(file = NULL,
                               } else { covariates.df[, .x, drop = FALSE] }}) %>% 
       purrr::set_names(., covariate.names)
     
+    dummy.df <- t(do.call(cbind, dummy.cov))
+    
     fL <- sapply(X = covariate.names, 
           FUN = function(x) factor_levels(covname = x, dat = covariates.df), 
           simplify = FALSE, USE.NAMES = TRUE)
@@ -564,7 +557,9 @@ read_data <- function(file = NULL,
                Lc = min.dose,
                Rc = max.dose,
                prec = measurement.precision,
-               sd = obs.sd),
+               sd = obs.sd,
+               risk.functions = risk.functions,
+               n.risk = n.risk),
     # Parameters
     param = list(sim = simulation,
                  data.file = basename(file),
@@ -572,7 +567,7 @@ read_data <- function(file = NULL,
                  dose.range = dose.range))
   
   if(n.covariates > 0) {
-    res$covariates <- append(res$covariates, list(df = covariates.df, dummy = dummy.cov))
+    res$covariates <- append(res$covariates, list(df = covariates.df, dummy = dummy.cov, dummy.df = dummy.df))
     res$covariates$fL <- fL
     
   }

@@ -25,7 +25,7 @@
 #'   \code{Inferred Min_range} \tab Best estimate of minimum whale-source range during the exposure\cr
 #' }
 #'
-#' @details Note: This is a completely manufactured dataset, which should not be used for inference. The ordering of columns does nto matter.
+#' @details Note: This is a completely manufactured dataset, which should not be used for inference. The ordering of columns does not matter.
 #' @name example_brs
 #' @docType data
 #' @usage data(example_brs)

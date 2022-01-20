@@ -35,6 +35,6 @@ data(example_brs)
 Example dataset used to illustrate the format expected by \code{espresso}.
 }
 \details{
-Note: This is a completely manufactured dataset, which should not be used for inference. The ordering of columns does nto matter.
+Note: This is a completely manufactured dataset, which should not be used for inference. The ordering of columns does not matter.
 }
 \keyword{datasets}

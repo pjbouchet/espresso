@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{likelihood}
 \alias{likelihood}
-\title{Likelihood}
+\title{The Truncated Normal Distribution}
 \usage{
 likelihood(
   biphasic = FALSE,
@@ -28,7 +28,53 @@ likelihood(
 \item{RJ}{Logical. If \code{TRUE}, returns the likelihoods associated with between-model jumps. If \code{FALSE}, returns the likelihoods associated with the update step of the Metropolis sampler.}
 
 \item{lprod}{If \code{TRUE}, returns the product of individual likelihoods.}
+
+\item{x}{Vector of quantiles.}
+
+\item{location}{Vector of means.}
+
+\item{scale}{Vector of standard deviations.}
+
+\item{log}{Logical. If \code{TRUE}, probabilities \code{p} are given as \code{log(p)}.}
+
+\item{L}{Lower limit of the distribution.}
+
+\item{U}{Upper limit of the distribution.
+dtnorm <- function(x, location = 0, scale = 1, log = FALSE, L = -Inf, U = Inf) {
+
+d <- dnorm(x, location, scale, log = TRUE)
+denom <- log(pnorm(U, location, scale) - pnorm(L, location, scale))
+d <- d - denom
+d\link{(x < L) | (x > U)} <- -100000 # When input quantile is outside bounds
+d\link{is.infinite(d)} <- -100000 # When input location is outside bounds
+if(!log) d <- exp(d)
+return(d)
+}
+
+#' The Truncated Normal Distribution
+#'
+#' Generate random deviates from a truncated normal distribution with mean equal to \code{location} and standard deviation equal to \code{scale}.
+#'
+#' @param n Number of observations.
+#' @param location Vector of means.
+#' @param scale Vector of standard deviations.
+#' @param L Lower limit of the distribution.
+#' @param U Upper limit of the distribution.
+
+rtnorm <- function(n, location, scale, L, U){
+location + scale * qnorm(pnorm(L, location, scale) + runif(n)*(pnorm(U, location, scale) - pnorm(L, location, scale)))
+
+}
+
+d_binom <- function(x, size, prob, log){
+d <- dbinom(x = x, size = size, prob = prob, log = log)
+d\link{is.infinite(d)} <- -100000 # To avoid Inf that cause numerical issues
+return(d)
+}
+Likelihood
+
+Calculate the log-likelihood of a monophasic dose-response model, as required by the rjMCMC sampler.}
 }
 \description{
-Calculate the log-likelihood of a monophasic dose-response model, as required by the rjMCMC sampler.
+Probability density for a truncated Normal distribution with mean equal to \code{location} and standard deviation equal to \code{scale}.
 }
