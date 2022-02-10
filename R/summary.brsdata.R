@@ -177,8 +177,8 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
       tidyr::unnest(cols = c(value)) %>% 
       dplyr::rename(param = name, SD = value) %>% 
       dplyr::mutate(step = "MH") %>% 
-      dplyr::bind_rows(., tibble::tibble(param = c("split-merge", "data-driven"), 
-                                         SD = c(dat.obj$config$prop$rj, dat.obj$config$prop$dd), 
+      dplyr::bind_rows(., tibble::tibble(param = "split-merge", 
+                                         SD = dat.obj$config$prop$rj, 
                                          step = "RJ"))
     print(prop.df, na.print = "NA")
     cat("\n")
@@ -191,7 +191,7 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
     print(dat.obj$config$priors)
     
     cat("\n-- Clustering --\n\n")
-    print(dat.obj$config$clust, na.print = "NA")
+    print(dat.obj$config$clust[[1]], na.print = "NA")
     
     
   }

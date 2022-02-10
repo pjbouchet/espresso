@@ -4,7 +4,6 @@
 #'
 #' @export
 #' @param dr.object Input object of class \code{dose_response}, as returned by \code{\link{compile_rjMCMC}}.
-#' @param model.rank Integer indicating the rank of the model for which dose-response curves are to be plotted. The model with highest posterior probability is given a rank of 1.
 #' @param overlay Logical. If \code{TRUE}, all curves will be overlaid on the same plot.
 #' @param do.facet Logical. If \code{TRUE}, plots will be faceted by species (or species group).
 #' @param colour.by Curves can be coloured by species group (\code{colour.by = "group"}) or by individual species (\code{colour.by = "species"}), or can use a single colour scheme (the default, \code{colour.by = NULL}).
@@ -62,9 +61,9 @@
 #' @keywords brs rjmcmc 
 
 plot.dose_response <- function(dr.object,
-                               model.rank = 1,
                                overlay = FALSE,
                                do.facet = TRUE,
+                               facet.title = TRUE,
                                colour.by = NULL,
                                colour = NULL,
                                colour.median = NULL,
@@ -90,6 +89,7 @@ plot.dose_response <- function(dr.object,
   species.list <- species_brs %>% janitor::clean_names(.)
   fL <- dr.object$fL
   word <- NULL
+  if(dr.object$by.model) model.rank <- dr.object$model.rank else model.rank <- 1
   
   #' ---------------------------------------------
   # Function checks
@@ -99,8 +99,7 @@ plot.dose_response <- function(dr.object,
   if(is.null(colour.median) & all.credint) colour.median <- "black"
   if(!"dose_response" %in% class(dr.object)) stop("dr.object must be of class <dose_response>")
   if(scientific.name & common.name) stop("Only one name allowed.")
-  if(!dr.object$by.model) model.rank <- 1
-  
+ 
   if(!is.null(colour.by)){
     if(!colour.by %in% c("group", "species")) stop("Can only colour by <species> or <group>")}
   
@@ -122,7 +121,7 @@ plot.dose_response <- function(dr.object,
   
   # Number of colours
   if(dr.object$by.model){
-    n.colours <- nb_groups(unlist(dr.object$mlist$group[dr.object$mlist$model == dr.object$ranks$model[model.rank]]))
+    n.colours <- dplyr::n_distinct(unlist(dr.object$mlist$group[dr.object$mlist$model == dr.object$ranks$model[model.rank]]))
   } else {
   n.colours <- dr.object$dat[[model.rank]]$posterior %>% 
     dplyr::filter(param == "median") %>% 
@@ -177,7 +176,7 @@ plot.dose_response <- function(dr.object,
       dplyr::filter(model == model.name) %>% 
       dplyr::pull(group) %>%
       unlist()
-    }
+  }
   
   #' ---------------------------------------------
   # Set up
@@ -189,23 +188,22 @@ plot.dose_response <- function(dr.object,
   if(all.credint) plot.quants <- dr.obj$cred.int else plot.quants <- max(dr.obj$cred.int)
   
   if(!is.null(covariate)){
-    dr.obj[[model.rank]]$posterior <- 
-      dr.obj[[model.rank]]$posterior %>% 
+    dr.obj[[1]]$posterior <- 
+      dr.obj[[1]]$posterior %>% 
       dplyr::mutate(parcov = names(value))}
   
   if(!is.null(covariate.values)){
-    dr.obj[[model.rank]]$posterior <- 
-      dr.obj[[model.rank]]$posterior %>% 
+    dr.obj[[1]]$posterior <- 
+      dr.obj[[1]]$posterior %>% 
       dplyr::mutate(parcov = rep(covariate.values, 
-                                 ifelse(length(covariate.values) == 1, 
-                                                      nrow(dr.obj[[model.rank]]$posterior), 3)))
+              ifelse(length(covariate.values) == 1, nrow(dr.obj[[1]]$posterior), 3)))
   }
   
   #' ---------------------------------------------
   # Posterior medians
   #' ---------------------------------------------
   
-  median.list <- dr.obj[[model.rank]]$posterior %>% 
+  median.list <- dr.obj[[1]]$posterior %>% 
     dplyr::filter(param == "median") %>% 
     dplyr::mutate(value = purrr::map(.x = value, .f = ~data.frame(x = dr.obj$dose.range, y = .x))) %>% 
     dplyr::mutate(grp = species)
@@ -285,7 +283,7 @@ plot.dose_response <- function(dr.object,
   # Credible intervals
   #' ---------------------------------------------
   
-  low <- dr.obj[[model.rank]]$posterior %>% 
+  low <- dr.obj[[1]]$posterior %>% 
     dplyr::filter(param == "lower") %>% 
     {if (!is.null(covariate.values)) dplyr::mutate(., parcov = covariate.values) else dplyr::mutate(.)} %>% 
     tidyr::unnest(cols = c(value)) %>% 
@@ -297,7 +295,7 @@ plot.dose_response <- function(dr.object,
     dplyr::rename(lower = value) %>% 
     dplyr::select(-param)
   
-  up <- dr.obj[[model.rank]]$posterior %>% 
+  up <- dr.obj[[1]]$posterior %>% 
     dplyr::filter(param == "upper") %>% 
     {if (!is.null(covariate.values)) dplyr::mutate(., parcov = covariate.values) else dplyr::mutate(.)} %>% 
     tidyr::unnest(cols = c(value)) %>% 
@@ -585,7 +583,9 @@ plot.dose_response <- function(dr.object,
     
   } 
   
-  mdat <- median.list %>% tidyr::unnest(cols = c(value))
+  mdat <- median.list %>% 
+    {if (dr.object$by.model) dplyr::distinct(., colgrp, .keep_all = TRUE) else .} %>%
+    tidyr::unnest(cols = c(value))
   
   if(!is.null(covariate)){
     
@@ -619,10 +619,17 @@ plot.dose_response <- function(dr.object,
     theme(plot.title = element_text(size = 12, vjust = 5, face = "bold"),
           plot.subtitle = element_text(size = 11, vjust = 5))
   
+  if(!facet.title){
+    gplot <- gplot + 
+      theme(strip.background = element_blank(),
+            strip.text.x = element_blank(),
+            strip.text.y = element_blank())
+  }
+  
   if(!overlay & !do.facet){
     for(page in 1:ggforce::n_pages(gplot)){
       p_save <- gplot +
-        facet_wrap_paginate(~ grp, ncol = 1, nrow = 1, page = page)
+        ggforce::facet_wrap_paginate(~ grp, ncol = 1, nrow = 1, page = page)
       
       if(do.save){
         suppressMessages(ggplot2::ggsave(filename = paste0("dose_response (page ", page, ").", file.format), 

@@ -6,9 +6,9 @@
 \usage{
 \method{plot}{dose_response}(
   dr.object,
-  model.rank = 1,
   overlay = FALSE,
   do.facet = TRUE,
+  facet.title = TRUE,
   colour.by = NULL,
   colour = NULL,
   colour.median = NULL,
@@ -28,8 +28,6 @@
 }
 \arguments{
 \item{dr.object}{Input object of class \code{dose_response}, as returned by \code{\link{compile_rjMCMC}}.}
-
-\item{model.rank}{Integer indicating the rank of the model for which dose-response curves are to be plotted. The model with highest posterior probability is given a rank of 1.}
 
 \item{overlay}{Logical. If \code{TRUE}, all curves will be overlaid on the same plot.}
 

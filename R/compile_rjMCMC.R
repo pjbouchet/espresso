@@ -6,7 +6,7 @@
 #' @param rj.object Input rjMCMC object of class \code{rjtrace}, as returned by \code{\link{trace_rjMCMC}}.
 #' @param phase Dose-response functional form: monophasic (1) or biphasic (2).
 #' @param by.model Logical. If \code{TRUE}, the function subsets posterior parameter estimates to produce separate dose-response curves for each candidate model.
-#' @param n.top Number of top-ranking models to generate curves for when \code{by.model = TRUE}.
+#' @param model.rank Rank of the model to generate curves for when \code{by.model = TRUE}.
 #' @param covariate Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given by \code{species}.
 #' @param covariate.values A vector of values for which dose-response curves are required. Only valid for continuous covariates.
 #' @param species Species name. 
@@ -53,54 +53,62 @@
 compile_rjMCMC <- function(rj.object, 
                            phase = 1,
                            by.model = FALSE,
-                           n.top = 10,
+                           model.rank = 1,
                            covariate = NULL,
                            covariate.values = NULL,
                            species = NULL,
-                           credible.intervals = seq(95, 1, by = -5),
+                           credible.intervals = c(95, 50, 5),
+                           # seq(95, 5, by = -5)
                            npts = 20){
   
   #' ---------------------------------------------
   # Perform function checks
   #' ---------------------------------------------
   
-  if(!"rjtrace" %in% class(rj.object)) stop("Input must be an object of class <rj_trace>.")
-  if(!is.null(covariate)){ if(!covariate %in% rj.object$dat$covariates$names) stop("Unrecognised covariate.")}
-  if(length(covariate) > 1) stop("<covariate> must be of length 1.")
-  if(!all(species %in% rj.object$dat$species$names)) stop("Unrecognised species.")
-  if(is.null(species) & !is.null(covariate)) stop("<species> cannot be set to NULL when a covariate is specified.")
-  if(length(species) > 1 & !is.null(covariate)) stop("Max of 1 species (group) allowed.")
-  if(any(credible.intervals > 100) | any(credible.intervals <= 0)) stop("Credible intervals must lie in the interval (0, 100].")
-  if(!50 %in% credible.intervals){ # Must contain the median
+  if (!"rjtrace" %in% class(rj.object)) stop("Input must be an object of class <rj_trace>.")
+  if (!is.null(covariate)) {
+    if (!covariate %in% rj.object$dat$covariates$names) stop("Unrecognised covariate.")
+  }
+  if (length(covariate) > 1) stop("<covariate> must be of length 1.")
+  if (!all(species %in% rj.object$dat$species$names)) stop("Unrecognised species.")
+  if (is.null(species) & !is.null(covariate)) stop("<species> cannot be set to NULL when a covariate is specified.")
+  if (length(species) > 1 & !is.null(covariate)) stop("Max of 1 species (group) allowed.")
+  if (any(credible.intervals > 100) | any(credible.intervals <= 0)) stop("Credible intervals must lie in the interval (0, 100].")
+  if (!50 %in% credible.intervals) { # Must contain the median
     credible.intervals <- sort(c(credible.intervals, 50), decreasing = TRUE)
   }
   
-  if(!phase %in% c(1,2)) stop("Unrecognised input for argument <phase>.")
-  if(!rj.object$config$function.select){
-    if(rj.object$config$biphasic & phase == 1) stop("Cannot extract monophasic curves. Please set <phase> to 2.")
-    if(!rj.object$config$biphasic & phase == 2) stop("Cannot extract biphasic curves. Please set <phase> to 1.")}
+  if (!phase %in% c(1, 2)) stop("Unrecognised input for argument <phase>.")
+  if (!rj.object$config$function.select) {
+    if (rj.object$config$biphasic & phase == 1) stop("Cannot extract monophasic curves. Please set <phase> to 2.")
+    if (!rj.object$config$biphasic & phase == 2) stop("Cannot extract biphasic curves. Please set <phase> to 1.")
+  }
   
-  if(rj.object$dat$covariates$n == 0) covariate <- NULL
+  if (rj.object$dat$covariates$n == 0) covariate <- NULL
   
-  if(!is.null(covariate)){
+  if (!is.null(covariate)) {
+    if (is.null(covariate.values) &
+        rj.object$dat$covariates$fL[[covariate]]$nL == 0) {
+      stop("Must provide covariate values")
+    }
     
-    if(is.null(covariate.values) & 
-       rj.object$dat$covariates$fL[[covariate]]$nL == 0) stop("Must provide covariate values")
+    if (!is.null(covariate.values) &
+        rj.object$dat$covariates$fL[[covariate]]$nL > 0) {
+      stop("<covariate.values> ignored for factor covariates.")
+    }
     
-    if(!is.null(covariate.values) & 
-       rj.object$dat$covariates$fL[[covariate]]$nL > 0) stop("<covariate.values> ignored for factor covariates.")
-    
-    if(!is.null(covariate.values)){
-      if(any(covariate.values < range(rj.object$dat$covariates$df[, covariate])[1]) | 
-        any(covariate.values > range(rj.object$dat$covariates$df[, covariate])[2]))
+    if (!is.null(covariate.values)) {
+      if (any(covariate.values < range(rj.object$dat$covariates$df[, covariate])[1]) |
+          any(covariate.values > range(rj.object$dat$covariates$df[, covariate])[2])) {
         stop("Covariate values out of range")
+      }
     }
   }
   
   #' ---------------------------------------------
   # Define dose range and credible intervals
   #' ---------------------------------------------
-
+  
   if(phase == 1) pn <- "mu" else pn <- "nu"
   dose.range <- seq(rj.object$config$priors[pn, 1], rj.object$config$priors[pn, 2], length = 100)
   credible.intervals  <- sort(credible.intervals, decreasing = TRUE)
@@ -124,126 +132,128 @@ compile_rjMCMC <- function(rj.object,
   #' ---------------------------------------------
   # Split trace by model ID / phase
   #' ---------------------------------------------
-
+  
   mcmc.trace <- dplyr::filter(mcmc.trace, phase == phase)
-  m.filtered <- dplyr::slice(rj.object$ranks, 1:n.top)
-  m.order <- sapply(X = m.filtered$model, 
-                    FUN = function(a) rj.object$mlist[rj.object$mlist$model == a, ]$ID)
-    
-  if(by.model) mcmc.list <- purrr::map(.x = m.order, 
-                                       .f = ~dplyr::filter(mcmc.trace, model_ID == .x)) else 
-                                         mcmc.list <- list(mcmc.trace)
+  m.filtered <- rj.object$ranks[rj.object$ranks$rank == model.rank, ]$model
+  m.ID <- rj.object$mlist[rj.object$mlist$model == m.filtered, ]$ID
+  m.groups <- rj.object$mlist[rj.object$mlist$model == m.filtered, ]$group[[1]]
+  if(by.model) mcmc.trace <- dplyr::filter(mcmc.trace, model_ID == m.ID)
   
   #' ---------------------------------------------
   # Compute dose-response curves
   #' ---------------------------------------------
   
-  pb <- progress::progress_bar$new(format = "Computing [:bar] :percent eta: :eta ",
-                                   total = length(mcmc.list), 
-                                   width = getOption("width") + 5)
+  psi.index <- which(startsWith(x = colnames(mcmc.trace), prefix = "psi"))
   
-  res <- purrr::map(.x = seq_along(mcmc.list), .f = function(mcl){
-                      
-                      if(by.model) pb$tick() # Launch progress bar
-                      
-                      psi.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]), prefix = "psi"))
+  # Identify columns corresponding to species means
+  if (!is.null(species)) {
+    col.index <- 
+      which(colnames(mcmc.trace) %in% paste0(pn, ".", ifelse(phase == 1, "", "lower."), 
+                                             which(rj.object$dat$species$names == species)))
+    sp.names <- species
+  } else {
+    col.index <- which(startsWith(x = colnames(mcmc.trace), prefix = pn))
+    sp.names <- unlist(rj.object$dat$species$names)
+  }
+  
+  if(by.model){
+    if(is.null(covariate)){
+    Mg <- sp.names[sapply(X = 1:length(unique(m.groups)), FUN = function(x) which(m.groups == x)[1])]
+    } else {
+    Mg <- species
+    }
+  } else {
+    Mg <- sp.names[1:length(sp.names)]
+  }
+
+    # MONOPHASIC ----------------
     
-                      # Identify columns corresponding to species means
-                      if (!is.null(species)) {
-                        col.index <- which(colnames(mcmc.list[[mcl]]) %in% 
-                                             paste0(pn, ".", ifelse(phase == 1, "", "lower."), 
-                                                    which(rj.object$dat$species$names == species)))
-                        sp.names <- species
-                      } else {
-                        col.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]), prefix = pn))
-                        sp.names <- unlist(rj.object$dat$species$names)
-                      }
-                      
     if(phase == 1){
-                      dr.raw <- lapply(X = col.index, FUN = function(col.x) {
-                                         
-                                         if(!is.null(covariate)){
-                                           
-                                           cov.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]),
-                                                                         prefix = covariate))
-                                           
-                                           if(rj.object$dat$covariates$fL[[covariate]]$nL > 0) 
-                                             cov.values <- list(rep(0, nrow(mcmc.list[[mcl]]))) else 
-                                             cov.values <- list()
-                                           
-                                           cov.values <- append(cov.values,
-                                                  lapply(X = cov.index, 
-                                               FUN = function(cc) dplyr::pull(mcmc.list[[mcl]][, cc])))
-                                           
-                                           dr.mean <- purrr::map(.x = cov.values,
-                                               .f = ~dplyr::pull(mcmc.list[[mcl]][, col.x]) + .x) %>% 
-                                             purrr::set_names(x = ., nm = rj.object$dat$covariates$fL[[covariate]]$Lnames)
-                                           
-                                           
-                                         } else {
-                                           
-                                           dr.mean <- list(dplyr::pull(mcmc.list[[mcl]][, col.x]))
-                                         }
-                                         
-                                         purrr::map(.x = dr.mean,
-                                             .f = ~truncnorm::ptruncnorm(
-                                             q = rep(dose.range, each = nrow(mcmc.list[[mcl]])),
-                                             a = rj.object$config$priors["mu", 1],
-                                             b = rj.object$config$priors["mu", 2],
-                                             mean = .x,
-                                             sd = sqrt((dplyr::pull(mcmc.list[[mcl]][, "phi"])^2) + 
-                                                   (dplyr::pull(mcmc.list[[mcl]][, "sigma"])^2)))
-                                                    
-                                         )}) # End dr.raw
-                      
-                      dr.raw <- purrr::set_names(x = dr.raw, nm = sp.names)
-                      
-                      doseresp.values <- purrr::map_depth(
-                        .x = dr.raw,
-                        .depth = 2,
-                        .f = ~ {
-                          lapply(X = 1:nrow(mcmc.list[[mcl]]), FUN = function(a) {
-                            nth_element(vector = .x, 
-                                        starting.position = a, 
-                                        n = nrow(mcmc.list[[mcl]]))
-                            
-                          }) %>% do.call(rbind, .)}) %>%
-                        purrr::set_names(x = ., nm = sp.names) 
-                      
+      
+      cat("Calculating ...\n")
+      
+      dr.raw <- lapply(X = col.index, FUN = function(col.x) {
+        
+        if(!is.null(covariate)){
+          
+          cov.index <- which(startsWith(x = colnames(mcmc.trace), prefix = covariate))
+          
+          if(rj.object$dat$covariates$fL[[covariate]]$nL > 0) 
+            cov.values <- list(rep(0, nrow(mcmc.trace))) else cov.values <- list()
+            
+            cov.values <- append(cov.values, 
+                       lapply(X = cov.index, FUN = function(cc) dplyr::pull(mcmc.trace[, cc])))
+            
+            dr.mean <- purrr::map(.x = cov.values,
+                                  .f = ~dplyr::pull(mcmc.trace[, col.x]) + .x) %>% 
+              purrr::set_names(x = ., nm = rj.object$dat$covariates$fL[[covariate]]$Lnames)
+            
+            
+        } else {
+          
+          dr.mean <- list(dplyr::pull(mcmc.trace[, col.x]))
+        }
+        
+        purrr::map(.x = dr.mean,
+                   .f = ~truncnorm::ptruncnorm(
+                     q = rep(dose.range, each = nrow(mcmc.trace)),
+                     a = rj.object$config$priors["mu", 1],
+                     b = rj.object$config$priors["mu", 2],
+                     mean = .x,
+                     sd = sqrt((dplyr::pull(mcmc.trace[, "phi"])^2) + (dplyr::pull(mcmc.trace[, "sigma"])^2)))
+                   
+        )}) # End dr.raw
+      
+      dr.raw <- purrr::set_names(x = dr.raw, nm = sp.names)
+      
+      doseresp.values <- purrr::map_depth(
+        .x = dr.raw,
+        .depth = 2,
+        .f = ~ {
+          lapply(X = 1:nrow(mcmc.trace), FUN = function(a) {
+            nth_element(vector = .x, starting.position = a, n = nrow(mcmc.trace))
+          }) %>% do.call(rbind, .)}) %>%
+        purrr::set_names(x = ., nm = sp.names) 
+      
     } else if (phase == 2){
       
-      doseresp.values <- lapply(X = sp.names, FUN = function(sp.x) {
+      # BIPHASIC ----------------
+
+      doseresp.values <- lapply(X = Mg, FUN = function(sp.x) {
         
-        dr.raw <- 
-          dplyr::select(mcmc.list[[mcl]], 
-           c("omega", "psi", "tau.lower", "tau.upper", 
-             paste0("nu.lower.", which(sp.names == sp.x)),
-             paste0("nu.upper.", which(sp.names == sp.x)),
-             paste0("alpha.", which(sp.names == sp.x))
-             # colnames(mcmc.list[[mcl]])[grepl(pattern = paste0("nu.*\\.", which(sp.names == sp.x)), 
-             #  x = colnames(mcmc.list[[mcl]]))]
-             )) %>% 
+        dr.raw <- dplyr::select(mcmc.trace, 
+                                c("omega", "psi", "tau.lower", "tau.upper", 
+                                  paste0("nu.lower.", sp.x),
+                                  paste0("nu.upper.", sp.x),
+                                  paste0("alpha.", sp.x))) %>% 
           as.matrix()
         
         if(!is.null(covariate)){
           
-          cov.index <- which(startsWith(x = colnames(mcmc.list[[mcl]]), prefix = covariate))
+          cov.index <- which(startsWith(x = colnames(mcmc.trace), prefix = covariate))
           
           if(rj.object$dat$covariates$fL[[covariate]]$nL > 0) 
-            cov.values <- list(rep(0, nrow(mcmc.list[[mcl]]))) else 
-              cov.values <- list()
+            cov.values <- list(rep(0, nrow(mcmc.trace))) else cov.values <- list()
             
-            cov.values <- append(cov.values,
-               lapply(X = cov.index, 
-                      FUN = function(cc) 
-                        qnorm(pnorm(q = dplyr::pull(mcmc.list[[mcl]][, cc]),
-                                    mean = rj.object$config$priors[covariate, 1],
-                                    sd = rj.object$config$priors[covariate, 2]))))
+            cov.values <-
+              append(
+                cov.values,
+                lapply(
+                  X = cov.index,
+                  FUN = function(cc) {
+                    qnorm(pnorm(
+                      q = dplyr::pull(mcmc.trace[, cc]),
+                      mean = rj.object$config$priors[covariate, 1],
+                      sd = rj.object$config$priors[covariate, 2]
+                    ))
+                  }
+                )
+              )
             
-            dr.mean <- purrr::map(.x = cov.values,
-                                  .f = ~dplyr::pull(mcmc.list[[mcl]][, psi.index]) + .x) %>% 
+            dr.mean <- 
+              purrr::map(.x = cov.values, .f = ~dplyr::pull(mcmc.trace[, psi.index]) + .x) %>% 
               purrr::set_names(x = ., nm = rj.object$dat$covariates$fL[[covariate]]$Lnames)
-
+            
             dr.raw <- purrr::map(.x = dr.mean, .f = ~{
               dr.raw[, "psi"] <- .x
               dr.raw
@@ -254,114 +264,130 @@ compile_rjMCMC <- function(rj.object,
           dr.raw <- list(dr.raw)
           
         }
+
+        dr.out <- purrr::map(.x = dr.raw, .f = ~{
         
-        dr.out <- purrr::map(.x = dr.raw, 
-                             .f = ~{
+        # Set up matrices
+        p.response <- matrix(data = 0, nrow = nrow(mcmc.trace), ncol = length(dose.range))
+        
+        for (i in 1:nrow(.x)) {
           
-          # Set up matrices
-          p.response.individ <- matrix(data = 0, nrow = npts, ncol = length(dose.range))
-          p.response <- matrix(data = 0, nrow = nrow(mcmc.list[[mcl]]), ncol = length(dose.range))
+          cat("\r", ifelse(by.model, "Species group ", "Species "),
+              sp.x, " (", sprintf("%03d", round(100*i/nrow(.x), 0)), "%)", sep = "")
+          cat("\n")
+
+          # Integrate out the random effect
+          pi.individ <- pnorm(q = qnorm(p = seq(0, 1, length = (npts + 2))[-c(1, (npts + 2))],
+                                        mean = .x[i, "psi"], sd = .x[i, "omega"]))
           
-          pb <- progress::progress_bar$new(format = "Computing [:bar] :percent eta: :eta ",
-                                           total = nrow(.x),
-                                           width = getOption("width") + 5)
+          # Dose-response curve corresponding to lower mixture component
+          p.response.individ.lower <- 
+            truncnorm::ptruncnorm(q = dose.range, 
+                                  a = rj.object$dat$param$dose.range[1], 
+                                  b = .x[i, which(grepl("alpha", colnames(.x)))],
+                                  mean = .x[i, which(grepl("nu.lower", colnames(.x)))], 
+                                  sd = .x[i, which(grepl("tau.lower", colnames(.x)))])
           
-          for (i in 1:nrow(.x)) {
-            
-            pb$tick()
-            
-            # Integrate out the random effect
-            pi.individ <- pnorm(q = qnorm(p = seq(0, 1, length = (npts + 2))[-c(1, (npts + 2))],
-                                          mean = .x[i, "psi"], 
-                                          sd = .x[i, "omega"]))
-            
-            # Dose-response curve corresponding to lower mixture component
-            p.response.individ.lower <- 
-              truncnorm::ptruncnorm(q = dose.range, 
-                                    a = rj.object$dat$param$dose.range[1], 
-                                    b = .x[i, which(grepl("alpha", colnames(.x)))],
-                                    mean = .x[i, which(grepl("nu.lower", colnames(.x)))], 
-                                    sd = .x[i, which(grepl("tau.lower", colnames(.x)))])
-            
-            # Dose-response curve corresponding to higher mixture component
-            p.response.individ.upper <- 
-              truncnorm::ptruncnorm(q = dose.range, 
-                                    a = .x[i, which(grepl("alpha", colnames(.x)))], 
-                                    b = rj.object$dat$param$dose.range[2], 
-                                    mean = .x[i, which(grepl("nu.upper", colnames(.x)))], 
-                                    sd = .x[i, which(grepl("tau.upper", colnames(.x)))])
-            
-            for (j in 1:npts) { p.response.individ[j, ] <- pi.individ[j] * p.response.individ.lower +
-              (1 - pi.individ[j]) * p.response.individ.upper}
-            
-            p.response[i, ] <- apply(X = p.response.individ, MARGIN = 2, FUN = mean)
-            
-          } # End for i loop
-          p.response
+          # Dose-response curve corresponding to higher mixture component
+          p.response.individ.upper <- 
+            truncnorm::ptruncnorm(q = dose.range, 
+                                  a = .x[i, which(grepl("alpha", colnames(.x)))], 
+                                  b = rj.object$dat$param$dose.range[2], 
+                                  mean = .x[i, which(grepl("nu.upper", colnames(.x)))], 
+                                  sd = .x[i, which(grepl("tau.upper", colnames(.x)))])
+          
+          p.response.individ.lower.mat <-
+            matrix(data = p.response.individ.lower,
+                   nrow = npts, ncol = length(dose.range), byrow = TRUE)
+          p.response.individ.lower.mat <-
+            sweep(p.response.individ.lower.mat, MARGIN = 1, pi.individ, `*`)
+          
+          p.response.individ.upper.mat <-
+            matrix(data = p.response.individ.upper,
+                   nrow = npts, ncol = length(dose.range), byrow = TRUE)
+          p.response.individ.upper.mat <-
+            sweep(p.response.individ.upper.mat, MARGIN = 1, STATS = 1 - pi.individ, FUN = `*`)
+          
+          p.response.individ <- p.response.individ.lower.mat + p.response.individ.upper.mat
+          
+          p.response[i, ] <- Rfast::colmeans(p.response.individ)
+          
+        } # End for i loop
+        p.response
         })
-      }) %>% purrr::set_names(x = ., nm = sp.names) 
-      # doseresp.values <- list(doseresp.values)
+      }) %>% 
+        purrr::set_names(x = ., nm = Mg)
+
     }
-                      # Median
-                      p.median <- purrr::map_depth(.x = doseresp.values, 
-                                                   .depth = 2,
-                                                   .f = ~ apply(X = .x, MARGIN = 2, FUN = median, na.rm = TRUE))
-                      
-                      # Lower quantiles
-                      q.low <- purrr::map_depth(
-                        .x = doseresp.values, 
-                        .depth = 2,
-                        .f = ~ {
-                          tmp <- .x
-                          purrr::map(.x = credible.intervals, .f = ~ apply(
-                            X = tmp, MARGIN = 2,
-                            FUN = quantile, (50 - .x / 2) / 100, na.rm = TRUE
-                          ))}) 
-                      
-                      # Upper quantiles
-                      q.up <- purrr::map_depth(
-                        .x = doseresp.values,
-                        .depth = 2,
-                        .f = ~ {
-                          tmp <- .x
-                          purrr::map(.x = credible.intervals, .f = ~ apply(
-                            X = tmp, MARGIN = 2,
-                            FUN = quantile, (50 + .x / 2) / 100, na.rm = TRUE
-                          ))}) 
-                      
-                      
-                      # Return all results in a list
-                      list(median = p.median, 
-                           lower = q.low, 
-                           upper = q.up)
-                      
-                    })
+    
+    # Median
+    p.median <-
+      purrr::map_depth(
+        .depth = 2,
+        .x = doseresp.values, 
+        .f = ~ Rfast::colMedians(x = .x, na.rm = TRUE)
+      )
+    
+    if(by.model & is.null(covariate)) p.median <- p.median[m.groups] %>% purrr::set_names(., sp.names)
+    
+    # Lower quantiles
+    q.low <- purrr::map_depth(
+      .x = doseresp.values, 
+      .depth = 2,
+      .f = ~ {
+        tmp <- .x
+        purrr::map(.x = credible.intervals, .f = ~ apply(
+          X = tmp, MARGIN = 2,
+          FUN = quantile, (50 - .x / 2) / 100, na.rm = TRUE
+        ))}) 
+    
+    if(by.model & is.null(covariate)) q.low <- q.low[m.groups] %>% purrr::set_names(., sp.names)
+    
+    # Upper quantiles
+    q.up <- purrr::map_depth(
+      .x = doseresp.values,
+      .depth = 2,
+      .f = ~ {
+        tmp <- .x
+        purrr::map(.x = credible.intervals, .f = ~ apply(
+          X = tmp, MARGIN = 2,
+          FUN = quantile, (50 + .x / 2) / 100, na.rm = TRUE
+        ))}) 
+    
+    if(by.model & is.null(covariate)) q.up <- q.up[m.groups] %>% purrr::set_names(., sp.names)
+    
+    # Return all results in a list
+    res <- list(median = p.median, 
+                lower = q.low, 
+                upper = q.up)
+
   
-  output <- purrr::map(.x = res, 
-                       .f = ~{
-                         
-                         out <- list()
-                         out$median <- tibble::enframe(.x$median) %>% 
-                           tidyr::unnest(cols = c(value)) %>% 
-                           dplyr::rename(species = name) %>% 
-                           dplyr::mutate(param = "median")
-                         
-                         out$lower <- tibble::enframe(.x$lower) %>% 
-                           tidyr::unnest(cols = c(value)) %>% 
-                           dplyr::rename(species = name) %>% 
-                           dplyr::mutate(param = "lower")
-                         
-                         out$upper <- tibble::enframe(.x$upper) %>% 
-                           tidyr::unnest(cols = c(value)) %>% 
-                           dplyr::rename(species = name) %>% 
-                           dplyr::mutate(param = "upper")
-                         
-                         out$posterior <- dplyr::bind_rows(out$median, out$lower, out$upper)
-                         out$lower <- out$upper <- out$median <- NULL
-                         out
-                       })
+    output <- purrr::map(
+      .x = list(res),
+      .f = ~ {
+        out <- list()
+        out$median <- tibble::enframe(.x$median) %>%
+          tidyr::unnest(cols = c(value)) %>%
+          dplyr::rename(species = name) %>%
+          dplyr::mutate(param = "median")
+        
+        out$lower <- tibble::enframe(.x$lower) %>%
+          tidyr::unnest(cols = c(value)) %>%
+          dplyr::rename(species = name) %>%
+          dplyr::mutate(param = "lower")
+        
+        out$upper <- tibble::enframe(.x$upper) %>%
+          tidyr::unnest(cols = c(value)) %>%
+          dplyr::rename(species = name) %>%
+          dplyr::mutate(param = "upper")
+        
+        out$posterior <- dplyr::bind_rows(out$median, out$lower, out$upper)
+        out$lower <- out$upper <- out$median <- NULL
+        out
+      }
+    )
   
-  if(by.model) output <- purrr::set_names(x = output, nm = names(m.order))
+  if(by.model) output <- purrr::set_names(x = output, nm = m.filtered)
   
   output$dose.range <- dose.range
   output$cred.int <- credible.intervals
@@ -374,6 +400,7 @@ compile_rjMCMC <- function(rj.object,
                  by.model = by.model, 
                  mlist = rj.object$mlist, 
                  ranks = rj.object$ranks,
+                 model.rank = model.rank,
                  p.med = rj.object$p.med,
                  p.med.bymodel = rj.object$p.med.bymodel,
                  covariate = covariate,
@@ -383,6 +410,7 @@ compile_rjMCMC <- function(rj.object,
   
   if(!is.null(covariate)) output$fL <- rj.object$dat$covariates$fL[[covariate]] else output$fL <- rj.object$dat$covariates$fL
   
+  cat("Done!")
   class(output) <- c("dose_response", class(output))
   return(output)
   

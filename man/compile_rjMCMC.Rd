@@ -8,11 +8,11 @@ compile_rjMCMC(
   rj.object,
   phase = 1,
   by.model = FALSE,
-  n.top = 10,
+  model.rank = 1,
   covariate = NULL,
   covariate.values = NULL,
   species = NULL,
-  credible.intervals = seq(95, 1, by = -5),
+  credible.intervals = c(95, 50, 5),
   npts = 20
 )
 }
@@ -23,7 +23,7 @@ compile_rjMCMC(
 
 \item{by.model}{Logical. If \code{TRUE}, the function subsets posterior parameter estimates to produce separate dose-response curves for each candidate model.}
 
-\item{n.top}{Number of top-ranking models to generate curves for when \code{by.model = TRUE}.}
+\item{model.rank}{Rank of the model to generate curves for when \code{by.model = TRUE}.}
 
 \item{covariate}{Covariate name. This argument can be used to generate dose-response curves for specific contextual covariates, conditioned on the species (group) given by \code{species}.}
 

@@ -318,7 +318,7 @@ configure_rjMCMC <- function(dat,
     p.Clust$cluster <- ifelse(is.null(dat$species$groups), dat$species$n, length(dat$species$groups))
     
   }
-    nglist <- purrr::map(.x = mlist, .f = ~nb_groups(.x))
+    nglist <- purrr::map(.x = mlist, .f = ~dplyr::n_distinct(.x))
   }
   
 

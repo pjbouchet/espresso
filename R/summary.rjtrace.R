@@ -289,10 +289,12 @@ summary.rjtrace <- function(rj.obj,
     
     if(rj.obj$config$function.select){
       
+      sink(tempfile())
       tb.combined <- prob_form(obj = rj.obj, do.combine = TRUE) %>% 
         .[["est"]] %>% 
         dplyr::bind_cols(tibble::tibble(chain = "all"), .)
       tb <- prob_form(obj = rj.obj, do.combine = FALSE)
+      sink()
       
       tb.out <- purrr::map(.x = tb, "est")
       tb.out <- purrr::map(.x = seq_along(tb.out), .f = ~dplyr::mutate(.data = tb.out[[.x]], chain = .x)) %>% 
