@@ -113,8 +113,11 @@ configure_rjMCMC <- function(dat,
   
   if(function.select| !biphasic){
   
-  # Estimate the between-whale SD (phi) and the within-whale between-exposure SD (sigma) from the data.
-  # This is useful for generating appropriate starting values for the MCMC sampler (see below).
+  # Estimate the between-whale SD (phi) and the within-whale between-exposure SD (sigma) 
+  # from the data. This is useful for generating appropriate starting values for
+  # the MCMC sampler (see below).
+  # In some cases, all observations are censored. In this case, use the value at the 
+  # mid-point of the prior range.
   
   dat.sigma <- mean(unique(sapply(X = dat$whales$id, FUN = function(n) 
     sd(dat$obs$y_ij[dat$whales$id == n], na.rm = TRUE))), na.rm = TRUE)
@@ -125,12 +128,17 @@ configure_rjMCMC <- function(dat,
   dat.phi <- mean(sapply(X = dat$species$id, FUN = function(n) 
     sd(dat.phi[dat$species$id == n], na.rm = TRUE)), na.rm = TRUE)
   
+  if(is.na(dat.sigma)) dat.sigma <- mean(priors[["sigma"]])
+  if(is.na(dat.phi)) dat.phi <- mean(priors[["phi"]])
+  
   } else {
     
   dat.by.species <- purrr::map(.x = seq_len(dat$species$n),
                .f = ~sort(dat$obs$y_ij[dat$species$trials == .x]))
     
   dat.tau <- mean(rbind(sapply(X = dat.by.species, FUN = function(x){sd(x[x < median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = dat.by.species, FUN = function(x){sd(x[x > median(x, na.rm = TRUE)], na.rm = TRUE)})))
+  
+  if(is.na(dat.tau)) dat.tau <- mean(priors[["tau"]])
   
   }
   

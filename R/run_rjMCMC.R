@@ -67,26 +67,8 @@ run_rjMCMC <- function(dat,
   # Create a parallel cluster and register the backend
   cl <- suppressMessages(parallel::makeCluster(n.chains, outfile = ""))
   doParallel::registerDoParallel(cl)
-  
-  # Setup the rjMCMC
-  # rj.list <- purrr::map(.x = seq_len(n.chains), 
-  #                       .f = ~setup_rjMCMC(rj.input = dat,
-  #                                          n.chains = n.chains,
-  #                                          n.burn = n.burn,
-  #                                          n.iter = n.iter,
-  #                                          p.split = dat$config$move$prob[1],
-  #                                          p.merge = dat$config$move$prob[2],
-  #                                          do.update = do.update,
-  #                                          start.values = last.iter[[.x]]))
-  
-
-  # pb.pct <- seq(0, 100, 5)
-  # pb.tk <- round((n.burn + n.iter)*pb.pct / 100)
-  
-  # Needed to set up the progress bar on Windows
-  # See https://stackoverflow.com/questions/7349570/wrapper-to-for-loops-with-progress-bar
-  # sink("/dev/null")
-  
+ 
+  # Progress bar
   if(isDarwin){
   sink(tempfile())
   pb <- utils::txtProgressBar(min = 0, max = (n.iter + n.burn), style = 3)
@@ -132,7 +114,9 @@ run_rjMCMC <- function(dat,
     environment(propose_jump) <- rlang::current_env()
     environment(proposal_rj) <- rlang::current_env()
     environment(propdens_rj) <- rlang::current_env()
-    environment(N_groups) <- rlang::current_env()
+    environment(proposal_ff) <- rlang::current_env()
+    environment(propdens_ff) <- rlang::current_env()
+    environment(ff_prior) <- rlang::current_env()
     
     # Define all the parameters need for the run
     model.select <- rj$config$model.select
@@ -178,11 +162,15 @@ run_rjMCMC <- function(dat,
     is.LeftCensored <- rj$dat$obs$censored == -1
     Rc <- rj$dat$obs$Rc
     Lc <- rj$dat$obs$Lc
+    .p.bounds <- matrix(data = dose.range, ncol = 2, nrow = n.trials, byrow = TRUE)
     tot.iter <- rj$mcmc$tot.iter
-    dummy.names <- gsub("\\..*","", row.names(dummy.df))
+    dummy.names <- unlist(purrr::map2(.x = covariate.names, 
+                                   .y = purrr::map_dbl(.x = fL, "nL"),
+                                   .f = ~rep(.x, each = ifelse(.y == 0, 1, .y))))
     one.group <- paste0("(", paste0(species.names, collapse = ","), ")")
     individual.groups <- 
       paste0(paste0("(", species.names, ")"), collapse = "+")
+    var.est <- rj$config$var
     
     # Extract values to speed up calculations
     .t.ij <- rj$t.ij[1, ]
@@ -243,32 +231,26 @@ run_rjMCMC <- function(dat,
         
         # Propose jump and new parameters
         proposed.jump <- propose_jump(rj.obj = rj)
-        
-        new.params <- 
-          proposal_rj(jump = proposed.jump, huelsenbeck = FALSE)
+        new.params <- proposal_rj(jump = proposed.jump, huelsenbeck = FALSE)
         
         # Priors
         logprior.new <-
-          uniform_prior(rj.obj = rj,
-                        param.name = if (.phase == 1) "mu" else c("nu", "alpha"),
+          uniform_prior(param.name = if (.phase == 1) "mu" else c("nu", "alpha"),
                         param = new.params)
         
         logprior.cur <-
-          uniform_prior(
-            rj.obj = rj,
-            param.name = if (.phase == 1) "mu" else c("nu", "alpha"),
+          uniform_prior(param.name = if (.phase == 1) "mu" else c("nu", "alpha"),
             param = if (.phase == 1) {
               list(out = list(mu = .mu))
             } else {
-              list(out = list(nu = t(cbind(.nu1, .nu2)), alpha = .alpha))
+              list(out = list(nu = cbind(.nu1, .nu2), alpha = .alpha))
             }
           )
         
         # Likelihoods
         loglik.new <-
           likelihood(biphasic = ifelse(.phase == 1, FALSE, TRUE),
-                     param.name = if(.phase == 1) "mu" else
-                       c("nu", "alpha"),
+                     param.name = if(.phase == 1) "mu" else c("nu", "alpha"),
                      rj.obj = rj,
                      values = new.params$out,
                      included.cov = NULL,
@@ -277,8 +259,7 @@ run_rjMCMC <- function(dat,
         
         loglik.cur <- 
           likelihood(biphasic = ifelse(.phase == 1, FALSE, TRUE),
-                     param.name = if(.phase == 1) "mu" else
-                       c("nu", "alpha"),
+                     param.name = if(.phase == 1) "mu" else c("nu", "alpha"),
                      rj.obj = rj,
                      values = NULL,
                      included.cov = NULL,
@@ -320,48 +301,19 @@ run_rjMCMC <- function(dat,
             .mlist[[new.model]] <- proposed.jump$model$id
             .nglist[[new.model]] <- dplyr::n_distinct(proposed.jump$model$id)
           }
-          
-          # if(!new.model %in% rj$config$clust[[1]]$model){ 
-          #   rj$config$clust[[1]] <- 
-          #   rbind(rj$config$clust[[1]], 
-          #   tibble::tibble(model = new.model, p = 0, p_scale = 0)) %>% 
-          #   dplyr::mutate(p_scale = rescale_p(p))
-          # }
-          
+
           # Save new values
           if(.phase == 1){
             .mu <- new.params$out$mu
           } else {
-            .nu1 <- t(new.params$out$nu)[, 1]
-            .nu2 <- t(new.params$out$nu)[, 2]
+            .nu1 <- new.params$out$nu[, 1]
+            .nu2 <- new.params$out$nu[, 2]
             .alpha <- new.params$out$alpha
           }
           
         } 
-        
-        # else { # If proposal not accepted
-        #   
-        #   .model <- rj$current.model <- rj$model[i - 1]
-        #   if(function.select | .phase == 1){
-        #   rj$mu[i, ] <- rj$mu[i - 1, ]}
-        #   if(function.select | .phase == 2){
-        #   rj$nu[i, ,] <- rj$nu[i - 1, ,]
-        #   rj$alpha[i, ] <- rj$alpha[i - 1, ]
-        #   }
-        
-        # }
-        
+       
       }
-      
-      # else { # If no model selection
-      #   
-      #   if(function.select | .phase == 1){
-      #   rj$mu[i, ] <- rj$mu[i - 1, ]}
-      #   if(function.select | .phase == 2){
-      #   rj$nu[i, ,] <- rj$nu[i - 1, ,]
-      #   rj$alpha[i, ] <- rj$alpha[i - 1, ]}
-      #   
-      # }
       
       #' -----------------------------------------------------
       # Step 2: Add/remove covariates ----
@@ -474,20 +426,20 @@ run_rjMCMC <- function(dat,
       
       if(function.select){
         
-        # We can generalize the standard 'monophasic' dos
-        # -response function by allowing the threshold to 
-        # come from one of two truncated normal 
-        # distributions, one with lower exposure 
+        # We can generalize the standard 'monophasic' dose-response
+        # function by allowing the threshold to come from one of two
+        # truncated normal distributions, one with lower exposure 
         # values than the other. This gives a 'biphasic' 
         # function with a context-dependent part and a 
         # dose-dependent part.
         
-        ff.prop <- proposal_ff(rj.obj = rj, from.phase = .phase)
+        ff.prop <- proposal_ff()
         
         # Likelihoods
         loglik.new <-
-          likelihood(biphasic = ifelse(ff.prop$to.phase == 1, FALSE, TRUE),
-                     param.name = if(ff.prop$to.phase == 1) c("mu", "mu.i", "phi", "sigma") else c("nu", "alpha", "tau1", "tau2", "omega", "psi", "mu.ij", "psi.i", "k.ij"),
+          likelihood(biphasic = ifelse(.phase == 1, TRUE, FALSE),
+                     param.name = if(.phase == 2) c("mu", "mu.i", "phi", "sigma") else 
+                       c("nu", "alpha", "tau1", "tau2", "omega", "psi", "mu.ij", "psi.i", "k.ij"),
                      rj.obj = rj,
                      values = ff.prop,
                      included.cov = NULL,
@@ -504,126 +456,45 @@ run_rjMCMC <- function(dat,
                      lprod = TRUE)
         
         # Priors
-        logprior.new <- ff_prior(rj.obj = rj, 
-                                 param = ff.prop, 
-                                 phase = ff.prop$to.phase)
-        
-        logprior.cur <- ff_prior(rj.obj = rj, 
-                                 param = NULL,
-                                 phase = .phase)
+        logprior.new <- ff_prior(param = ff.prop, phase = ff.prop$to.phase)
+        logprior.cur <- ff_prior(param = NULL, phase = .phase)
         
         # Proposal densities
-        logpropdens <- propdens_ff(rj.obj = rj, param = ff.prop)
+        logpropdens <- propdens_ff(param = ff.prop)
         
         # Posterior ratio (Jacobian is 1 and p is 1)
-        lognum <- loglik.new + logprior.new +
-          logpropdens[[.phase]]
-        
-        logden <- loglik.cur + logprior.cur + 
-          logpropdens[[ff.prop$to.phase]]
+        lognum <- loglik.new + logprior.new + logpropdens[[.phase]]
+        logden <- loglik.cur + logprior.cur + logpropdens[[ff.prop$to.phase]]
         
         if (runif(1) < exp(lognum - logden)) {
           
           rj$accept.phase[i] <- 1
           .phase <- ff.prop$to.phase
           
-          # if(i > n.burn){
-          #   
-          #   if(ff.prop$to.phase == 1)
-          #   rj$accept[["to.monophasic"]] <- rj$accept[["to.monophasic"]] + 1
-          #   
-          #   if(ff.prop$to.phase == 2)
-          #     rj$accept[["to.biphasic"]] <- rj$accept[["to.biphasic"]] + 1
-          # }
-          
-          
-          if(ff.prop$to.phase == 1){
+          if(.phase == 1){
             
-            rj$sigma[i] <- ff.prop$sigma
-            rj$mu.i[i, ] <- ff.prop$mu.i
-            rj$mu[i, ] <- ff.prop$mu
-            rj$phi[i] <- ff.prop$phi
-            
-            # rj$tau[i, ] <- rj$tau[i - 1, ]
-            # rj$omega[i] <- rj$omega[i - 1]
-            # rj$psi[i] <- rj$psi[i - 1]
-            # rj$mu.ij[i, ,] <- rj$mu.ij[i - 1, ,]
-            # rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
-            # rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
-            # rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
-            
+            .sigma <- ff.prop$sigma
+            .mu.i <- ff.prop$mu.i
+            .mu <- ff.prop$mu
+            .phi <- ff.prop$phi
+  
           } else {
             
-            rj$alpha[i, ] <- ff.prop$alpha
-            rj$nu[i, , 1] <- ff.prop$nu[1, ]
-            rj$nu[i, , 2] <- ff.prop$nu[2, ]
-            rj$tau[i, ] <- ff.prop$tau
-            rj$omega[i] <- ff.prop$omega
-            rj$psi[i] <- ff.prop$psi
-            rj$mu.ij[i, ,] <- ff.prop$mu.ij
-            rj$psi.i[i, ] <- ff.prop$psi.i
-            rj$k.ij[i, ] <- ff.prop$k.ij
-            rj$pi.ij[i, ] <- ff.prop$pi.ij
+            .alpha <- ff.prop$alpha
+            .nu1 <- ff.prop$nu[, 1]
+            .nu2 <- ff.prop$nu[, 2]
+            .tau1 <- ff.prop$tau[1]
+            .tau2 <- ff.prop$tau[2]
+            .omega <- ff.prop$omega
+            .psi <- ff.prop$psi
+            .mu.ij1 <- ff.prop$mu.ij[, 1]
+            .mu.ij2 <- ff.prop$mu.ij[, 2]
+            .psi.i <- ff.prop$psi.i
+            .k.ij <- ff.prop$k.ij
+            .pi.ij <- ff.prop$pi.ij
             
-            # rj$sigma[i] <- rj$sigma[i - 1]
-            # rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
-            # rj$phi[i] <- rj$phi[i - 1]
           }
-          
-          # } 
-          
-          # else {
-          #   
-          #   rj$phase[i] <- rj$phase[i - 1]
-          #   
-          #   rj$sigma[i] <- rj$sigma[i - 1]
-          #   rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
-          #   rj$phi[i] <- rj$phi[i - 1]
-          #   
-          #   rj$tau[i, ] <- rj$tau[i - 1, ]
-          #   rj$omega[i] <- rj$omega[i - 1]
-          #   rj$psi[i] <- rj$psi[i - 1]
-          #   rj$mu.ij[i, ,] <- rj$mu.ij[i - 1, ,]
-          #   rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
-          #   rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
-          #   rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
-          #   
-          # }
-          
-          # } else {
-          #   
-          #   rj$phase[i] <- rj$phase[i - 1]
-          #   
-          #   if(function.select | rj$phase[i - 1] == 1){
-          #   rj$sigma[i] <- rj$sigma[i - 1]
-          #   rj$mu.i[i, ] <- rj$mu.i[i - 1, ]
-          #   rj$phi[i] <- rj$phi[i - 1]
-          #   }
-          #   
-          #   if(function.select | rj$phase[i - 1] == 2){
-          #   rj$tau[i, ] <- rj$tau[i - 1, ]
-          #   rj$omega[i] <- rj$omega[i - 1]
-          #   rj$psi[i] <- rj$psi[i - 1]
-          #   rj$mu.ij[i, ,] <- rj$mu.ij[i - 1, ,]
-          #   rj$psi.i[i, ] <- rj$psi.i[i - 1, ]
-          #   rj$k.ij[i, ] <- rj$k.ij[i - 1, ]
-          #   rj$pi.ij[i, ] <- rj$pi.ij[i - 1, ]
-          # 
-          #   }
-          
         }
-        
-        # rj$t.ij[i, ] <- rj$t.ij[i - 1, ] # t.ij stay the same
-        # rj$iter["t.ij"] <- rj$iter["t.ij"] + 1
-        
-        #  if(function.select | rj$phase[i - 1] == 1){
-        #  rj$iter[c("sigma", "mu.i", "phi")] <- 
-        #    rj$iter[c("sigma", "mu.i", "phi")] + 1
-        #  }
-        #  
-        #  if(function.select | rj$phase[i - 1] == 2){
-        #  rj$iter[c("tau", "omega", "psi", "mu.ij", "k.ij", "psi.i", "pi.ij")] <- 
-        # rj$iter[c("tau", "omega", "psi", "mu.ij", "k.ij", "psi.i", "pi.ij")] + 1
       }
       
       #'---------------------------------------------------
@@ -659,8 +530,7 @@ run_rjMCMC <- function(dat,
             loglik.proposed <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj, "exposed", 1),
+                location = .mu.i[whale.id] + cov_effects("exposed", 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -669,8 +539,7 @@ run_rjMCMC <- function(dat,
             loglik.current <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj, phase = 1),
+                location = .mu.i[whale.id] + cov_effects(phase = 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -679,10 +548,10 @@ run_rjMCMC <- function(dat,
           } else {
             
             pi.ij.proposed <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, "exposed", 2))
+              pnorm(.psi.i[whale.id] + cov_effects("exposed", 2))
             
             pi.ij.current <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, phase = 2))
+              pnorm(.psi.i[whale.id] + cov_effects(phase = 2))
             
             loglik.proposed <- 
               sum(d_Binom(x = 2 - .k.ij, 
@@ -732,8 +601,7 @@ run_rjMCMC <- function(dat,
             loglik.proposed <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj, "sonar", 1),
+                location = .mu.i[whale.id] + cov_effects("sonar", 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -742,8 +610,7 @@ run_rjMCMC <- function(dat,
             loglik.current <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj, phase = 1),
+                location = .mu.i[whale.id] + cov_effects(phase = 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -752,10 +619,10 @@ run_rjMCMC <- function(dat,
           } else {
             
             pi.ij.proposed <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, "sonar", 2))
+              pnorm(.psi.i[whale.id] + cov_effects("sonar", 2))
             
             pi.ij.current <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, phase = 2))
+              pnorm(.psi.i[whale.id] + cov_effects(phase = 2))
             
             loglik.proposed <- 
               sum(d_Binom(x = 2 - .k.ij, 
@@ -805,8 +672,7 @@ run_rjMCMC <- function(dat,
             loglik.proposed <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj, "behaviour", 1),
+                location = .mu.i[whale.id] + cov_effects("behaviour", 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -815,8 +681,7 @@ run_rjMCMC <- function(dat,
             loglik.current <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj.obj = rj, phase = 1),
+                location = .mu.i[whale.id] + cov_effects(phase = 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -825,22 +690,22 @@ run_rjMCMC <- function(dat,
           } else {
             
             pi.ij.proposed <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, "behaviour", 2))
+              pnorm(.psi.i[whale.id] + cov_effects("behaviour", 2))
             
             pi.ij.current <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, phase = 2))
+              pnorm(.psi.i[whale.id] + cov_effects(phase = 2))
             
             loglik.proposed <- 
               sum(d_Binom(x = 2 - .k.ij, 
-                                       size = 1, 
-                                       prob = pi.ij.proposed, 
-                                       do_log = TRUE))
+                          size = 1, 
+                          prob = pi.ij.proposed, 
+                          do_log = TRUE))
             
             loglik.current <- 
               sum(d_Binom(x = 2 - .k.ij, 
-                                       size = 1, 
-                                       prob = pi.ij.current, 
-                                       do_log = TRUE))
+                          size = 1, 
+                          prob = pi.ij.current, 
+                          do_log = TRUE))
             
           }
           
@@ -874,8 +739,7 @@ run_rjMCMC <- function(dat,
             loglik.proposed <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj, "range", 1),
+                location = .mu.i[whale.id] + cov_effects("range", 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -884,8 +748,7 @@ run_rjMCMC <- function(dat,
             loglik.current <- 
               sum(dt_norm(
                 x = .t.ij,
-                location = .mu.i[whale.id] + 
-                  cov_effects(rj.obj = rj, phase = 1),
+                location = .mu.i[whale.id] + cov_effects(phase = 1),
                 scale = .sigma,
                 L = dose.range[1],
                 U = dose.range[2],
@@ -894,10 +757,10 @@ run_rjMCMC <- function(dat,
           } else {
             
             pi.ij.proposed <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, "range", 2))
+              pnorm(.psi.i[whale.id] + cov_effects("range", 2))
             
             pi.ij.current <- 
-              pnorm(.psi.i[whale.id] + cov_effects(rj, phase = 2))
+              pnorm(.psi.i[whale.id] + cov_effects(phase = 2))
             
             loglik.proposed <- 
               sum(d_Binom(x = 2 - .k.ij, 
@@ -951,7 +814,7 @@ run_rjMCMC <- function(dat,
         loglik.proposed <- loglik.proposed + 
           dt_norm(
             x = proposed.t.ij[[1]],
-            location = .mu.i[whale.id] + cov_effects(rj, phase = 1),
+            location = .mu.i[whale.id] + cov_effects(phase = 1),
             scale = .sigma,
             L = dose.range[1],
             U = dose.range[2],
@@ -965,7 +828,7 @@ run_rjMCMC <- function(dat,
         loglik.current <- loglik.current + 
           dt_norm(
             x = .t.ij,
-            location = .mu.i[whale.id] + cov_effects(rj, phase = 1),
+            location = .mu.i[whale.id] + cov_effects(phase = 1),
             scale = .sigma,
             L = dose.range[1],
             U = dose.range[2],
@@ -1007,7 +870,7 @@ run_rjMCMC <- function(dat,
           loglik.proposed <- 
             sum(dt_norm(
               x = .t.ij,
-              location = .mu.i[whale.id] + cov_effects(rj, phase = 1),
+              location = .mu.i[whale.id] + cov_effects(phase = 1),
               scale = proposed.sigma,
               L = dose.range[1],
               U = dose.range[2],
@@ -1016,7 +879,7 @@ run_rjMCMC <- function(dat,
           loglik.current <- 
             sum(dt_norm(
               x = .t.ij,
-              location = .mu.i[whale.id] + cov_effects(rj, phase = 1),
+              location = .mu.i[whale.id] + cov_effects(phase = 1),
               scale = .sigma,
               L = dose.range[1],
               U = dose.range[2],
@@ -1035,8 +898,7 @@ run_rjMCMC <- function(dat,
         
         loglik.proposed <- dt_norm(
           x = .t.ij,
-          location = proposed.mu.i[whale.id] + 
-            cov_effects(rj, phase = 1),
+          location = proposed.mu.i[whale.id] + cov_effects(phase = 1),
           scale = .sigma,
           L = dose.range[1],
           U = dose.range[2],
@@ -1057,8 +919,7 @@ run_rjMCMC <- function(dat,
         
         loglik.current <- dt_norm(
           x = .t.ij,
-          location = .mu.i[whale.id] + 
-            cov_effects(rj, phase = 1),
+          location = .mu.i[whale.id] + cov_effects(phase = 1),
           scale = .sigma,
           L = dose.range[1],
           U = dose.range[2],
@@ -1175,7 +1036,7 @@ run_rjMCMC <- function(dat,
       if(.phase == 2){
         
         if(n.covariates > 0){
-          .pi.ij <- pnorm(.psi.i[whale.id] + cov_effects(rj.obj = rj, phase = 2))
+          .pi.ij <- pnorm(.psi.i[whale.id] + cov_effects(phase = 2))
         } else {
           .pi.ij <- pnorm(.psi.i[whale.id])
         }
@@ -1495,7 +1356,7 @@ run_rjMCMC <- function(dat,
         
         if(n.covariates > 0){
           .pi.ij <- 
-            pnorm(.psi.i[whale.id] + cov_effects(rj.obj = rj, phase = 2))
+            pnorm(.psi.i[whale.id] + cov_effects(phase = 2))
         } else {
           .pi.ij <- pnorm(.psi.i[whale.id])
         }

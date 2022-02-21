@@ -4,11 +4,9 @@
 \alias{propdens_ff}
 \title{Proposal densities for functional form jumps.}
 \usage{
-propdens_ff(rj.obj, param)
+propdens_ff(param)
 }
 \arguments{
-\item{rj.obj}{Input object.}
-
 \item{param}{Parameter values.}
 }
 \description{

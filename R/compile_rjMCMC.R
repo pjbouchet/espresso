@@ -218,14 +218,14 @@ compile_rjMCMC <- function(rj.object,
     } else if (phase == 2){
       
       # BIPHASIC ----------------
-
+      
       doseresp.values <- lapply(X = Mg, FUN = function(sp.x) {
         
         dr.raw <- dplyr::select(mcmc.trace, 
                                 c("omega", "psi", "tau.lower", "tau.upper", 
-                                  paste0("nu.lower.", sp.x),
-                                  paste0("nu.upper.", sp.x),
-                                  paste0("alpha.", sp.x))) %>% 
+                                  paste0("nu.lower.", which(Mg == sp.x)),
+                                  paste0("nu.upper.", which(Mg == sp.x)),
+                                  paste0("alpha.", which(Mg == sp.x)))) %>% 
           as.matrix()
         
         if(!is.null(covariate)){
@@ -274,7 +274,6 @@ compile_rjMCMC <- function(rj.object,
           
           cat("\r", ifelse(by.model, "Species group ", "Species "),
               sp.x, " (", sprintf("%03d", round(100*i/nrow(.x), 0)), "%)", sep = "")
-          cat("\n")
 
           # Integrate out the random effect
           pi.individ <- pnorm(q = qnorm(p = seq(0, 1, length = (npts + 2))[-c(1, (npts + 2))],
@@ -410,7 +409,7 @@ compile_rjMCMC <- function(rj.object,
   
   if(!is.null(covariate)) output$fL <- rj.object$dat$covariates$fL[[covariate]] else output$fL <- rj.object$dat$covariates$fL
   
-  cat("Done!")
+  cat("\nDone!")
   class(output) <- c("dose_response", class(output))
   return(output)
   

@@ -5,9 +5,12 @@
 \title{Proposal for jumps between functional forms}
 \usage{
 proposal_ff(
-  rj.obj,
-  from.phase,
-  prop.scale = list(alpha = 10, omega = 1, psi.i = 0.25, sigma = 10)
+  p.alpha = 10,
+  p.psi.i = 0.25,
+  p.omega = 1,
+  p.phi = 2,
+  p.sigma = 2,
+  p.mu.i = 10
 )
 }
 \arguments{

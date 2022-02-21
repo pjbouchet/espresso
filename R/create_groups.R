@@ -137,7 +137,8 @@ create_groups <- function(dat.obj,
                      dplyr::group_by(species) %>% 
                      dplyr::summarise(N_ind = length(unique(tag_id)), 
                                       N_trials = dplyr::n(), 
-                                      censored = sum(is.na(spl)), 
+                                      censored.L = sum(censored == -1), 
+                                      censored.R = sum(censored == 1),
                                       mean = mean(spl, na.rm = TRUE),
                                       min = min(spl, na.rm = TRUE),
                                       max = max(spl, na.rm = TRUE), .groups = "keep") %>% 

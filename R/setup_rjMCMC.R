@@ -223,8 +223,7 @@ setup_rjMCMC <- function(rj.input,
       rj$current.model <- rj$model[1:tot.iter] <- names(rj.input$config$mlist) 
     }
 
-    rj$current.groups <- rj$mlist[[rj$current.model]]
-    rj$current.ng <- length(unique(rj$current.groups))
+    current.groups <- rj$mlist[[rj$current.model]]
     
     # Functional form
     if(rj.input$config$function.select) rj$phase[1] <- sample(x = 1:2, size = 1)
@@ -263,7 +262,7 @@ setup_rjMCMC <- function(rj.input,
                    lc = rj.input$obs$Lc)
     
     mu.start <- purrr::map_dbl(
-      .x = seq_len(nb_groups(rj$current.groups)),
+      .x = seq_len(dplyr::n_distinct(current.groups)),
       .f = ~ {
         
         sp.data <- input.data %>% 
@@ -273,8 +272,8 @@ setup_rjMCMC <- function(rj.input,
           sp.data %>% 
             dplyr::rowwise() %>% 
             dplyr::mutate(y = ifelse(censored == 1,
-                                     runif(n = 1, min = rc, max = rj.input$config$priors["mu", 2]),
-                                     runif(n = 1, min = rj.input$config$priors["mu", 1], max = lc))) %>% 
+                   runif(n = 1, min = rc, max = rj.input$config$priors["mu", 2]),
+                   runif(n = 1, min = rj.input$config$priors["mu", 1], max = lc))) %>% 
             dplyr::ungroup() %>% 
             dplyr::pull(y) %>% 
             mean(., na.rm = TRUE)
@@ -288,7 +287,7 @@ setup_rjMCMC <- function(rj.input,
                    L = rj.input$param$dose.range[1] - mu.start,
                    U = rj.input$param$dose.range[2] - mu.start)
     
-    rj$mu[1, ] <- (mu.start + mu.deviates)[rj$current.groups]
+    rj$mu[1, ] <- (mu.start + mu.deviates)[current.groups]
     
     # rj$mu[1,] <- mu.start + mu.deviates[sapply(X = mu.start, 
     #                         FUN = function(x) which(unique(mu.start) == x), simplify = TRUE)]
@@ -316,19 +315,19 @@ setup_rjMCMC <- function(rj.input,
     # Model parameters 
     # -- BIPHASIC ----
     
-      # inits.bi <- purrr::map(.x = seq_len(nb_groups(rj$current.groups)),
-      #       .f = ~sort(rj.input$obs$y_ij[rj.input$species$trials %in% which(rj$current.groups == .x)]))
+      # inits.bi <- purrr::map(.x = seq_len(dplyr::n_distinct(current.groups)),
+      #       .f = ~sort(rj.input$obs$y_ij[rj.input$species$trials %in% which(current.groups == .x)]))
       
-      inits.bi <- purrr::map(.x = seq_len(nb_groups(rj$current.groups)),
+      inits.bi <- purrr::map(.x = seq_len(dplyr::n_distinct(current.groups)),
                              .f = ~{
                                censored <- rj.input$obs$censored[rj.input$species$trials %in% 
-                                            which(rj$current.groups == .x)]
+                                            which(current.groups == .x)]
                                y.obs <- rj.input$obs$y_ij[rj.input$species$trials %in% 
-                                           which(rj$current.groups == .x)]
+                                           which(current.groups == .x)]
                                Lc.obs <- rj.input$obs$Lc[rj.input$species$trials %in% 
-                                           which(rj$current.groups == .x)]
+                                           which(current.groups == .x)]
                                Rc.obs <- rj.input$obs$Rc[rj.input$species$trials %in% 
-                                           which(rj$current.groups == .x)]
+                                           which(current.groups == .x)]
                                y.obs[is.na(y.obs) & censored == 1] <- 
                                  runif(n = sum(is.na(y.obs) & censored == 1),
                                        min = Rc.obs[is.na(y.obs) & censored == 1],
@@ -343,35 +342,35 @@ setup_rjMCMC <- function(rj.input,
       rj$alpha[1, ] <- sapply(X = inits.bi, FUN = function(x){
         rt_norm(n = 1, location = min(x) + (max(x)-min(x))/2, scale = 1, 
                          L = rj.input$param$dose.range[1],
-                         U = rj.input$param$dose.range[2])})[rj$current.groups]
+                         U = rj.input$param$dose.range[2])})[current.groups]
       
       # Add one random deviate from a Uniform distribution here to avoid numerical
       # issues with NAs when one of the list elements of inits.bi is of
       # length 1 and doesn't meet the constraint with respect to alpha
       rj$nu[1, ,1] <-
-        sapply(X = seq_len(nb_groups(rj$current.groups)), 
+        sapply(X = seq_len(dplyr::n_distinct(current.groups)), 
                FUN = function(x){
                  rt_norm(n = 1, 
-                        location = mean(c(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$current.groups == x)])], runif(n = 1, min = rj.input$param$dose.range[1], max = unique(rj$alpha[1, which(rj$current.groups == x)])))), 
+                        location = mean(c(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(current.groups == x)])], runif(n = 1, min = rj.input$param$dose.range[1], max = unique(rj$alpha[1, which(current.groups == x)])))), 
                         scale = 2,
                         L = rj.input$param$dose.range[1],
-                        U = unique(rj$alpha[1, which(rj$current.groups == x)]))})[rj$current.groups]
+                        U = unique(rj$alpha[1, which(current.groups == x)]))})[current.groups]
       
       rj$nu[1, ,2] <-
-        sapply(X = seq_len(nb_groups(rj$current.groups)), 
+        sapply(X = seq_len(dplyr::n_distinct(current.groups)), 
                FUN = function(x){
                  rt_norm(n = 1, 
-                        location = mean(c(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$current.groups == x)])], runif(n = 1, min = unique(rj$alpha[1, which(rj$current.groups == x)]), max = rj.input$param$dose.range[2]))), 
+                        location = mean(c(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(current.groups == x)])], runif(n = 1, min = unique(rj$alpha[1, which(current.groups == x)]), max = rj.input$param$dose.range[2]))), 
                         scale = 2,
-                        L = unique(rj$alpha[1, which(rj$current.groups == x)]),
-                        U = rj.input$param$dose.range[2])})[rj$current.groups]
+                        L = unique(rj$alpha[1, which(current.groups == x)]),
+                        U = rj.input$param$dose.range[2])})[current.groups]
       
 
       inits.tau <-
-        rbind(sapply(X = seq_len(nb_groups(rj$current.groups)), FUN = function(x){
-          sd(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(rj$current.groups == x)])])}),
-          sapply(X = seq_len(nb_groups(rj$current.groups)), FUN = function(x){
-            sd(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(rj$current.groups == x)])])}))
+        rbind(sapply(X = seq_len(dplyr::n_distinct(current.groups)), FUN = function(x){
+          sd(inits.bi[[x]][inits.bi[[x]] < unique(rj$alpha[1, which(current.groups == x)])])}),
+          sapply(X = seq_len(dplyr::n_distinct(current.groups)), FUN = function(x){
+            sd(inits.bi[[x]][inits.bi[[x]] > unique(rj$alpha[1, which(current.groups == x)])])}))
       
       inits.tau[is.na(inits.tau)] <- runif(n = sum(is.na(inits.tau)),
                                            min = rj.input$config$priors["tau", 1],

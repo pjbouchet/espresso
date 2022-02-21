@@ -108,7 +108,7 @@ read_data <- function(file = NULL,
   }
   
   if(!is.null(sonar.groups)){
-    if(!is.list(sonar.groups)) stop("signal.types must be a list")
+    if(!is.list(sonar.groups)) stop("sonar.groups must be a list")
     if(is.null(names(sonar.groups))) stop("Cannot find names for signal type groups")}
   
   if(is.null(covariates)){
@@ -231,7 +231,7 @@ read_data <- function(file = NULL,
       dplyr::filter(max_rl >= dose.range[1] & max_rl <= dose.range[2]) %>% 
       dplyr::select(max_rl, q50) %>% dplyr::mutate(q50 = -q50)
     spline.pmrf <- stats::splinefun(x = pmrf$q50, y = pmrf$max_rl)
-    pts.pmrf <- spline.pmrf(seq(0, 1, 0.001))
+    pts.pmrf <- spline.pmrf(seq(min(pmrf$q50), max(pmrf$q50), 0.001))
     rl.pmrf <- sample(x = pts.pmrf, size = n.risk[2], replace = TRUE)
    
     tbl.pmrf <- tibble::tibble(resp_spl = rl.pmrf, project = "Jacobson_2020", species = "Md", 
@@ -356,6 +356,46 @@ read_data <- function(file = NULL,
     dplyr::arrange(species, tag_id)
   
   #' ---------------------------------------------
+  # Covariate levels
+  #' ---------------------------------------------
+  
+  if(n.covariates > 0){
+    
+    covariates.df <- brsdat %>% 
+      dplyr::select_at(tidyselect::all_of(covariate.names)) %>% 
+      data.frame() %>%
+      dplyr::mutate(dplyr::across(covariate.names[covariate.types == "f"], ~ as.factor(.x)))
+    
+    fL <- sapply(X = covariate.names, 
+                 FUN = function(x) factor_levels(covname = x, dat = covariates.df), 
+                 simplify = FALSE, USE.NAMES = TRUE)
+    
+    # Dummy coding
+    dummy.cov <- purrr::map(
+      .x = seq_len(n.covariates),
+      .f = ~ {
+        if (covariate.types[.x] == "f") {
+          fastDummies::dummy_cols(
+            .data = covariates.df,
+            select_columns = covariate.names[.x],
+            remove_first_dummy = FALSE,
+            remove_selected_columns = TRUE
+          ) %>%
+            dplyr::select(-tidyselect::any_of(covariate.names))
+        } else {
+          covariates.df[, .x, drop = FALSE]
+        }
+      }
+    ) %>%
+      purrr::set_names(., covariate.names)
+    
+    dummy.df <- t(do.call(cbind, dummy.cov))
+    rownames(dummy.df) <- unlist(purrr::map(.x = covariate.names, 
+                                            .f = ~paste0(.x, if(fL[[.x]]$nL == 0) "" else paste0("_", fL[[.x]][["Lnames"]]))))
+    
+  }
+  
+  #' ---------------------------------------------
   # Remove empty records
   #' ---------------------------------------------
   
@@ -393,11 +433,23 @@ read_data <- function(file = NULL,
   #' ---------------------------------------------
   
   brsdat <- brsdat %>% 
+    dplyr::mutate(r = dplyr::row_number()) %>%
     dplyr::filter(species %in% include.species) %>% 
     dplyr::filter(!species %in% exclude.species) %>% 
-    dplyr::mutate(r = dplyr::row_number()) %>% 
     dplyr::mutate(sp_orig = species) 
   
+  #' ---------------------------------------------
+  # Covariates
+  #' ---------------------------------------------
+  
+  if(n.covariates > 0){
+    
+    covariates.df <- covariates.df[brsdat$r, ]
+    dummy.df <- dummy.df[, brsdat$r]
+    dummy.cov <- purrr::map(.x = dummy.cov, .f = ~dplyr::slice(.x, brsdat$r))
+    
+  }
+
   #' ---------------------------------------------
   # Summarise dataset
   #' ---------------------------------------------
@@ -445,42 +497,6 @@ read_data <- function(file = NULL,
   measurement.precision <- 1 / (obs.sd^2)
   
   #' ---------------------------------------------
-  # Covariates
-  #' ---------------------------------------------
-  
-  if(n.covariates > 0){
-    
-    covariates.df <- brsdat %>% 
-      dplyr::select_at(tidyselect::all_of(covariate.names)) %>% 
-      data.frame(.)
-    
-    for(ii in 1:length(covariate.names)){
-      if(covariate.types[ii] == "f") covariates.df[, covariate.names[ii]] <- as.factor(covariates.df[, covariate.names[ii]])
-      if(covariate.types[ii] %in% c("d", "i")) covariates.df[, covariate.names[ii]] <- as.numeric(covariates.df[, covariate.names[ii]])}
-    
-    # Dummy coding
-    dummy.cov <- purrr::map(.x = seq_len(n.covariates),
-                            .f = ~{
-                              if(covariate.types[.x] == "f"){
-                                
-                                fastDummies::dummy_cols(.data = covariates.df, 
-                                                        select_columns = covariate.names[.x],
-                                                        remove_first_dummy = FALSE, 
-                                                        remove_selected_columns = TRUE) %>% 
-                                  dplyr::select(-tidyselect::any_of(covariate.names))
-                                
-                              } else { covariates.df[, .x, drop = FALSE] }}) %>% 
-      purrr::set_names(., covariate.names)
-    
-    dummy.df <- t(do.call(cbind, dummy.cov))
-    
-    fL <- sapply(X = covariate.names, 
-          FUN = function(x) factor_levels(covname = x, dat = covariates.df), 
-          simplify = FALSE, USE.NAMES = TRUE)
-    
-  } # End if n.covariates
-  
-  #' ---------------------------------------------
   # Observations
   #' ---------------------------------------------
   
@@ -504,16 +520,18 @@ read_data <- function(file = NULL,
                      dplyr::group_by(common_name) %>% 
                      dplyr::summarise(N_ind = length(unique(tag_id)), 
                                       N_trials = dplyr::n(),
-                                      censored = sum(is.na(spl)), 
+                                      censored.L = sum(censored == -1), 
+                                      censored.R = sum(censored == 1), 
                                       mean = mean(spl, na.rm = TRUE),
                                       min = min(spl, na.rm = TRUE),
                                       max = max(spl, na.rm = TRUE), .groups = "keep") %>% 
                      dplyr::ungroup())
   
   suppressMessages(species.summary <- 
-                     dplyr::left_join(x = species.summary, 
-                                      y = dplyr::distinct(brsdat[, c("common_name", "species")])) %>% 
-                     dplyr::select(species, common_name, N_ind, N_trials, censored, mean, min, max))
+       dplyr::left_join(x = species.summary, 
+                        y = dplyr::distinct(brsdat[, c("common_name", "species")])) %>% 
+                     dplyr::select(species, common_name, N_ind, N_trials, censored.L,
+                                   censored.R, mean, min, max))
   
   
   #' ---------------------------------------------

@@ -45,15 +45,20 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   cat("\nOBSERVATIONS\n")
   cat("--------------------\n")
   
-  if(!dat.obj$param$sim){
-  cat("Risk function (Moretti et al. 2014):", dat.obj$obs$risk.functions[1], 
-      paste0("(n = ", dat.obj$obs$n.risk[1], ")"), "\n")
-  cat("Risk function (Jacobson et al. 2019):", dat.obj$obs$risk.functions[2], 
-      paste0("(n = ", dat.obj$obs$n.risk[2], ")"), "\n")
-  }
   cat("Left-censoring:", sum(dat.obj$obs$censored < 0), "\n")
   cat("Right-censoring:", sum(dat.obj$obs$censored > 0), "\n")
   cat("Total:", sum(!dat.obj$obs$censored == 0), "\n")
+  
+  cat("\n\n--------------------")
+  cat("\nRISK FUNCTIONS\n")
+  cat("--------------------\n")
+  
+  if(!dat.obj$param$sim){
+    cat("Moretti et al. 2014:", dat.obj$obs$risk.functions[1], 
+        paste0("(n = ", dat.obj$obs$n.risk[1], ")"), "\n")
+    cat("Jacobson et al. 2019:", dat.obj$obs$risk.functions[2], 
+        paste0("(n = ", dat.obj$obs$n.risk[2], ")"), "\n")
+  }
   
   cat("\n--------------------")
   cat("\nSPECIES\n")

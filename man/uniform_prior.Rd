@@ -4,11 +4,9 @@
 \alias{uniform_prior}
 \title{Uniform prior}
 \usage{
-uniform_prior(rj.obj, param.name, param = NULL)
+uniform_prior(param.name, param = NULL)
 }
 \arguments{
-\item{rj.obj}{rjMCMC object.}
-
 \item{param.name}{Parameter name.}
 
 \item{param}{Parameter values.}
