@@ -320,7 +320,7 @@ simulate_data <- function(biphasic = FALSE,
       
     }
 
-    if(!is.null(seed)) set.seed(seed) 
+    if(!is.null(seed)) set.seed(seed)
     # Choose which part of the dose-response curve each whale responds to, with prob pi_ij
     k_ij <- (1 - rbinom(n = n.trials, size = 1, prob = pi_ij)) + 1
     

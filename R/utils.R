@@ -232,6 +232,7 @@ likelihood <- function(biphasic = FALSE,
     }
     
     if(any(c("mu.ij", "nu2", "tau2", "alpha") %in% param.name) | RJ){
+      
       LL.2b <- dt_norm(x = .mu.ij2, location = .nu2, scale = .tau2,
                L = .alpha, U = dose.range[2], do_log = TRUE)
       
@@ -699,7 +700,7 @@ proposal_ff <- function(p.alpha = 10,
     
     # omega (*)
     proposed.omega <- 
-      rt_norm(n = 1, location = 1, scale = p.omega, L = priors["omega", 1], U = priors["omega", 2])
+      rt_norm(n = 1, location = 5, scale = p.omega, L = priors["omega", 1], U = priors["omega", 2])
     
     # mu_ij (*)
     proposed.mu.ij <- matrix(data = NA, nrow = n.trials, ncol = 2)
@@ -835,7 +836,7 @@ proposal_ff_turnedoff <- function(rj.obj, from.phase, prop.scale = list(alpha = 
   fprop$t.ij <- rj.obj$t.ij[rj.obj$iter["t.ij"], ]
   
   inits.bi <- purrr::map(
-    .x = seq_len(nb_groups(.mlist[[.model]])),
+    .x = seq_len(dplyr::n_distinct(.mlist[[.model]])),
     .f = ~ {
       censored <- is.censored[species.trials %in%
                                             which(.mlist[[.model]] == .x)]
