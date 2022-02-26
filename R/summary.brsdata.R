@@ -105,13 +105,13 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
   cat("\nCOVARIATES\n")
   cat("--------------------\n")
   
-  if(dat.obj$covariates$n == 0 ){
+  if(dat.obj$covariates$n == 0){
     
     cat("No covariates\n")
     
   } else {
     
-    allcov <- vector(mode = "list", length = 2)
+    # allcov <- vector(mode = "list", length = 2)
     
     for(cc in dat.obj$covariates$names){
       
