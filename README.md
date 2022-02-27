@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Multi-species Bayesian dose-response models <img src='man/figures/espresso-hex.jpg' align="right" height="180" class="logo"/>
+# Multi-species Bayesian dose-response models <img src='man/figures/espresso-hex.png' align="right" height="180" class="logo"/>
 
 <!-- badges: start -->
 
