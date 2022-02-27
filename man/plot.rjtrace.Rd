@@ -8,8 +8,9 @@
   rj.obj,
   param.name = NULL,
   phase = NULL,
+  type = "both",
   covariates.incl = FALSE,
-  autocorr = TRUE,
+  autocorr = FALSE,
   individual = TRUE
 )
 }

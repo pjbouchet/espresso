@@ -48,8 +48,9 @@
 plot.rjtrace <- function(rj.obj, 
                          param.name = NULL,
                          phase = NULL,
+                         type = "both", # or trace or density
                          covariates.incl = FALSE,
-                         autocorr = TRUE,
+                         autocorr = FALSE,
                          individual = TRUE){
   
   if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
@@ -173,10 +174,11 @@ plot.rjtrace <- function(rj.obj,
     
       do.filter <- FALSE
       MCMC_trace(mcmc.trace, 
-               iter = rj.obj$mcmc$n.iter, 
-               pdf = FALSE, 
-               ind = individual,
-               params = mpars)
+                 type = type,
+                 iter = rj.obj$mcmc$n.iter, 
+                 pdf = FALSE, 
+                 ind = individual,
+                 params = mpars)
       
     }
     
@@ -198,6 +200,7 @@ plot.rjtrace <- function(rj.obj,
       do.filter <- FALSE
       
       MCMC_trace(mcmc.trace, 
+                 type = type,
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
@@ -240,6 +243,7 @@ plot.rjtrace <- function(rj.obj,
     cov.trace.final <- purrr::map(.x = cov.trace.final, .f = ~coda::as.mcmc.list(.x))
     
     MCMC_trace(main.trace, 
+               type = type,
                iter = rj.obj$mcmc$n.iter, 
                pdf = FALSE, 
                ind = individual,
@@ -247,7 +251,7 @@ plot.rjtrace <- function(rj.obj,
     
     purrr::walk2(.x = cov.trace.final,
                  .y = cov.n,
-                 .f = ~MCMC_trace(.x,  iter = .y, pdf = FALSE, ind = individual, params = mpars))
+                 .f = ~MCMC_trace(.x, type = type, iter = .y, pdf = FALSE, ind = individual, params = mpars))
   }
   
   if(autocorr){
