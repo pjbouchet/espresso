@@ -114,13 +114,16 @@ likelihood <- function(biphasic = FALSE,
       cov.effects <- 0
       
       if (n.covariates > 0) {
+        
         if(is.null(included.cov)) included.cov <- .include.covariates
         if (sum(included.cov) > 0) {
 
           covvalues <- unlist(sapply(
             X = covariate.names,
             simplify = FALSE, USE.NAMES = TRUE, 
-            FUN = function(co) get(paste0(".", co))
+            FUN = function(co){
+              if (!is.null(values) & co %in% param.name) {
+                my.q <- values } else { my.q <- get(paste0(".", co))}}
           )) * included.cov[dummy.names]
           
           cov.effects <- colSums(dummy.df * covvalues)
