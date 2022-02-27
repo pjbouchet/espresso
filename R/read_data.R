@@ -445,7 +445,7 @@ read_data <- function(file = NULL,
   if(n.covariates > 0){
     
     covariates.df <- covariates.df[brsdat$r, , drop = FALSE]
-    dummy.df <- dummy.df[, brsdat$r]
+    dummy.df <- dummy.df[, brsdat$r, drop = FALSE]
     dummy.cov <- purrr::map(.x = dummy.cov, .f = ~dplyr::slice(.x, brsdat$r))
     
   }
