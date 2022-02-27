@@ -65,7 +65,7 @@ run_rjMCMC <- function(dat,
   isWindows <- Sys.info()[['sysname']] == "Windows"
   
   # Create a parallel cluster and register the backend
-  cl <- suppressMessages(parallel::makeCluster(n.chains, outfile = "rjmcmc_log.txt"))
+  cl <- suppressMessages(parallel::makeCluster(n.chains, outfile = ""))
   doParallel::registerDoParallel(cl)
  
   # Progress bar

@@ -150,50 +150,6 @@ setup_rjMCMC <- function(rj.input,
   } else {
     colnames(rj$include.covariates) <- "beta"
   }
-  
-  # # Acceptance rates
-  # rj$accept <- list()
-  # 
-  # if(!rj.input$config$biphasic | rj.input$config$function.select){
-  #   rj$accept <- append(rj$accept, 
-  #                       list(t.ij = numeric(rj.input$trials$n),
-  #                            mu.i = numeric(rj.input$whales$n), 
-  #                            mu = 0, 
-  #                            phi = 0, 
-  #                            sigma = 0))
-  # }
-  # 
-  # if(rj.input$config$biphasic){
-  #   rj$accept <- append(rj$accept, list(mu.ij.1 = numeric(rj.input$trials$n), 
-  #                                       mu.ij.2 = numeric(rj.input$trials$n), 
-  #                                       psi.i = numeric(rj.input$whale$n), 
-  #                                       k.ij = numeric(rj.input$trials$n), 
-  #                                       nu = c(0, 0),
-  #                                       tau = c(0, 0),
-  #                                       alpha = 0, 
-  #                                       omega = 0))}
-  #                  
-  # if(rj.input$config$covariate.select){
-  #   rj$accept <- append(rj$accept, list(move.covariates = numeric(1)))}
-  # 
-  # if(rj.input$covariates$n > 0){
-  #   cl <- as.list(numeric(rj.input$covariates$n))
-  #   names(cl) <- rj.input$covariates$names
-  #   rj$accept <- append(rj$accept, cl)
-  # }
-  # 
-  # if(rj.input$config$model.select){
-  #   if(rj.input$config$function.select){
-  #     ml <- list(mono.move.0 = 0, bi.move.0 = 0)
-  #   } else {
-  #     if(rj.input$config$biphasic) ml <- list(bi.move.0 = 0) else ml <- list(mono.move.0 = 0)
-  #   }
-  #   rj$accept <- append(rj$accept, ml)
-  # }
-  # 
-  # if(rj.input$config$function.select){
-  #   rj$accept <- append(rj$accept, list(to.monophasic = 0, to.biphasic = 0))
-  # }
 
   #' -----------------------------------------------
   # Generate starting values
@@ -314,9 +270,6 @@ setup_rjMCMC <- function(rj.input,
 
     # Model parameters 
     # -- BIPHASIC ----
-    
-      # inits.bi <- purrr::map(.x = seq_len(dplyr::n_distinct(current.groups)),
-      #       .f = ~sort(rj.input$obs$y_ij[rj.input$species$trials %in% which(current.groups == .x)]))
       
       inits.bi <- purrr::map(.x = seq_len(dplyr::n_distinct(current.groups)),
                              .f = ~{
@@ -431,21 +384,25 @@ setup_rjMCMC <- function(rj.input,
 
       if(!rj.input$config$biphasic & !rj.input$config$function.select){
       
-      # Right-censored
-      rj$t.ij[1, rj.input$obs$censored == 1] <-
-        rt_norm(n = sum(rj.input$obs$censored == 1),
-              location = mu.ij.config[rj.input$obs$censored == 1],
-              scale = 30,
-              L = rj.input$obs$Rc[rj.input$obs$censored == 1], 
-              U = rj.input$param$dose.range[2])
-      
-      # Left-censored
-      rj$t.ij[1, rj.input$obs$censored == -1] <-
-        rt_norm(n = sum(rj.input$obs$censored == -1),
-               location = mu.ij.config[rj.input$obs$censored == -1],
-               scale = 30,
-               L = rj.input$param$dose.range[1],
-               U = rj.input$obs$Lc[rj.input$obs$censored == -1])
+        # Right-censored
+        if(sum(rj.input$obs$censored == 1) > 0){
+          rj$t.ij[1, rj.input$obs$censored == 1] <-
+            rt_norm(n = sum(rj.input$obs$censored == 1),
+                    location = mu.ij.config[rj.input$obs$censored == 1],
+                    scale = 30,
+                    L = rj.input$obs$Rc[rj.input$obs$censored == 1], 
+                    U = rj.input$param$dose.range[2])
+        }
+        
+        # Left-censored
+        if(sum(rj.input$obs$censored == -1) > 0){
+          rj$t.ij[1, rj.input$obs$censored == -1] <-
+            rt_norm(n = sum(rj.input$obs$censored == -1),
+                    location = mu.ij.config[rj.input$obs$censored == -1],
+                    scale = 30,
+                    L = rj.input$param$dose.range[1],
+                    U = rj.input$obs$Lc[rj.input$obs$censored == -1])
+        }
       
       } else {
        
@@ -493,32 +450,6 @@ setup_rjMCMC <- function(rj.input,
   if(rj.input$config$model.select) rj$accept.model <- numeric(tot.iter)
   if(rj.input$config$covariate.select) rj$accept.covariates <- numeric(tot.iter)
   if(rj.input$config$function.select) rj$accept.phase <- numeric(tot.iter)
-  
-  
-  # Iteration
-  # mod.par <- tibble::tibble(param = c("alpha", "k.ij", "mu", "mu.i", "mu.ij",     
-  #                          "nu", "omega", "phi", "pi.ij", "psi", "psi.i",
-  #                          "sigma", "t.ij", "tau", "covariates", # Need this term even when no covariates
-  #                          rj.input$covariates$names)) %>% 
-  #   dplyr::mutate(monophasic = c(0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 
-  #                                # if (rj.input$covariates$n > 0)
-  #                                  1, 
-  #                                rep(1, rj.input$covariates$n)),
-  #                   biphasic = c(1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 
-  #                                # if (rj.input$covariates$n > 0) 
-  #                                  1,  
-  #                                rep(1, rj.input$covariates$n)))
-  # 
-  # if(!rj.input$config$function.select){
-  #   if(rj.input$config$biphasic) 
-  #     mod.par <- mod.par %>% dplyr::filter(biphasic == 1) else 
-  #       mod.par <- mod.par %>% dplyr::filter(monophasic == 1)
-  # } else {
-  #   mod.par <- mod.par %>% dplyr::filter(biphasic + monophasic > 0)
-  # }
-  # 
-  # rj$iter <- rep(1, nrow(mod.par))
-  # names(rj$iter) <- mod.par$param
   
   # Finally, store the data
   rj$dat <- rj.input
