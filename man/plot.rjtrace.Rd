@@ -9,6 +9,9 @@
   param.name = NULL,
   phase = NULL,
   type = "both",
+  adjust = 2,
+  gvals = NULL,
+  priors = NULL,
   covariates.incl = FALSE,
   autocorr = FALSE,
   individual = TRUE
