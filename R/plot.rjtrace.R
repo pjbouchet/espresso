@@ -49,13 +49,16 @@ plot.rjtrace <- function(rj.obj,
                          param.name = NULL,
                          phase = NULL,
                          type = "both", # or trace or density
+                         adjust = 2,
+                         gvals = NULL,
+                         priors = NULL,
                          covariates.incl = FALSE,
                          autocorr = FALSE,
                          individual = TRUE){
   
   if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
-  if(!is.null(param.name)) { if(param.name %in% c("phi", "sigma", "mu")) phase <- 1 }
-  if(!is.null(param.name)) { if(param.name %in% c("alpha", "tau", "psi", "omega", "nu")) phase <- 2 }
+  if(!is.null(param.name)) { if(any(param.name %in% c("phi", "sigma", "mu"))) phase <- 1 }
+  if(!is.null(param.name)) { if(any(param.name %in% c("alpha", "tau", "psi", "omega", "nu"))) phase <- 2 }
   
   #' ---------------------------------------------
   # Extract the trace and rename columns
@@ -93,37 +96,10 @@ plot.rjtrace <- function(rj.obj,
       colnames(mcmc.trace[[nc]])[grepl(pattern = nn, x = colnames(mcmc.trace[[nc]]))] <- 
         paste0(nn, " (", rj.obj$dat$species$names, ")")
     }
-    
-    # if(rj.obj$config$function.select | rj.obj$config$biphasic){
-    # 
-    # colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.lower", x = colnames(mcmc.trace[[nc]]))] <- 
-    #   gsub(pattern = "nu.lower", replacement = "nu [lower]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.lower", x = colnames(mcmc.trace[[nc]]))])
-    # 
-    # colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.upper", x = colnames(mcmc.trace[[nc]]))] <- 
-    #   gsub(pattern = "nu.upper", replacement = "nu [upper]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "nu.upper", x = colnames(mcmc.trace[[nc]]))])
-    # 
-    # colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.lower", x = colnames(mcmc.trace[[nc]]))] <- 
-    #   gsub(pattern = "tau.lower", replacement = "tau [lower]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.lower", x = colnames(mcmc.trace[[nc]]))])
-    # 
-    # colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.upper", x = colnames(mcmc.trace[[nc]]))] <- 
-    #   gsub(pattern = "tau.upper", replacement = "tau [upper]", x = colnames(mcmc.trace[[nc]])[grepl(pattern = "tau.upper", x = colnames(mcmc.trace[[nc]]))])
-    # 
-    # }
-    
-    # if (rj.obj$config$function.select | !rj.obj$config$biphasic) {
-    #   
-    #   colnames(mcmc.trace[[nc]])[mu.indices] <-
-    #     gsub(pattern = "mu.", replacement = "mu  ", x = colnames(mcmc.trace[[nc]])[mu.indices])
-    #   
-    #   for(j in mu.indices){
-    #     colnames(mcmc.trace[[nc]])[mu.indices] <-
-    #       gsub(pattern = j, replacement = paste0("(", rj.obj$dat$species$names[j], ")"), 
-    #            x = colnames(mcmc.trace[[nc]])[mu.indices])
-    #   }
-    # }
   }
   
-  if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]]) else mpars <- colnames(mcmc.trace[[1]])[startsWith(colnames(mcmc.trace[[1]]), prefix = param.name)]
+  if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]]) else 
+    mpars <- colnames(mcmc.trace[[1]])[purrr::map_dbl(.x = param.name, .f = ~which(startsWith(colnames(mcmc.trace[[1]]), prefix = .x)))]
   if(!rj.obj$config$model.select) mpars <- mpars[!mpars %in% c("model_size", "model_ID")]
   if(!rj.obj$config$covariate.select) mpars <- mpars[!mpars %in% paste0("incl.", rj.obj$dat$covariates$names)]
   if(!rj.obj$config$function.select) mpars <- mpars[!mpars %in% "phase"]
@@ -164,6 +140,8 @@ plot.rjtrace <- function(rj.obj,
   mpars <- mpars[!grepl(pattern = "accept", x = mpars)]
   bpars <- bpars[!grepl(pattern = "accept", x = bpars)]
   
+  # gvals <- rj.post$dat$param[c("mu", "sigma", "phi")] |> unlist()
+  
   if(is.null(param.name)){
     
     if(covariates.incl){
@@ -175,6 +153,9 @@ plot.rjtrace <- function(rj.obj,
       do.filter <- FALSE
       MCMC_trace(mcmc.trace, 
                  type = type,
+                 priors = priors,
+                 gvals = gvals,
+                 adjust = adjust,
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
@@ -201,6 +182,9 @@ plot.rjtrace <- function(rj.obj,
       
       MCMC_trace(mcmc.trace, 
                  type = type,
+                 priors = priors,
+                 gvals = gvals,
+                 adjust = adjust,
                  iter = rj.obj$mcmc$n.iter, 
                  pdf = FALSE, 
                  ind = individual,
@@ -212,8 +196,9 @@ plot.rjtrace <- function(rj.obj,
   
   if(do.filter){
     
-    cov.cols <- purrr::map(.x = param.name[param.name %in% rj.obj$dat$covariates$names],
+    cov.cols <- purrr::map(.x = rj.obj$dat$covariates$names,
                            .f = ~which(grepl(pattern = .x, x = colnames(mcmc.trace[[1]]))))
+    cov.names <- colnames(mcmc.trace[[1]])[cov.cols[[1]]]
     
     cov.trace <- purrr::map(.x = cov.cols, .f = ~mcmc.trace[, .x, drop = FALSE])
     main.trace <- mcmc.trace[, seq_len(ncol(mcmc.trace[[1]]))[-unlist(cov.cols)], drop = FALSE]
@@ -244,14 +229,17 @@ plot.rjtrace <- function(rj.obj,
     
     MCMC_trace(main.trace, 
                type = type,
+               priors = priors,
+               adjust = adjust,
+               gvals = gvals,
                iter = rj.obj$mcmc$n.iter, 
                pdf = FALSE, 
                ind = individual,
-               params = mpars)
+               params = mpars[!mpars %in% cov.names])
     
     purrr::walk2(.x = cov.trace.final,
                  .y = cov.n,
-                 .f = ~MCMC_trace(.x, type = type, iter = .y, pdf = FALSE, ind = individual, params = mpars))
+                 .f = ~MCMC_trace(.x, type = type, gvals = gvals, adjust = adjust, priors = priors, iter = .y, pdf = FALSE, ind = individual))
   }
   
   if(autocorr){

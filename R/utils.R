@@ -2680,628 +2680,454 @@ gg_color_hue <- function(n) {
   return(col)
 }
 
-MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 5000, 
-            gvals = NULL, priors = NULL, post_zm = TRUE, PPO_out = FALSE, 
-            Rhat = FALSE, n.eff = FALSE, ind = FALSE, pdf = TRUE, plot = TRUE, 
-            open_pdf = TRUE, filename, wd = getwd(), type = "both", ylim = NULL, 
-            xlim = NULL, xlab_tr, ylab_tr, xlab_den, ylab_den, main_den = NULL, 
-            main_tr = NULL, lwd_den = 1, lwd_pr = 1, lty_den = 1, lty_pr = 1, 
-            col_den, col_pr, col_txt, sz_txt = 1.2, sz_ax = 1, sz_ax_txt = 1, 
-            sz_tick_txt = 1, sz_main_txt = 1.2, pos_tick_x_tr = NULL, 
-            pos_tick_y_tr = NULL, pos_tick_x_den = NULL, pos_tick_y_den = NULL) 
-  {
+MCMC_trace <- function (object, params = "all", adjust = 2, excl = NULL, ISB = TRUE, iter = 5000, 
+                        gvals = NULL, priors = NULL, post_zm = TRUE, PPO_out = FALSE, 
+                        Rhat = FALSE, n.eff = FALSE, ind = FALSE, pdf = TRUE, plot = TRUE, 
+                        open_pdf = TRUE, filename, wd = getwd(), type = "both", ylim = NULL, 
+                        xlim = NULL, xlab_tr, ylab_tr, xlab_den, ylab_den, main_den = NULL, 
+                        main_tr = NULL, lwd_den = 1, lwd_pr = 1, lty_den = 1, lty_pr = 1, 
+                        col_den, col_pr, col_txt, sz_txt = 1.2, sz_ax = 1, sz_ax_txt = 1, 
+                        sz_tick_txt = 1, sz_main_txt = 1.2, pos_tick_x_tr = NULL, 
+                        pos_tick_y_tr = NULL, pos_tick_x_den = NULL, pos_tick_y_den = NULL) 
+{
   
   
   # Adapted from MCMCvis::MCMCtrace
   # Only change made is to gg_color_hue to allow for different colour palette
   
-    .pardefault <- graphics::par(no.readonly = T)
-    if (methods::is(object, "matrix")) {
-      warning("Input type matrix - assuming only one chain for each parameter.")
-      object1 <- coda::as.mcmc.list(coda::as.mcmc(object))
-      object2 <- MCMCvis::MCMCchains(object1, params, excl, ISB, mcmc.list = TRUE)
+  .pardefault <- graphics::par(no.readonly = T)
+  if (methods::is(object, "matrix")) {
+    warning("Input type matrix - assuming only one chain for each parameter.")
+    object1 <- coda::as.mcmc.list(coda::as.mcmc(object))
+    object2 <- MCMCvis::MCMCchains(object1, params, excl, ISB, mcmc.list = TRUE)
+  }
+  else {
+    object2 <- MCMCvis::MCMCchains(object, params, excl, ISB, mcmc.list = TRUE)
+  }
+  np <- colnames(object2[[1]])
+  n_chains <- length(object2)
+  if (nrow(object2[[1]]) > iter) {
+    it <- (nrow(object2[[1]]) - iter + 1):nrow(object2[[1]])
+  }
+  else {
+    it <- 1:nrow(object2[[1]])
+  }
+  if (!is.null(priors)) {
+    if (NCOL(priors) == 1 & length(np) > 1) {
+      warning("Only one prior specified for > 1 parameter. Using a single prior for all parameters.")
+    }
+    if ((NCOL(priors) > 1 & NCOL(priors) != length(np))) {
+      stop("Number of priors does not equal number of specified parameters.")
+    }
+    if (NROW(priors) > length(it) * n_chains) {
+      warning(paste0("Number of samples in prior is greater than number of total or specified iterations (for all chains) for specified parameter. Only last ", 
+                     length(it) * n_chains, " iterations will be used."))
+    }
+    if (NROW(priors) < length(it) * n_chains) {
+      warning(paste0("Number of samples in prior is less than number of total or specified iterations (for all chains) for specified parameter. Resampling from prior to generate ", 
+                     length(it) * n_chains, " total iterations."))
+    }
+    if (type == "trace") {
+      warning("Prior posterior overlap (PPO) cannot be plotting without density plots. Use type = 'both' or type = 'density'.")
+    }
+  }
+  if (!is.null(gvals)) {
+    if (length(gvals) == 1 & length(np) > 1) {
+      warning("Only one generating value specified for > 1 parameter. Using a single generating value for all parameters.")
+    }
+    if (length(gvals) > 1 & length(gvals) != length(np)) {
+      stop("Number of generating values does not equal number of specified parameters.")
+    }
+  }
+  if (PPO_out == TRUE) {
+    PPO_df <- data.frame(param = rep(NA, length(np)), percent_PPO = rep(NA, length(np)))
+  }
+  if (plot == TRUE) {
+    if (pdf == TRUE) {
+      if (missing(filename)) {
+        file_out <- paste0(wd, "/MCMCtrace.pdf")
+      }
+      else {
+        if (grepl(".pdf", filename, fixed = TRUE)) {
+          file_out <- paste0(wd, "/", filename)
+        }
+        else {
+          file_out <- paste0(wd, "/", filename, ".pdf")
+        }
+      }
+      pdf(file = file_out)
+    }
+    ref_col <- "grey"
+    A_VAL <- 0.5
+    if (type == "both") {
+      if (length(np) >= 3) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                3, 2, byrow = TRUE))
+        graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
+        MN_LINE <- NULL
+      }
+      if (length(np) == 2) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                2, 2, byrow = TRUE))
+        graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
+        MN_LINE <- NULL
+      }
+      if (length(np) == 1) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                1, 2, byrow = TRUE))
+        graphics::par(mar = c(8.1, 4.1, 7.1, 1.1))
+        MN_LINE <- 1.1
+      }
     }
     else {
-      object2 <- MCMCvis::MCMCchains(object, params, excl, ISB, mcmc.list = TRUE)
+      if (length(np) >= 5) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                3, 2, byrow = TRUE))
+        graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
+        MN_LINE <- NULL
+      }
+      if (length(np) == 3 | length(np) == 4) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                2, 2, byrow = TRUE))
+        graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
+        MN_LINE <- NULL
+      }
+      if (length(np) == 2) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                1, 2, byrow = TRUE))
+        graphics::par(mar = c(8.1, 4.1, 7.1, 1.1))
+        MN_LINE <- 1.1
+      }
+      if (length(np) == 1) {
+        graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
+                                1, 1, byrow = TRUE))
+        graphics::par(mar = c(5.1, 4.1, 4.1, 2.1))
+        MN_LINE <- NULL
+      }
     }
-    np <- colnames(object2[[1]])
-    n_chains <- length(object2)
-    if (nrow(object2[[1]]) > iter) {
-      it <- (nrow(object2[[1]]) - iter + 1):nrow(object2[[1]])
+    graphics::par(mgp = c(2.5, 1, 0))
+    
+    colors <- gg_color_hue(n_chains)
+    gg_cols <- grDevices::col2rgb(colors)/255
+    YLIM <- ylim
+    XLIM <- xlim
+    if (!missing(xlab_tr)) {
+      xlab_tr <- xlab_tr
     }
     else {
-      it <- 1:nrow(object2[[1]])
+      xlab_tr <- "Iteration"
     }
-    if (!is.null(priors)) {
-      if (NCOL(priors) == 1 & length(np) > 1) {
-        warning("Only one prior specified for > 1 parameter. Using a single prior for all parameters.")
-      }
-      if ((NCOL(priors) > 1 & NCOL(priors) != length(np))) {
-        stop("Number of priors does not equal number of specified parameters.")
-      }
-      if (NROW(priors) > length(it) * n_chains) {
-        warning(paste0("Number of samples in prior is greater than number of total or specified iterations (for all chains) for specified parameter. Only last ", 
-                       length(it) * n_chains, " iterations will be used."))
-      }
-      if (NROW(priors) < length(it) * n_chains) {
-        warning(paste0("Number of samples in prior is less than number of total or specified iterations (for all chains) for specified parameter. Resampling from prior to generate ", 
-                       length(it) * n_chains, " total iterations."))
-      }
-      if (type == "trace") {
-        warning("Prior posterior overlap (PPO) cannot be plotting without density plots. Use type = 'both' or type = 'density'.")
-      }
+    if (!missing(ylab_tr)) {
+      ylab_tr <- ylab_tr
     }
-    if (!is.null(gvals)) {
-      if (length(gvals) == 1 & length(np) > 1) {
-        warning("Only one generating value specified for > 1 parameter. Using a single generating value for all parameters.")
-      }
-      if (length(gvals) > 1 & length(gvals) != length(np)) {
-        stop("Number of generating values does not equal number of specified parameters.")
+    else {
+      ylab_tr <- "Value"
+    }
+    if (!missing(xlab_den)) {
+      xlab_den <- xlab_den
+    }
+    else {
+      xlab_den <- "Parameter estimate"
+    }
+    if (!missing(ylab_den)) {
+      ylab_den <- ylab_den
+    }
+    else {
+      ylab_den <- "Density"
+    }
+    if (!missing(main_den)) {
+      if (length(main_den) != 1 & length(main_den) != length(np)) {
+        stop("Number of elements for 'main_den' does not equal number of specified parameters.")
       }
     }
-    if (PPO_out == TRUE) {
-      PPO_df <- data.frame(param = rep(NA, length(np)), percent_PPO = rep(NA, length(np)))
+    if (!missing(main_tr)) {
+      if (length(main_tr) != 1 & length(main_tr) != length(np)) {
+        stop("Number of elements for 'main_tr' does not equal number of specified parameters.")
+      }
     }
-    if (plot == TRUE) {
-      if (pdf == TRUE) {
-        if (missing(filename)) {
-          file_out <- paste0(wd, "/MCMCtrace.pdf")
+    MAIN_DEN <- function(x, md = main_den, idx) {
+      if (!is.null(md)) {
+        if (length(md) == 1) {
+          return(md)
         }
         else {
-          if (grepl(".pdf", filename, fixed = TRUE)) {
-            file_out <- paste0(wd, "/", filename)
-          }
-          else {
-            file_out <- paste0(wd, "/", filename, ".pdf")
-          }
-        }
-        pdf(file = file_out)
-      }
-      ref_col <- "red"
-      A_VAL <- 0.5
-      if (type == "both") {
-        if (length(np) >= 3) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  3, 2, byrow = TRUE))
-          graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
-          MN_LINE <- NULL
-        }
-        if (length(np) == 2) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  2, 2, byrow = TRUE))
-          graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
-          MN_LINE <- NULL
-        }
-        if (length(np) == 1) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  1, 2, byrow = TRUE))
-          graphics::par(mar = c(8.1, 4.1, 7.1, 1.1))
-          MN_LINE <- 1.1
+          return(md[idx])
         }
       }
       else {
-        if (length(np) >= 5) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  3, 2, byrow = TRUE))
-          graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
-          MN_LINE <- NULL
-        }
-        if (length(np) == 3 | length(np) == 4) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  2, 2, byrow = TRUE))
-          graphics::par(mar = c(4.1, 4.1, 2.1, 1.1))
-          MN_LINE <- NULL
-        }
-        if (length(np) == 2) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  1, 2, byrow = TRUE))
-          graphics::par(mar = c(8.1, 4.1, 7.1, 1.1))
-          MN_LINE <- 1.1
-        }
-        if (length(np) == 1) {
-          graphics::layout(matrix(c(1, 2, 3, 4, 5, 6), 
-                                  1, 1, byrow = TRUE))
-          graphics::par(mar = c(5.1, 4.1, 4.1, 2.1))
-          MN_LINE <- NULL
-        }
+        # return(paste0("Density - ", x))
+        return(paste0(x))
       }
-      graphics::par(mgp = c(2.5, 1, 0))
-      
-      colors <- gg_color_hue(n_chains)
-      gg_cols <- grDevices::col2rgb(colors)/255
-      YLIM <- ylim
-      XLIM <- xlim
-      if (!missing(xlab_tr)) {
-        xlab_tr <- xlab_tr
-      }
-      else {
-        xlab_tr <- "Iteration"
-      }
-      if (!missing(ylab_tr)) {
-        ylab_tr <- ylab_tr
-      }
-      else {
-        ylab_tr <- "Value"
-      }
-      if (!missing(xlab_den)) {
-        xlab_den <- xlab_den
-      }
-      else {
-        xlab_den <- "Parameter estimate"
-      }
-      if (!missing(ylab_den)) {
-        ylab_den <- ylab_den
-      }
-      else {
-        ylab_den <- "Density"
-      }
-      if (!missing(main_den)) {
-        if (length(main_den) != 1 & length(main_den) != length(np)) {
-          stop("Number of elements for 'main_den' does not equal number of specified parameters.")
-        }
-      }
-      if (!missing(main_tr)) {
-        if (length(main_tr) != 1 & length(main_tr) != length(np)) {
-          stop("Number of elements for 'main_tr' does not equal number of specified parameters.")
-        }
-      }
-      MAIN_DEN <- function(x, md = main_den, idx) {
-        if (!is.null(md)) {
-          if (length(md) == 1) {
-            return(md)
-          }
-          else {
-            return(md[idx])
-          }
+    }
+    MAIN_TR <- function(x, mtr = main_tr, idx) {
+      if (!is.null(mtr)) {
+        if (length(mtr) == 1) {
+          return(mtr)
         }
         else {
-          # return(paste0("Density - ", x))
-          return(paste0(x))
+          return(mtr[idx])
         }
       }
-      MAIN_TR <- function(x, mtr = main_tr, idx) {
-        if (!is.null(mtr)) {
-          if (length(mtr) == 1) {
-            return(mtr)
+      else {
+        # return(paste0("Trace - ", x))
+        return(paste0(x))
+      }
+    }
+    if (missing(col_den)) {
+      COL_DEN <- "black"
+    }
+    else {
+      COL_DEN <- col_den
+    }
+    if (missing(col_pr)) {
+      COL_PR <- "steelblue"
+    }
+    else {
+      COL_PR <- col_pr
+    }
+    if (missing(col_txt)) {
+      COL_TXT <- "steelblue"
+    }
+    else {
+      COL_TXT <- col_txt
+    }
+    if (is.null(pos_tick_x_den)) {
+      XAXT_DEN <- "s"
+    }
+    else {
+      XAXT_DEN <- "n"
+    }
+    if (is.null(pos_tick_y_den)) {
+      YAXT_DEN <- "s"
+    }
+    else {
+      YAXT_DEN <- "n"
+    }
+    if (is.null(pos_tick_x_tr)) {
+      XAXT_TR <- "s"
+    }
+    else {
+      XAXT_TR <- "n"
+    }
+    if (is.null(pos_tick_y_tr)) {
+      YAXT_TR <- "s"
+    }
+    else {
+      YAXT_TR <- "n"
+    }
+    if (Rhat == TRUE | n.eff == TRUE) {
+      summ <- MCMCvis::MCMCsummary(object, params = params, excl = excl, 
+                                   ISB = ISB, Rhat = Rhat, n.eff = n.eff)
+      if (Rhat == TRUE) {
+        rhat <- summ[, grep("Rhat", colnames(summ))]
+      }
+      if (n.eff == TRUE) {
+        neff <- summ[, grep("n.eff", colnames(summ))]
+      }
+    }
+    if (type == "both") {
+      for (j in 1:length(np)) {
+        tmlt <- do.call("cbind", object2[it, np[j]])
+        graphics::matplot(it, tmlt, lwd = 1, lty = 1, 
+                          type = "l", main = NULL, col = grDevices::rgb(red = gg_cols[1, 
+                          ], green = gg_cols[2, ], blue = gg_cols[3, 
+                          ], alpha = A_VAL), xlab = xlab_tr, ylab = ylab_tr, 
+                          cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
+                          xaxt = XAXT_TR, yaxt = YAXT_TR)
+        graphics::title(main = MAIN_TR(np[j], main_tr, 
+                                       j), line = MN_LINE, cex.main = sz_main_txt)
+        graphics::axis(side = 1, at = pos_tick_x_tr, 
+                       cex.axis = sz_tick_txt)
+        graphics::axis(side = 2, at = pos_tick_y_tr, 
+                       cex.axis = sz_tick_txt)
+        if (!missing(sz_ax)) {
+          graphics::box(lwd = sz_ax)
+          graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
+                         at = pos_tick_x_tr)
+          graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
+                         at = pos_tick_y_tr)
+        }
+        if (!is.null(priors)) {
+          if (NCOL(priors) == 1) {
+            wp <- priors
           }
           else {
-            return(mtr[idx])
+            wp <- priors[, j]
+          }
+          lwp <- length(wp)
+          if (lwp > length(it) * n_chains) {
+            pit <- (lwp - (length(it) * n_chains) + 1):lwp
+            wp2 <- wp[pit]
+          }
+          if (lwp < length(it) * n_chains) {
+            samps <- sample(wp, size = ((length(it) * 
+                                           n_chains) - lwp), replace = TRUE)
+            wp2 <- c(wp, samps)
+          }
+          if (lwp == length(it) * n_chains) {
+            wp2 <- wp
+          }
+          dpr <- density(wp2, adjust = adjust)
+          PPO_x_rng <- range(dpr$x)
+          PPO_y_rng <- range(dpr$y)
+          tmlt_1c <- matrix(tmlt, ncol = 1)
+          pp <- list(wp2, tmlt_1c)
+          ovr_v <- round((overlapping::overlap(pp)$OV[[1]]) * 
+                           100, digits = 1)
+          ovrlap <- paste0(ovr_v, "% overlap")
+          if (PPO_out == TRUE) {
+            PPO_df$param[j] <- np[j]
+            PPO_df$percent_PPO[j] <- ovr_v
           }
         }
-        else {
-          # return(paste0("Trace - ", x))
-          return(paste0(x))
-        }
-      }
-      if (missing(col_den)) {
-        COL_DEN <- "black"
-      }
-      else {
-        COL_DEN <- col_den
-      }
-      if (missing(col_pr)) {
-        COL_PR <- "red"
-      }
-      else {
-        COL_PR <- col_pr
-      }
-      if (missing(col_txt)) {
-        COL_TXT <- "red"
-      }
-      else {
-        COL_TXT <- col_txt
-      }
-      if (is.null(pos_tick_x_den)) {
-        XAXT_DEN <- "s"
-      }
-      else {
-        XAXT_DEN <- "n"
-      }
-      if (is.null(pos_tick_y_den)) {
-        YAXT_DEN <- "s"
-      }
-      else {
-        YAXT_DEN <- "n"
-      }
-      if (is.null(pos_tick_x_tr)) {
-        XAXT_TR <- "s"
-      }
-      else {
-        XAXT_TR <- "n"
-      }
-      if (is.null(pos_tick_y_tr)) {
-        YAXT_TR <- "s"
-      }
-      else {
-        YAXT_TR <- "n"
-      }
-      if (Rhat == TRUE | n.eff == TRUE) {
-        summ <- MCMCvis::MCMCsummary(object, params = params, excl = excl, 
-                            ISB = ISB, Rhat = Rhat, n.eff = n.eff)
-        if (Rhat == TRUE) {
-          rhat <- summ[, grep("Rhat", colnames(summ))]
-        }
-        if (n.eff == TRUE) {
-          neff <- summ[, grep("n.eff", colnames(summ))]
-        }
-      }
-      if (type == "both") {
-        for (j in 1:length(np)) {
-          tmlt <- do.call("cbind", object2[it, np[j]])
-          graphics::matplot(it, tmlt, lwd = 1, lty = 1, 
-                            type = "l", main = NULL, col = grDevices::rgb(red = gg_cols[1, 
-                            ], green = gg_cols[2, ], blue = gg_cols[3, 
-                            ], alpha = A_VAL), xlab = xlab_tr, ylab = ylab_tr, 
-                            cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
-                            xaxt = XAXT_TR, yaxt = YAXT_TR)
-          graphics::title(main = MAIN_TR(np[j], main_tr, 
-                                         j), line = MN_LINE, cex.main = sz_main_txt)
-          graphics::axis(side = 1, at = pos_tick_x_tr, 
+        if (ind == TRUE & n_chains > 1) {
+          dens <- apply(tmlt, 2, density, adjust = adjust)
+          max_den_y <- c()
+          rng_den_x <- c()
+          for (k in 1:NCOL(tmlt)) {
+            max_den_y <- c(max_den_y, max(dens[[k]]$y))
+            rng_den_x <- c(rng_den_x, range(dens[[k]]$x))
+          }
+          if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
+              is.null(xlim)) {
+            ylim <- range(c(0, max(max_den_y), PPO_y_rng))
+            xlim <- range(c(range(rng_den_x), PPO_x_rng))
+          }
+          else {
+            if (!is.null(ylim)) {
+              ylim <- YLIM
+              xlim <- XLIM
+            }
+            if (is.null(ylim) & is.null(xlim)) {
+              ylim <- c(0, max(max_den_y))
+              xlim <- NULL
+            }
+          }
+          graphics::plot(dens[[1]], xlab = xlab_den, 
+                         ylab = ylab_den, ylim = ylim, xlim = xlim, 
+                         lty = lty_den, lwd = lwd_den, main = "", 
+                         col = grDevices::rgb(red = gg_cols[1, 1], 
+                                              green = gg_cols[2, 1], blue = gg_cols[3, 
+                                                                                    1]), cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
+                         xaxt = XAXT_DEN, yaxt = YAXT_DEN)
+          graphics::title(main = MAIN_DEN(np[j], main_den, 
+                                          j), line = MN_LINE, cex.main = sz_main_txt)
+          graphics::axis(side = 1, at = pos_tick_x_den, 
                          cex.axis = sz_tick_txt)
-          graphics::axis(side = 2, at = pos_tick_y_tr, 
+          graphics::axis(side = 2, at = pos_tick_y_den, 
+                         cex.axis = sz_tick_txt)
+          for (l in 2:NCOL(tmlt)) {
+            graphics::lines(dens[[l]], lty = lty_den, 
+                            lwd = lwd_den, col = grDevices::rgb(red = gg_cols[1, 
+                                                                              l], green = gg_cols[2, l], blue = gg_cols[3, 
+                                                                                                                        l]))
+          }
+          if (!missing(sz_ax)) {
+            graphics::box(lwd = sz_ax)
+            graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
+                           at = pos_tick_x_den)
+            graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
+                           at = pos_tick_y_den)
+          }
+        }
+        else {
+          dens <- density(rbind(tmlt), adjust = adjust)
+          rng_den_x <- range(dens$x)
+          if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
+              is.null(xlim)) {
+            ylim <- range(c(range(dens$y), PPO_y_rng))
+            xlim <- range(c(range(dens$x), PPO_x_rng))
+          }
+          else {
+            if (!is.null(ylim)) {
+              ylim <- YLIM
+              xlim <- XLIM
+            }
+            if (is.null(ylim) & is.null(xlim)) {
+              ylim <- NULL
+              xlim <- NULL
+            }
+          }
+          graphics::plot(dens, xlab = xlab_den, ylab = ylab_den, 
+                         ylim = ylim, main = "", col = COL_DEN, xlim = xlim, 
+                         lty = lty_den, lwd = lwd_den, cex.axis = sz_tick_txt, 
+                         cex.lab = sz_ax_txt, xaxt = XAXT_DEN, yaxt = YAXT_DEN)
+          graphics::title(main = MAIN_DEN(np[j], main_den, 
+                                          j), line = MN_LINE, cex.main = sz_main_txt)
+          graphics::axis(side = 1, at = pos_tick_x_den, 
+                         cex.axis = sz_tick_txt)
+          graphics::axis(side = 2, at = pos_tick_y_den, 
                          cex.axis = sz_tick_txt)
           if (!missing(sz_ax)) {
             graphics::box(lwd = sz_ax)
             graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
-                           at = pos_tick_x_tr)
+                           at = pos_tick_x_den)
             graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
-                           at = pos_tick_y_tr)
+                           at = pos_tick_y_den)
           }
-          if (!is.null(priors)) {
-            if (NCOL(priors) == 1) {
-              wp <- priors
-            }
-            else {
-              wp <- priors[, j]
-            }
-            lwp <- length(wp)
-            if (lwp > length(it) * n_chains) {
-              pit <- (lwp - (length(it) * n_chains) + 1):lwp
-              wp2 <- wp[pit]
-            }
-            if (lwp < length(it) * n_chains) {
-              samps <- sample(wp, size = ((length(it) * 
-                                             n_chains) - lwp), replace = TRUE)
-              wp2 <- c(wp, samps)
-            }
-            if (lwp == length(it) * n_chains) {
-              wp2 <- wp
-            }
-            dpr <- density(wp2)
-            PPO_x_rng <- range(dpr$x)
-            PPO_y_rng <- range(dpr$y)
-            tmlt_1c <- matrix(tmlt, ncol = 1)
-            pp <- list(wp2, tmlt_1c)
-            ovr_v <- round((overlapping::overlap(pp)$OV[[1]]) * 
-                             100, digits = 1)
-            ovrlap <- paste0(ovr_v, "% overlap")
-            if (PPO_out == TRUE) {
-              PPO_df$param[j] <- np[j]
-              PPO_df$percent_PPO[j] <- ovr_v
-            }
+        }
+        if (!is.null(priors)) {
+          graphics::lines(dpr, col = COL_PR, lwd = lwd_pr, 
+                          lty = lty_pr)
+          if (!is.null(sz_txt) & !is.null(COL_TXT)) {
+            graphics::legend("topright", legend = ovrlap, 
+                             bty = "n", pch = NA, text.col = COL_TXT, 
+                             cex = sz_txt)
           }
-          if (ind == TRUE & n_chains > 1) {
-            dens <- apply(tmlt, 2, density)
-            max_den_y <- c()
-            rng_den_x <- c()
-            for (k in 1:NCOL(tmlt)) {
-              max_den_y <- c(max_den_y, max(dens[[k]]$y))
-              rng_den_x <- c(rng_den_x, range(dens[[k]]$x))
-            }
-            if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
-                is.null(xlim)) {
-              ylim <- range(c(0, max(max_den_y), PPO_y_rng))
-              xlim <- range(c(range(rng_den_x), PPO_x_rng))
-            }
-            else {
-              if (!is.null(ylim)) {
-                ylim <- YLIM
-                xlim <- XLIM
-              }
-              if (is.null(ylim) & is.null(xlim)) {
-                ylim <- c(0, max(max_den_y))
-                xlim <- NULL
-              }
-            }
-            graphics::plot(dens[[1]], xlab = xlab_den, 
-                           ylab = ylab_den, ylim = ylim, xlim = xlim, 
-                           lty = lty_den, lwd = lwd_den, main = "", 
-                           col = grDevices::rgb(red = gg_cols[1, 1], 
-                                                green = gg_cols[2, 1], blue = gg_cols[3, 
-                                                                                      1]), cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
-                           xaxt = XAXT_DEN, yaxt = YAXT_DEN)
-            graphics::title(main = MAIN_DEN(np[j], main_den, 
-                                            j), line = MN_LINE, cex.main = sz_main_txt)
-            graphics::axis(side = 1, at = pos_tick_x_den, 
-                           cex.axis = sz_tick_txt)
-            graphics::axis(side = 2, at = pos_tick_y_den, 
-                           cex.axis = sz_tick_txt)
-            for (l in 2:NCOL(tmlt)) {
-              graphics::lines(dens[[l]], lty = lty_den, 
-                              lwd = lwd_den, col = grDevices::rgb(red = gg_cols[1, 
-                                                                                l], green = gg_cols[2, l], blue = gg_cols[3, 
-                                                                                                                          l]))
-            }
-            if (!missing(sz_ax)) {
-              graphics::box(lwd = sz_ax)
-              graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_x_den)
-              graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_y_den)
-            }
+        }
+        if (Rhat == TRUE & n.eff == TRUE) {
+          diag_txt <- list(paste0("Rhat: ", rhat[j]), 
+                           paste0("n.eff: ", neff[j]))
+        }
+        if (Rhat == TRUE & n.eff == FALSE) {
+          diag_txt <- paste0("Rhat: ", rhat[j])
+        }
+        if (Rhat == FALSE & n.eff == TRUE) {
+          diag_txt <- paste0("n.eff: ", neff[j])
+        }
+        if (Rhat == TRUE | n.eff == TRUE) {
+          if (!is.null(sz_txt) & !is.null(COL_TXT)) {
+            graphics::legend("topleft", x.intersp = -0.5, 
+                             legend = diag_txt, bty = "n", pch = NA, 
+                             text.col = COL_TXT, cex = sz_txt)
+          }
+        }
+        if (!is.null(gvals)) {
+          if (length(gvals) == 1) {
+            gv <- gvals
           }
           else {
-            dens <- density(rbind(tmlt))
-            rng_den_x <- range(dens$x)
-            if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
-                is.null(xlim)) {
-              ylim <- range(c(range(dens$y), PPO_y_rng))
-              xlim <- range(c(range(dens$x), PPO_x_rng))
-            }
-            else {
-              if (!is.null(ylim)) {
-                ylim <- YLIM
-                xlim <- XLIM
-              }
-              if (is.null(ylim) & is.null(xlim)) {
-                ylim <- NULL
-                xlim <- NULL
-              }
-            }
-            graphics::plot(dens, xlab = xlab_den, ylab = ylab_den, 
-                           ylim = ylim, main = "", col = COL_DEN, xlim = xlim, 
-                           lty = lty_den, lwd = lwd_den, cex.axis = sz_tick_txt, 
-                           cex.lab = sz_ax_txt, xaxt = XAXT_DEN, yaxt = YAXT_DEN)
-            graphics::title(main = MAIN_DEN(np[j], main_den, 
-                                            j), line = MN_LINE, cex.main = sz_main_txt)
-            graphics::axis(side = 1, at = pos_tick_x_den, 
-                           cex.axis = sz_tick_txt)
-            graphics::axis(side = 2, at = pos_tick_y_den, 
-                           cex.axis = sz_tick_txt)
-            if (!missing(sz_ax)) {
-              graphics::box(lwd = sz_ax)
-              graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_x_den)
-              graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_y_den)
-            }
+            gv <- gvals[j]
           }
-          if (!is.null(priors)) {
-            graphics::lines(dpr, col = COL_PR, lwd = lwd_pr, 
-                            lty = lty_pr)
-            if (!is.null(sz_txt) & !is.null(COL_TXT)) {
-              graphics::legend("topright", legend = ovrlap, 
-                               bty = "n", pch = NA, text.col = COL_TXT, 
-                               cex = sz_txt)
-            }
-          }
-          if (Rhat == TRUE & n.eff == TRUE) {
-            diag_txt <- list(paste0("Rhat: ", rhat[j]), 
-                             paste0("n.eff: ", neff[j]))
-          }
-          if (Rhat == TRUE & n.eff == FALSE) {
-            diag_txt <- paste0("Rhat: ", rhat[j])
-          }
-          if (Rhat == FALSE & n.eff == TRUE) {
-            diag_txt <- paste0("n.eff: ", neff[j])
-          }
-          if (Rhat == TRUE | n.eff == TRUE) {
-            if (!is.null(sz_txt) & !is.null(COL_TXT)) {
-              graphics::legend("topleft", x.intersp = -0.5, 
-                               legend = diag_txt, bty = "n", pch = NA, 
-                               text.col = COL_TXT, cex = sz_txt)
-            }
-          }
-          if (!is.null(gvals)) {
-            if (length(gvals) == 1) {
-              gv <- gvals
-            }
-            else {
-              gv <- gvals[j]
-            }
-            graphics::abline(v = gv, lty = 2, lwd = 3, 
-                             col = ref_col)
-          }
+          graphics::abline(v = gv, lty = 2, lwd = 1, col = ref_col)
         }
-      }
-      if (type == "trace") {
-        for (j in 1:length(np)) {
-          tmlt <- do.call("cbind", object2[it, np[j]])
-          graphics::matplot(it, tmlt, lwd = 1, lty = 1, 
-                            type = "l", main = NULL, col = grDevices::rgb(red = gg_cols[1, 
-                            ], green = gg_cols[2, ], blue = gg_cols[3, 
-                            ], alpha = A_VAL), xlab = xlab_tr, ylab = ylab_tr, 
-                            cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
-                            xaxt = XAXT_TR, yaxt = YAXT_TR)
-          graphics::title(main = MAIN_TR(np[j], main_tr, 
-                                         j), line = MN_LINE, cex.main = sz_main_txt)
-          graphics::axis(side = 1, at = pos_tick_x_tr, 
-                         cex.axis = sz_tick_txt)
-          graphics::axis(side = 2, at = pos_tick_y_tr, 
-                         cex.axis = sz_tick_txt)
-          if (!missing(sz_ax)) {
-            graphics::box(lwd = sz_ax)
-            graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
-                           at = pos_tick_x_tr)
-            graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
-                           at = pos_tick_y_tr)
-          }
-        }
-      }
-      if (type == "density") {
-        for (j in 1:length(np)) {
-          tmlt <- do.call("cbind", object2[it, np[j]])
-          if (!is.null(priors)) {
-            if (NCOL(priors) == 1) {
-              wp <- priors
-            }
-            else {
-              wp <- priors[, j]
-            }
-            lwp <- length(wp)
-            if (lwp > length(it) * n_chains) {
-              pit <- (lwp - (length(it) * n_chains) + 1):lwp
-              wp2 <- wp[pit]
-            }
-            if (lwp < length(it) * n_chains) {
-              samps <- sample(wp, size = ((length(it) * 
-                                             n_chains) - lwp), replace = TRUE)
-              wp2 <- c(wp, samps)
-            }
-            if (lwp == length(it) * n_chains) {
-              wp2 <- wp
-            }
-            dpr <- density(wp2)
-            PPO_x_rng <- range(dpr$x)
-            PPO_y_rng <- range(dpr$y)
-            tmlt_1c <- matrix(tmlt, ncol = 1)
-            pp <- list(wp2, tmlt_1c)
-            ovr_v <- round((overlapping::overlap(pp)$OV[[1]]) * 
-                             100, digits = 1)
-            ovrlap <- paste0(ovr_v, "% overlap")
-            if (PPO_out == TRUE) {
-              PPO_df$param[j] <- np[j]
-              PPO_df$percent_PPO[j] <- ovr_v
-            }
-          }
-          if (ind == TRUE & n_chains > 1) {
-            dens <- apply(tmlt, 2, density)
-            max_den_y <- c()
-            rng_den_x <- c()
-            for (k in 1:NCOL(tmlt)) {
-              max_den_y <- c(max_den_y, max(dens[[k]]$y))
-              rng_den_x <- c(rng_den_x, range(dens[[k]]$x))
-            }
-            if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
-                is.null(xlim)) {
-              ylim <- range(c(0, max(max_den_y), PPO_y_rng))
-              xlim <- range(c(range(rng_den_x), PPO_x_rng))
-            }
-            else {
-              if (!is.null(ylim)) {
-                ylim <- YLIM
-                xlim <- XLIM
-              }
-              if (is.null(ylim) & is.null(xlim)) {
-                ylim <- c(0, max(max_den_y))
-                xlim <- NULL
-              }
-            }
-            graphics::plot(dens[[1]], xlab = xlab_den, 
-                           ylab = ylab_den, ylim = ylim, xlim = xlim, 
-                           lty = lty_den, lwd = lwd_den, main = "", 
-                           col = grDevices::rgb(red = gg_cols[1, 1], 
-                                                green = gg_cols[2, 1], blue = gg_cols[3, 
-                                                                                      1]), cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
-                           xaxt = XAXT_DEN, yaxt = YAXT_DEN)
-            graphics::title(main = MAIN_DEN(np[j], main_den, 
-                                            j), line = MN_LINE, cex.main = sz_main_txt)
-            graphics::axis(side = 1, at = pos_tick_x_den, 
-                           cex.axis = sz_tick_txt)
-            graphics::axis(side = 2, at = pos_tick_y_den, 
-                           cex.axis = sz_tick_txt)
-            for (l in 2:NCOL(tmlt)) {
-              graphics::lines(dens[[l]], lty = lty_den, 
-                              lwd = lwd_den, col = grDevices::rgb(red = gg_cols[1, 
-                                                                                l], green = gg_cols[2, l], blue = gg_cols[3, 
-                                                                                                                          l]))
-            }
-            if (!missing(sz_ax)) {
-              graphics::box(lwd = sz_ax)
-              graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_x_den)
-              graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_y_den)
-            }
-          }
-          else {
-            dens <- density(rbind(tmlt))
-            if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
-                is.null(xlim)) {
-              ylim <- range(c(range(dens$y), PPO_y_rng))
-              xlim <- range(c(range(dens$x), PPO_x_rng))
-            }
-            else {
-              if (!is.null(ylim)) {
-                ylim <- YLIM
-                xlim <- XLIM
-              }
-              if (is.null(ylim) & is.null(xlim)) {
-                ylim <- NULL
-                xlim <- NULL
-              }
-            }
-            graphics::plot(density(rbind(tmlt)), 
-                           xlab = xlab_den, ylab = ylab_den, ylim = ylim, 
-                           col = COL_DEN, xlim = xlim, lty = lty_den, 
-                           lwd = lwd_den, main = "", cex.axis = sz_tick_txt, 
-                           cex.lab = sz_ax_txt, xaxt = XAXT_DEN, yaxt = YAXT_DEN)
-            graphics::title(main = MAIN_DEN(np[j], main_den, 
-                                            j), line = MN_LINE, cex.main = sz_main_txt)
-            graphics::axis(side = 1, at = pos_tick_x_den, 
-                           cex.axis = sz_tick_txt)
-            graphics::axis(side = 2, at = pos_tick_y_den, 
-                           cex.axis = sz_tick_txt)
-            if (!missing(sz_ax)) {
-              graphics::box(lwd = sz_ax)
-              graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_x_den)
-              graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
-                             at = pos_tick_y_den)
-            }
-          }
-          if (!is.null(priors)) {
-            graphics::lines(dpr, col = COL_PR, lwd = lwd_pr, 
-                            lty = lty_pr)
-            if (!is.null(sz_txt) & !is.null(COL_TXT)) {
-              graphics::legend("topright", legend = ovrlap, 
-                               bty = "n", pch = NA, text.col = COL_TXT, 
-                               cex = sz_txt)
-            }
-          }
-          if (Rhat == TRUE & n.eff == TRUE) {
-            diag_txt <- list(paste0("Rhat: ", rhat[j]), 
-                             paste0("n.eff: ", neff[j]))
-          }
-          if (Rhat == TRUE & n.eff == FALSE) {
-            diag_txt <- paste0("Rhat: ", rhat[j])
-          }
-          if (Rhat == FALSE & n.eff == TRUE) {
-            diag_txt <- paste0("n.eff: ", neff[j])
-          }
-          if (Rhat == TRUE | n.eff == TRUE) {
-            if (!is.null(sz_txt) & !is.null(COL_TXT)) {
-              graphics::legend("topleft", x.intersp = -0.5, 
-                               legend = diag_txt, bty = "n", pch = NA, 
-                               text.col = COL_TXT, cex = sz_txt)
-            }
-          }
-          if (!is.null(gvals)) {
-            if (length(gvals) == 1) {
-              gv <- gvals
-            }
-            else {
-              gv <- gvals[j]
-            }
-            graphics::abline(v = gv, lty = 2, lwd = 3, 
-                             col = ref_col)
-          }
-        }
-      }
-      if (type != "both" & type != "density" & type != "trace") {
-        stop("Invalid argument for \"type\". Valid inputs are \"both\", \"trace\", and \"density\".")
-      }
-      if (pdf == TRUE) {
-        invisible(grDevices::dev.off())
-        if (open_pdf == TRUE) {
-          system(paste0("open ", file_out))
-        }
-      }
-      else {
-        graphics::par(.pardefault)
       }
     }
-    if (plot == FALSE) {
+    if (type == "trace") {
+      for (j in 1:length(np)) {
+        tmlt <- do.call("cbind", object2[it, np[j]])
+        graphics::matplot(it, tmlt, lwd = 1, lty = 1, 
+                          type = "l", main = NULL, col = grDevices::rgb(red = gg_cols[1, 
+                          ], green = gg_cols[2, ], blue = gg_cols[3, 
+                          ], alpha = A_VAL), xlab = xlab_tr, ylab = ylab_tr, 
+                          cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
+                          xaxt = XAXT_TR, yaxt = YAXT_TR)
+        graphics::title(main = MAIN_TR(np[j], main_tr, 
+                                       j), line = MN_LINE, cex.main = sz_main_txt)
+        graphics::axis(side = 1, at = pos_tick_x_tr, 
+                       cex.axis = sz_tick_txt)
+        graphics::axis(side = 2, at = pos_tick_y_tr, 
+                       cex.axis = sz_tick_txt)
+        if (!missing(sz_ax)) {
+          graphics::box(lwd = sz_ax)
+          graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
+                         at = pos_tick_x_tr)
+          graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
+                         at = pos_tick_y_tr)
+        }
+      }
+    }
+    if (type == "density") {
       for (j in 1:length(np)) {
         tmlt <- do.call("cbind", object2[it, np[j]])
         if (!is.null(priors)) {
@@ -3317,14 +3143,14 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             wp2 <- wp[pit]
           }
           if (lwp < length(it) * n_chains) {
-            samps <- sample(wp, size = ((length(it) * n_chains) - 
-                                          lwp), replace = TRUE)
+            samps <- sample(wp, size = ((length(it) * 
+                                           n_chains) - lwp), replace = TRUE)
             wp2 <- c(wp, samps)
           }
           if (lwp == length(it) * n_chains) {
             wp2 <- wp
           }
-          dpr <- density(wp2)
+          dpr <- density(wp2, adjust = adjust)
           PPO_x_rng <- range(dpr$x)
           PPO_y_rng <- range(dpr$y)
           tmlt_1c <- matrix(tmlt, ncol = 1)
@@ -3337,15 +3163,187 @@ MCMC_trace <- function (object, params = "all", excl = NULL, ISB = TRUE, iter = 
             PPO_df$percent_PPO[j] <- ovr_v
           }
         }
+        if (ind == TRUE & n_chains > 1) {
+          dens <- apply(tmlt, 2, density, adjust = adjust)
+          max_den_y <- c()
+          rng_den_x <- c()
+          for (k in 1:NCOL(tmlt)) {
+            max_den_y <- c(max_den_y, max(dens[[k]]$y))
+            rng_den_x <- c(rng_den_x, range(dens[[k]]$x))
+          }
+          if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
+              is.null(xlim)) {
+            ylim <- range(c(0, max(max_den_y), PPO_y_rng))
+            xlim <- range(c(range(rng_den_x), PPO_x_rng))
+          }
+          else {
+            if (!is.null(ylim)) {
+              ylim <- YLIM
+              xlim <- XLIM
+            }
+            if (is.null(ylim) & is.null(xlim)) {
+              ylim <- c(0, max(max_den_y))
+              xlim <- NULL
+            }
+          }
+          graphics::plot(dens[[1]], xlab = xlab_den, 
+                         ylab = ylab_den, ylim = ylim, xlim = xlim, 
+                         lty = lty_den, lwd = lwd_den, main = "", 
+                         col = grDevices::rgb(red = gg_cols[1, 1], 
+                                              green = gg_cols[2, 1], blue = gg_cols[3, 
+                                                                                    1]), cex.axis = sz_tick_txt, cex.lab = sz_ax_txt, 
+                         xaxt = XAXT_DEN, yaxt = YAXT_DEN)
+          graphics::title(main = MAIN_DEN(np[j], main_den, 
+                                          j), line = MN_LINE, cex.main = sz_main_txt)
+          graphics::axis(side = 1, at = pos_tick_x_den, 
+                         cex.axis = sz_tick_txt)
+          graphics::axis(side = 2, at = pos_tick_y_den, 
+                         cex.axis = sz_tick_txt)
+          for (l in 2:NCOL(tmlt)) {
+            graphics::lines(dens[[l]], lty = lty_den, 
+                            lwd = lwd_den, col = grDevices::rgb(red = gg_cols[1, 
+                                                                              l], green = gg_cols[2, l], blue = gg_cols[3, 
+                                                                                                                        l]))
+          }
+          if (!missing(sz_ax)) {
+            graphics::box(lwd = sz_ax)
+            graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
+                           at = pos_tick_x_den)
+            graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
+                           at = pos_tick_y_den)
+          }
+        }
+        else {
+          dens <- density(rbind(tmlt), adjust = adjust)
+          if (!is.null(priors) & post_zm == FALSE & is.null(ylim) & 
+              is.null(xlim)) {
+            ylim <- range(c(range(dens$y), PPO_y_rng))
+            xlim <- range(c(range(dens$x), PPO_x_rng))
+          }
+          else {
+            if (!is.null(ylim)) {
+              ylim <- YLIM
+              xlim <- XLIM
+            }
+            if (is.null(ylim) & is.null(xlim)) {
+              ylim <- NULL
+              xlim <- NULL
+            }
+          }
+          graphics::plot(density(rbind(tmlt), adjust = adjust), 
+                         xlab = xlab_den, ylab = ylab_den, ylim = ylim, 
+                         col = COL_DEN, xlim = xlim, lty = lty_den, 
+                         lwd = lwd_den, main = "", cex.axis = sz_tick_txt, 
+                         cex.lab = sz_ax_txt, xaxt = XAXT_DEN, yaxt = YAXT_DEN)
+          graphics::title(main = MAIN_DEN(np[j], main_den, 
+                                          j), line = MN_LINE, cex.main = sz_main_txt)
+          graphics::axis(side = 1, at = pos_tick_x_den, 
+                         cex.axis = sz_tick_txt)
+          graphics::axis(side = 2, at = pos_tick_y_den, 
+                         cex.axis = sz_tick_txt)
+          if (!missing(sz_ax)) {
+            graphics::box(lwd = sz_ax)
+            graphics::axis(1, lwd.ticks = sz_ax, labels = FALSE, 
+                           at = pos_tick_x_den)
+            graphics::axis(2, lwd.ticks = sz_ax, labels = FALSE, 
+                           at = pos_tick_y_den)
+          }
+        }
+        if (!is.null(priors)) {
+          graphics::lines(dpr, col = COL_PR, lwd = lwd_pr, 
+                          lty = lty_pr)
+          if (!is.null(sz_txt) & !is.null(COL_TXT)) {
+            graphics::legend("topright", legend = ovrlap, 
+                             bty = "n", pch = NA, text.col = COL_TXT, 
+                             cex = sz_txt)
+          }
+        }
+        if (Rhat == TRUE & n.eff == TRUE) {
+          diag_txt <- list(paste0("Rhat: ", rhat[j]), 
+                           paste0("n.eff: ", neff[j]))
+        }
+        if (Rhat == TRUE & n.eff == FALSE) {
+          diag_txt <- paste0("Rhat: ", rhat[j])
+        }
+        if (Rhat == FALSE & n.eff == TRUE) {
+          diag_txt <- paste0("n.eff: ", neff[j])
+        }
+        if (Rhat == TRUE | n.eff == TRUE) {
+          if (!is.null(sz_txt) & !is.null(COL_TXT)) {
+            graphics::legend("topleft", x.intersp = -0.5, 
+                             legend = diag_txt, bty = "n", pch = NA, 
+                             text.col = COL_TXT, cex = sz_txt)
+          }
+        }
+        if (!is.null(gvals)) {
+          if (length(gvals) == 1) {
+            gv <- gvals
+          }
+          else {
+            gv <- gvals[j]
+          }
+          graphics::abline(v = gv, lty = 2, lwd = 1, col = ref_col)
+        }
       }
     }
-    if (PPO_out == TRUE) {
-      if (is.null(priors)) {
-        warning("NAs produced for PPO dataframe as priors not specified.")
+    if (type != "both" & type != "density" & type != "trace") {
+      stop("Invalid argument for \"type\". Valid inputs are \"both\", \"trace\", and \"density\".")
+    }
+    if (pdf == TRUE) {
+      invisible(grDevices::dev.off())
+      if (open_pdf == TRUE) {
+        system(paste0("open ", file_out))
       }
-      return(PPO_df)
+    }
+    else {
+      graphics::par(.pardefault)
     }
   }
+  if (plot == FALSE) {
+    for (j in 1:length(np)) {
+      tmlt <- do.call("cbind", object2[it, np[j]])
+      if (!is.null(priors)) {
+        if (NCOL(priors) == 1) {
+          wp <- priors
+        }
+        else {
+          wp <- priors[, j]
+        }
+        lwp <- length(wp)
+        if (lwp > length(it) * n_chains) {
+          pit <- (lwp - (length(it) * n_chains) + 1):lwp
+          wp2 <- wp[pit]
+        }
+        if (lwp < length(it) * n_chains) {
+          samps <- sample(wp, size = ((length(it) * n_chains) - 
+                                        lwp), replace = TRUE)
+          wp2 <- c(wp, samps)
+        }
+        if (lwp == length(it) * n_chains) {
+          wp2 <- wp
+        }
+        dpr <- density(wp2, adjust = adjust)
+        PPO_x_rng <- range(dpr$x)
+        PPO_y_rng <- range(dpr$y)
+        tmlt_1c <- matrix(tmlt, ncol = 1)
+        pp <- list(wp2, tmlt_1c)
+        ovr_v <- round((overlapping::overlap(pp)$OV[[1]]) * 
+                         100, digits = 1)
+        ovrlap <- paste0(ovr_v, "% overlap")
+        if (PPO_out == TRUE) {
+          PPO_df$param[j] <- np[j]
+          PPO_df$percent_PPO[j] <- ovr_v
+        }
+      }
+    }
+  }
+  if (PPO_out == TRUE) {
+    if (is.null(priors)) {
+      warning("NAs produced for PPO dataframe as priors not specified.")
+    }
+    return(PPO_df)
+  }
+}
 
 median_data <- function(rj.obj, model.id){
   
