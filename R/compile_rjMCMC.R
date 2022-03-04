@@ -143,29 +143,34 @@ compile_rjMCMC <- function(rj.object,
   # Compute dose-response curves
   #' ---------------------------------------------
   
-  psi.index <- which(startsWith(x = colnames(mcmc.trace), prefix = "psi"))
-  
   # Identify columns corresponding to species means
   if (!is.null(species)) {
-    col.index <- 
-      which(colnames(mcmc.trace) %in% paste0(pn, ".", ifelse(phase == 1, "", "lower."), 
-                                             which(rj.object$dat$species$names == species)))
     sp.names <- species
   } else {
-    col.index <- which(startsWith(x = colnames(mcmc.trace), prefix = pn))
     sp.names <- unlist(rj.object$dat$species$names)
   }
   
   if(by.model){
     if(is.null(covariate)){
-    Mg <- sp.names[sapply(X = 1:length(unique(m.groups)), FUN = function(x) which(m.groups == x)[1])]
+      Mg <- split(sp.names, f = factor(m.groups))
+      Mg <- purrr::map_chr(Mg, 1)
     } else {
-    Mg <- species
+      Mg <- species
     }
   } else {
     Mg <- sp.names[1:length(sp.names)]
   }
 
+  if (!is.null(species)) {
+    col.index <- which(colnames(mcmc.trace) %in% paste0(pn, ".", ifelse(phase == 1, "", "lower."), 
+                                             which(rj.object$dat$species$names == species)))
+  } else {
+    if(!by.model) { col.index <- which(startsWith(x = colnames(mcmc.trace), prefix = pn))
+    } else { col.index <- unname(sapply(X = Mg, FUN = function(a) which(sp.names == a))) }
+  }
+
+  psi.index <- which(startsWith(x = colnames(mcmc.trace), prefix = "psi"))
+  
     # MONOPHASIC ----------------
     
     if(phase == 1){
@@ -204,7 +209,7 @@ compile_rjMCMC <- function(rj.object,
                    
         )}) # End dr.raw
       
-      dr.raw <- purrr::set_names(x = dr.raw, nm = sp.names)
+      dr.raw <- purrr::set_names(x = dr.raw, nm = Mg)
       
       doseresp.values <- purrr::map_depth(
         .x = dr.raw,
@@ -212,8 +217,9 @@ compile_rjMCMC <- function(rj.object,
         .f = ~ {
           lapply(X = 1:nrow(mcmc.trace), FUN = function(a) {
             nth_element(vector = .x, starting.position = a, n = nrow(mcmc.trace))
-          }) %>% do.call(rbind, .)}) %>%
-        purrr::set_names(x = ., nm = sp.names) 
+          }) %>% do.call(rbind, .)}) 
+      # %>%
+      #   purrr::set_names(x = ., nm = Mg) 
       
     } else if (phase == 2){
       

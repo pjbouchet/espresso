@@ -1449,20 +1449,6 @@ proposal_t.ij <- function() {
     
     .p.bounds[is.RightCensored, 1] <- Rc[is.RightCensored]
     .p.bounds[is.LeftCensored, 2] <- Lc[is.LeftCensored]
-    
-    # lower.limit <- rep(priors["mu", 1], n.trials)
-    # upper.limit <- rep(priors["mu", 2], n.trials)
-    
-    # lower.limit[is.RightCensored] <- Rc[is.RightCensored]
-    # upper.limit[is.LeftCensored] <- Lc[is.LeftCensored]
-    
-    # pval <- rt_norm(
-    #   n = n.trials,
-    #   location = .t.ij,
-    #   scale = prop.t.ij,
-    #   L = lower.limit,
-    #   U = upper.limit
-    # )
 
   # }
   

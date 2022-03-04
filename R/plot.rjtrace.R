@@ -99,7 +99,8 @@ plot.rjtrace <- function(rj.obj,
   }
   
   if(is.null(param.name)) mpars <- colnames(mcmc.trace[[1]]) else 
-    mpars <- colnames(mcmc.trace[[1]])[purrr::map_dbl(.x = param.name, .f = ~which(startsWith(colnames(mcmc.trace[[1]]), prefix = .x)))]
+    mpars <- colnames(mcmc.trace[[1]])[unlist(purrr::map(.x = param.name, .f = ~which(startsWith(colnames(mcmc.trace[[1]]), prefix = .x))))]
+  
   if(!rj.obj$config$model.select) mpars <- mpars[!mpars %in% c("model_size", "model_ID")]
   if(!rj.obj$config$covariate.select) mpars <- mpars[!mpars %in% paste0("incl.", rj.obj$dat$covariates$names)]
   if(!rj.obj$config$function.select) mpars <- mpars[!mpars %in% "phase"]
