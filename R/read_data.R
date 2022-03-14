@@ -35,6 +35,8 @@
 #' @param min.N Minimum number of observations per species. Species with sample sizes smaller than \code{min.N} will be removed.
 #' @param covariates Contextual covariates. Must be a character string containing one or more of the following: \code{exposed}, \code{sonar}, \code{behaviour} or \code{range}. No covariates are considered when this argument is set to \code{NULL}.
 #' @param sonar.groups Named list detailing which sonar signals should be grouped a priori.
+#' @param min.spl Minimum SPL value to be considered. Data below this value will be discarded. 
+#' @param max.spl Maximum SPL value to be considered. Data above this value will be discarded.
 #' @param dose.range Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date. 
 #' @param obs.sd Measurement uncertainty (expressed as a standard deviation in received levels), in dB re 1μPa.
 #' @param verbose Logical. Whether to print or suppress warning messages.
@@ -88,6 +90,8 @@ read_data <- function(file = NULL,
                                                    "HPAS-C", "HPAC-C", "HPAS-D", "HPASF-C",
                                                    "MPAS-C", "MPAS-D", "HPAC-C", "XHPAS-D",
                                                    "XHPAS-C")),
+                      min.spl = NULL,
+                      max.spl = NULL,
                       dose.range = c(60, 215),
                       obs.sd = 2.5,
                       verbose = TRUE){
@@ -439,6 +443,13 @@ read_data <- function(file = NULL,
     dplyr::mutate(sp_orig = species) 
   
   #' ---------------------------------------------
+  # SPL filter
+  #' ---------------------------------------------
+  
+  if(!is.null(min.spl)){ brsdat <- brsdat %>% dplyr::filter(spl > min.spl | is.na(spl)) }
+  if(!is.null(max.spl)){ brsdat <- brsdat %>% dplyr::filter(spl < max.spl | is.na(spl)) }
+  
+  #' ---------------------------------------------
   # Covariates
   #' ---------------------------------------------
   
@@ -488,7 +499,8 @@ read_data <- function(file = NULL,
   
   # Species trials
   species.trials <- sapply(X = seq_along(species.id), 
-                           FUN = function(x) rep(species.id[x], n.trials.per.whale[x])) %>% do.call(c, .)
+                           FUN = function(x) rep(species.id[x], n.trials.per.whale[x]))
+  if("list" %in% class(species.trials)) species.trials <- do.call(c, species.trials)
   
   #' ---------------------------------------------
   # Sampling uncertainty

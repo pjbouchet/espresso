@@ -130,8 +130,8 @@ create_groups <- function(dat.obj,
     dplyr::count(.) %>% 
     dplyr::pull(n)
   
-  species.trials <- sapply(X = seq_along(species.id), 
-                           FUN = function(x) rep(species.id[x], n.trials.per.whale[x])) %>% do.call(c, .)
+  species.trials <- sapply(X = seq_along(species.id), FUN = function(x) rep(species.id[x], n.trials.per.whale[x]))
+  if("list" %in% class(species.trials)) species.trials <- do.call(c, species.trials)
   
   suppressWarnings(species.summary <- brsdat %>% 
                      dplyr::group_by(species) %>% 
