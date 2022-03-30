@@ -28,8 +28,8 @@
 #' @importFrom Rdpack reprompt
 #' @export
 #' @param file Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.
-#' @param risk.functions Logical vector of length 2. If \code{TRUE}, indicating whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso} and \insertCite{Jacobson2019;textual}{espresso}.
-#' @param n.risk Vector of length 2. Number of samples to draw from the \insertCite{Moretti2014;textual}{espresso} and \insertCite{Jacobson2019;textual}{espresso} dose-response curves, respectively. Defaults to \code{c(10, 10)}.
+#' @param risk.functions Logical vector of length 4. If \code{TRUE}, indicates whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso}, \insertCite{Jacobson2019;textual}{espresso}, \insertCite{Houser2013a;textual}{espresso} or \insertCite{Houser2013b;textual}{espresso}.
+#' @param n.risk Vector of length 4. Number of samples to draw for simulating exposures from the dose-response curves selected using \code{risk.functions}. Defaults to \code{c(10, 10, 10, 10)}.
 #' @param include.species Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.
 #' @param exclude.species Character vector specifying which species should be discarded. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. No species are excluded when this argument is set to the default of \code{NULL}.
 #' @param min.N Minimum number of observations per species. Species with sample sizes smaller than \code{min.N} will be removed.
@@ -41,6 +41,7 @@
 #' @param obs.sd Measurement uncertainty (expressed as a standard deviation in received levels), in dB re 1μPa.
 #' @param verbose Logical. Whether to print or suppress warning messages.
 #' 
+#' @note Data simulated using \code{risk.functions} are assumed to represent measured responses and do not include left or right-censored observations. Note also that \code{include.species} and \code{exclude.species} override \code{risk.functions}, such that simulated data cannot be produced if the associated species is excluded. 
 #' @return A list object of class \code{brsdata}, with the following elements:
 #' 
 #' \tabular{ll}{
@@ -68,7 +69,7 @@
 #' # whilst excluding sperm whales and any other species with a sample size
 #' # smaller than two observations.
 #' mydat <- read_data(file = "path/to/my/data.csv", 
-#'                   risk.functions = FALSE,
+#'                   risk.functions = c(FALSE, FALSE, FALSE, FALSE),
 #'                   exclude.species = "Sperm whale",
 #'                   min.N = 2)
 #' }
@@ -76,8 +77,8 @@
 #' @keywords brs gvs rjmcmc dose-response             
 
 read_data <- function(file = NULL,
-                      risk.functions = c(FALSE, FALSE),
-                      n.risk = c(10, 10),
+                      risk.functions = c(FALSE, FALSE, FALSE, FALSE),
+                      n.risk = c(10, 10, 10, 10),
                       include.species = NULL,
                       exclude.species = NULL,
                       min.N = NULL,
@@ -204,6 +205,7 @@ read_data <- function(file = NULL,
   # Add samples from published risk functions, if necessary 
   #' ---------------------------------------------
   
+  # Moretti et al. (2014)
   if(risk.functions[1]){
     
     spline.moretti <- stats::splinefun(x = moretti_dose$probability, y = moretti_dose$rl)
@@ -218,7 +220,8 @@ read_data <- function(file = NULL,
                                   pre_feeding = TRUE, inferred_resp_range = NA, inferred_min_range = NA)
     
     tbl.moretti$resp_range <- tbl.moretti$min_range <- purrr::map_dbl(.x = rl.moretti,
-                          .f = ~stats::optimize(f = range_finder, interval = c(0, 30000), SL = 215, target.L = .x)[['minimum']])
+                          .f = ~stats::optimize(f = range_finder, interval = c(0, 30000),
+                                                SL = 215, target.L = .x)[['minimum']])
     
     tbl.moretti <- dplyr::relocate(tbl.moretti, names(rawdat)) %>% dplyr::arrange(tag_id)
     tbl.moretti <- split(tbl.moretti, tbl.moretti$tag_id) %>% 
@@ -229,7 +232,8 @@ read_data <- function(file = NULL,
     
   }
   
-  if(risk.functions[2]){ # Jacobson et al. (PMRF)
+  # Jacobson et al. (2019)
+  if(risk.functions[2]){ 
     
     pmrf <- jacobson_dose %>% 
       dplyr::filter(max_rl >= dose.range[1] & max_rl <= dose.range[2]) %>% 
@@ -257,6 +261,65 @@ read_data <- function(file = NULL,
     
   }
     
+  # Houser et al. (2013a)
+  if(risk.functions[3]){
+    
+    spline.houser.Zca <- stats::splinefun(x = houser_dose$Zca$probability, y = houser_dose$Zca$rl)
+    pts.houser.Zca <- spline.houser.Zca(seq(0, 1, 0.001))
+    rl.houser.Zca <- sample(x = pts.houser.Zca, size = n.risk[3], replace = TRUE)
+
+    tbl.houser.Zca <- tibble::tibble(
+      resp_spl = rl.houser.Zca, 
+      project = "Houser_2013a",
+      species = "Zca",
+      tag_id = paste0("Zca_houser2013a_", sample(1:length(rl.houser.Zca), replace = TRUE)),
+      start_time = NA, resp_time = NA, 
+      resp_type = sample(x = c("haul out", "refusal to participate"), size = n.risk[3], replace = TRUE),
+      resp_score = 7,
+      resp_se_lcum = NA, max_spl = rl.houser.Zca, max_se_lcum = NA, censored = 0, 
+      exp_order = 1, exp_duration = 0, exp_signal = "MFA",
+      pre_feeding = FALSE, resp_range = 0.001, min_range = 0.001, 
+      inferred_resp_range = 0.001, inferred_min_range = 0.001)
+    
+    tbl.houser.Zca <- dplyr::relocate(tbl.houser.Zca, names(rawdat)) %>% dplyr::arrange(tag_id)
+    tbl.houser.Zca <- split(tbl.houser.Zca, tbl.houser.Zca$tag_id) %>% 
+      purrr::map(.x = ., .f = ~dplyr::mutate(.x, exp_order = dplyr::row_number())) %>% 
+      do.call(rbind, .)
+    
+    rawdat <- dplyr::bind_rows(rawdat, tbl.houser.Zca)
+    
+  }
+  
+  # Houser et al. (2013b)
+  if(risk.functions[4]){
+    
+    spline.houser.Tt <- stats::splinefun(x = houser_dose$Tt$probability, y = houser_dose$Tt$rl)
+    pts.houser.Tt <- spline.houser.Tt(seq(0, 1, 0.001))
+    rl.houser.Tt <- sample(x = pts.houser.Tt, size = n.risk[4], replace = TRUE)
+    
+    tbl.houser.Tt <- tibble::tibble(
+      resp_spl = rl.houser.Tt, 
+      project = "Houser_2013b",
+      species = "Tt",
+      tag_id = paste0("Tt_houser2013b_", sample(1:length(rl.houser.Tt), replace = TRUE)),
+      start_time = NA, 
+      resp_time = NA, 
+      resp_type = sample(x = c("tail slap", "refusal to participate"), size = n.risk[4], replace = TRUE),
+      resp_score = 7,
+      resp_se_lcum = NA, max_spl = rl.houser.Tt, max_se_lcum = NA, censored = 0, 
+      exp_order = 1, exp_duration = 0, exp_signal = "MFA",
+      pre_feeding = FALSE, resp_range = 0.001, min_range = 0.001, 
+      inferred_resp_range = 0.001, inferred_min_range = 0.001)
+    
+    tbl.houser.Tt <- dplyr::relocate(tbl.houser.Tt, names(rawdat)) %>% dplyr::arrange(tag_id)
+    tbl.houser.Tt <- split(tbl.houser.Tt, tbl.houser.Tt$tag_id) %>% 
+      purrr::map(.x = ., .f = ~dplyr::mutate(.x, exp_order = dplyr::row_number())) %>% 
+      do.call(rbind, .)
+    
+    rawdat <- dplyr::bind_rows(rawdat, tbl.houser.Tt)
+    
+  }
+  
   #' ---------------------------------------------
   # Extract relevant columns
   #' ---------------------------------------------

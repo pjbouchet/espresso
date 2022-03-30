@@ -6,8 +6,8 @@
 \usage{
 read_data(
   file = NULL,
-  risk.functions = c(FALSE, FALSE),
-  n.risk = c(10, 10),
+  risk.functions = c(FALSE, FALSE, FALSE, FALSE),
+  n.risk = c(10, 10, 10, 10),
   include.species = NULL,
   exclude.species = NULL,
   min.N = NULL,
@@ -16,6 +16,8 @@ read_data(
     "REAL MFA HELO", "SOCAL_d", "REAL MFAS", "REAL MFA (USS Dewey)"), LFAS = c("LFAS",
     "LFA", "LFAS_DS", "LFAS_LO", "LFAS_122", "LFAS_185", "HPAS-C", "HPAC-C", "HPAS-D",
     "HPASF-C", "MPAS-C", "MPAS-D", "HPAC-C", "XHPAS-D", "XHPAS-C")),
+  min.spl = NULL,
+  max.spl = NULL,
   dose.range = c(60, 215),
   obs.sd = 2.5,
   verbose = TRUE
@@ -24,9 +26,9 @@ read_data(
 \arguments{
 \item{file}{Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.}
 
-\item{risk.functions}{Logical vector of length 2. If \code{TRUE}, indicating whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso} and \insertCite{Jacobson2019;textual}{espresso}.}
+\item{risk.functions}{Logical vector of length 4. If \code{TRUE}, indicates whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso}, \insertCite{Jacobson2019;textual}{espresso}, \insertCite{Houser2013a;textual}{espresso} or \insertCite{Houser2013b;textual}{espresso}.}
 
-\item{n.risk}{Vector of length 2. Number of samples to draw from the \insertCite{Moretti2014;textual}{espresso} and \insertCite{Jacobson2019;textual}{espresso} dose-response curves, respectively. Defaults to \code{c(10, 10)}.}
+\item{n.risk}{Vector of length 4. Number of samples to draw for simulating exposures from the dose-response curves selected using \code{risk.functions}. Defaults to \code{c(10, 10, 10, 10)}.}
 
 \item{include.species}{Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.}
 
@@ -37,6 +39,10 @@ read_data(
 \item{covariates}{Contextual covariates. Must be a character string containing one or more of the following: \code{exposed}, \code{sonar}, \code{behaviour} or \code{range}. No covariates are considered when this argument is set to \code{NULL}.}
 
 \item{sonar.groups}{Named list detailing which sonar signals should be grouped a priori.}
+
+\item{min.spl}{Minimum SPL value to be considered. Data below this value will be discarded.}
+
+\item{max.spl}{Maximum SPL value to be considered. Data above this value will be discarded.}
 
 \item{dose.range}{Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.}
 
@@ -84,6 +90,9 @@ When covariates are specified, the below fields must also be included, as releva
 
 An example data file is included in the package. See \code{\link{example_brs}} for details.
 }
+\note{
+Data simulated using \code{risk.functions} are assumed to represent measured responses and do not include left or right-censored observations. Note also that \code{include.species} and \code{exclude.species} override \code{risk.functions}, such that simulated data cannot be produced if the associated species is excluded.
+}
 \examples{
 \dontrun{
 library(espresso)
@@ -95,7 +104,7 @@ mydat <- read_data(file = NULL)
 # whilst excluding sperm whales and any other species with a sample size
 # smaller than two observations.
 mydat <- read_data(file = "path/to/my/data.csv", 
-                  risk.functions = FALSE,
+                  risk.functions = c(FALSE, FALSE, FALSE, FALSE),
                   exclude.species = "Sperm whale",
                   min.N = 2)
 }

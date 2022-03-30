@@ -48,6 +48,29 @@ plot_phase <- function(rjdat = NULL,
     
   }
   
+  bp <- function(L, U, nu1, tau1, nu2, tau2, psi, omega, by = by){
+    
+    B <- 1E5
+    
+    #Alpha uniform between nu1 and nu2
+    alpha <- runif(B, nu1, nu2)
+    
+    psi_i <- rnorm(B, psi, omega)
+    pi_ij <- pnorm(psi_i)
+    k_ij <- rbinom(B, 1, pi_ij)
+    mu_1i <- truncnorm::rtruncnorm(B, L, alpha, nu1, tau1)
+    mu_2i <- truncnorm::rtruncnorm(B, alpha, U, nu2, tau2)
+    t_ij <- ifelse(k_ij, mu_1i, mu_2i)
+    
+    x <- seq(L, U, by = by)
+    n.x <- length(x)
+    y <- numeric(n.x)
+    for(i in 1:n.x){
+      y[i] <- sum(t_ij <= x[i]) / B
+    }
+    return(y)
+  }
+  
   dose.range <- seq(lower, upper, 0.5)
   
   par(mfrow = c(1, 2))
@@ -68,6 +91,7 @@ plot_phase <- function(rjdat = NULL,
   }
   
   if(plot.bi){
+    
     p.response.individ <- matrix(data = 0, nrow = npts, ncol = length(dose.range))
     pi.individ <- pnorm(q = qnorm(p = seq(0, 1, length = (npts + 2))[-c(1, (npts + 2))], mean = psi, sd = omega))
     
@@ -93,9 +117,10 @@ plot_phase <- function(rjdat = NULL,
     p.response <- apply(X = p.response.individ, MARGIN = 2, FUN = mean)
     
     plot(dose.range, seq(0, 1, length.out = length(dose.range)), type ='n', xlab = x.lab, ylab = y.lab)
+    lines(dose.range, bp(lower, upper, nu1, tau1, nu2, tau2, psi, omega, by = 0.5), col = linecol[1], lwd = 1.5)
     lines(dose.range, p.response, col = linecol[1])
   }
-  
+
   # MONOPHASIC
   if(plot.mono){
     if(!plot.bi) plot(dose.range, truncnorm::ptruncnorm(q = dose.range, a = lower, b = upper, mean = mu, sd = sqrt(phi^2+sigma^2)), col = linecol[2], type = 'l', xlab = x.lab, ylab = y.lab) else lines(dose.range, truncnorm::ptruncnorm(q = dose.range, a = lower, b = upper, mean = mu, sd = sqrt(phi^2+sigma^2)), col = linecol[2])

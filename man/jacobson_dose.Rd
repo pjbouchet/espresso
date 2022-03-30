@@ -3,7 +3,7 @@
 \docType{data}
 \name{jacobson_dose}
 \alias{jacobson_dose}
-\title{Dose-response curve for Blainville's beaked whale}
+\title{Dose-response curve for Blainville's beaked whales from the Pacific Missile Range Facility (PMRF)}
 \usage{
 data(jacobson_dose)
 }

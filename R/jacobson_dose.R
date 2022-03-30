@@ -1,4 +1,4 @@
-#' Dose-response curve for Blainville's beaked whale
+#' Dose-response curve for Blainville's beaked whales from the Pacific Missile Range Facility (PMRF)
 #'
 #' Derived from \insertCite{Jacobson2019;textual}{espresso}.
 #'

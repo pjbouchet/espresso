@@ -3,7 +3,7 @@
 \docType{data}
 \name{moretti_dose}
 \alias{moretti_dose}
-\title{Dose-response curve for Blainville's beaked whale}
+\title{Dose-response curve for Blainville's beaked whales}
 \usage{
 data(moretti_dose)
 }
