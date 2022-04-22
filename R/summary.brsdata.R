@@ -58,6 +58,10 @@ summary.brsdata <- function(dat.obj, print.config = TRUE){
         paste0("(n = ", dat.obj$obs$n.risk[1], ")"), "\n")
     cat("Jacobson et al. 2019:", dat.obj$obs$risk.functions[2], 
         paste0("(n = ", dat.obj$obs$n.risk[2], ")"), "\n")
+    cat("Houser et al. 2013 (California sea lions):", dat.obj$obs$risk.functions[3], 
+        paste0("(n = ", dat.obj$obs$n.risk[3], ")"), "\n")
+    cat("Houser et al. 2013 (bottlenose dolphins):", dat.obj$obs$risk.functions[4], 
+        paste0("(n = ", dat.obj$obs$n.risk[4], ")"), "\n")
   }
   
   cat("\n--------------------")

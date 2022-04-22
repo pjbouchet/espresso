@@ -28,7 +28,7 @@
 #' @importFrom Rdpack reprompt
 #' @export
 #' @param file Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.
-#' @param risk.functions Logical vector of length 4. If \code{TRUE}, indicates whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso}, \insertCite{Jacobson2019;textual}{espresso}, \insertCite{Houser2013a;textual}{espresso} or \insertCite{Houser2013b;textual}{espresso}.
+#' @param risk.functions Logical vector of length 4. If \code{TRUE}, indicates whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso}, \insertCite{Jacobson2019;textual}{espresso}, \insertCite{Houser2013a;textual}{espresso}a or \insertCite{Houser2013b;textual}{espresso}b.
 #' @param n.risk Vector of length 4. Number of samples to draw for simulating exposures from the dose-response curves selected using \code{risk.functions}. Defaults to \code{c(10, 10, 10, 10)}.
 #' @param include.species Character vector specifying which species should be retained. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. All species are included when this argument is set to the default of \code{NULL}.
 #' @param exclude.species Character vector specifying which species should be discarded. These can be selected by any combination of scientific name, common name, or unique identifier, as listed in \code{\link{species_brs}}. No species are excluded when this argument is set to the default of \code{NULL}.
