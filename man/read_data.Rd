@@ -26,7 +26,7 @@ read_data(
 \arguments{
 \item{file}{Path to the input CSV file. If set to \code{NULL}, imports the \code{\link{example_brs}} data.}
 
-\item{risk.functions}{Logical vector of length 4. If \code{TRUE}, indicates whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso}, \insertCite{Jacobson2019;textual}{espresso}, \insertCite{Houser2013a;textual}{espresso}a or \insertCite{Houser2013b;textual}{espresso}b.}
+\item{risk.functions}{Logical vector of length 4. If \code{TRUE}, indicates whether to include the risk functions derived in \insertCite{Moretti2014;textual}{espresso}, \insertCite{Jacobson2022;textual}{espresso}, \insertCite{Houser2013a;textual}{espresso}a or \insertCite{Houser2013b;textual}{espresso}b.}
 
 \item{n.risk}{Vector of length 4. Number of samples to draw for simulating exposures from the dose-response curves selected using \code{risk.functions}. Defaults to \code{c(10, 10, 10, 10)}.}
 

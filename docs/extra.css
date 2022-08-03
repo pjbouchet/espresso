@@ -15,13 +15,6 @@ code {
     border-radius: 4px;
 }
 
-.logo {
-    height: 280px;
-    padding-top: 1em;
-    padding-left: 1em;
-    padding-bottom: 0.5em;
-}
-
 .ch, .st {
     color: #28a52c;
 }
@@ -123,6 +116,13 @@ nav[data-toggle='toc'] .nav > .active > a, nav[data-toggle='toc'] .nav > .active
     color: #337ab7;
     border-left: 2px solid #337ab7;
     background-color: #f0f7fd;
+}
+
+.logo {
+    height: 280px;
+    padding-top: 1em;
+    padding-left: 1em;
+    padding-bottom: 0.5em;
 }
 
 .update {

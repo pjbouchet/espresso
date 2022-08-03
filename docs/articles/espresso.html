@@ -20,8 +20,6 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
-
-
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -34,12 +32,18 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.6.3</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
+<li>
+  <a href="../index.html">
+    <span class="fas fa-home fa-lg"></span>
+     
+  </a>
+</li>
 <li>
   <a href="../articles/espresso.html">Get started</a>
 </li>
@@ -55,84 +59,129 @@
 </div>
 <!--/.navbar -->
 
+      
 
-
-      </header><script src="espresso_files/header-attrs-2.5/header-attrs.js"></script><div class="row">
+      </header><script src="espresso_files/header-attrs-2.11/header-attrs.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Getting started with espresso</h1>
-                        <h4 data-toc-skip class="author">Phil J. Bouchet, Catriona M Harris, Elizabeth E Henderson, Dina Sadykova, Len Thomas</h4>
+                        <h4 class="author">Phil J. Bouchet, Catriona M
+Harris, Elizabeth E Henderson, Dina Sadykova, Len Thomas</h4>
             <address class="author_afil">
-      Centre for Research into Ecological &amp; Environmental Modelling, University of St Andrews<br><h4 data-toc-skip class="date">2021-08-21</h4>
-
-
+      Centre for Research into Ecological &amp; Environmental Modelling,
+University of St Andrews<br><h4 class="date">2022-08-03</h4>
+      
+      
       <div class="hidden name"><code>espresso.Rmd</code></div>
 
     </address>
 </div>
 
-
-
+    
+    
 <div id="preamble" class="section level2">
 <h2 class="hasAnchor">
-<a href="#preamble" class="anchor" aria-hidden="true"></a>Preamble</h2>
-<p><b>Important note: This vignette is currently being updated. Some of the R syntax shown here might differ from the latest version of the package available on Github. Please refer to the package help files or contact the authors for more details/assistance. </b></p>
-<p>This vignette illustrates the use of the <code>espresso</code> R package for fitting and selecting between multi-species behavioural dose-response (“risk”) functions. The package is an extension of the work previously conducted under the U.S. Navy-funded <a href="%5Bhttps://synergy.st-andrews.ac.uk/mocha/" class="external-link">MOCHA project</a> (<a href="https://synergy.st-andrews.ac.uk/mocha/" class="external-link uri">https://synergy.st-andrews.ac.uk/mocha/</a>) <span class="citation">(<a href="#ref-Harris2016" role="doc-biblioref">Harris <em>et al.</em> 2016</a>; <a href="#ref-Harris2018" role="doc-biblioref">Harris <em>et al.</em> 2018</a>)</span>, in which Bayesian hierarchical models were developed to estimate the probabilities of noise-related behavioural impacts to marine mammal species, whilst accounting for uncertainty, individual heterogeneity, and the effects of contextual covariates <span class="citation">(<a href="#ref-Miller2014" role="doc-biblioref">Miller <em>et al.</em> 2014</a>; <a href="#ref-Antunes2014" role="doc-biblioref">Antunes <em>et al.</em> 2014</a>)</span>. <code>espresso</code> builds on this framework and provides functions to identify groups of species exhibiting similar patterns of responsiveness to sound, using a Bayesian model selection approach. The underlying method relies on a dimension-jumping reversible-jump Markov chain Monte Carlo algorithm <span class="citation">(rjMCMC, <a href="#ref-Green1995" role="doc-biblioref">Green 1995</a>; <a href="#ref-Hastie2012" role="doc-biblioref">Hastie and Green 2012</a>)</span>, which accommodates: (1) the selection of explanatory covariates (sonar frequency, previous history of exposure, feeding behaviour, and source-whale range), (2) the comparison of dose-response functional forms<sup><strong>[1]</strong></sup> (i.e., monophasic or biphasic), and (3) the appropriate treatment of both left-censored and right-censored observations (i.e., animals which display either an immediate response on first exposure, or no signs of response across the array of doses received, respectively).</p>
-<p><sup><strong>[1]</strong></sup><strong>Soon to be released.</strong></p>
-<p>Here, we showcase the main features of <code>espresso</code> using a simulated dataset available from within the package.</p>
+<a href="#preamble" class="anchor"></a>Preamble</h2>
+<p>This vignette illustrates the use of the <code>espresso</code> R
+package for fitting and selecting between multi-species behavioural
+dose-response (“risk”) functions. The package is an extension of the
+work previously conducted under the U.S. Navy-funded <a href="%5Bhttps://synergy.st-andrews.ac.uk/mocha/">MOCHA project</a> (<a href="https://synergy.st-andrews.ac.uk/mocha/" class="uri">https://synergy.st-andrews.ac.uk/mocha/</a>) <span class="citation">(<a href="#ref-Harris2016" role="doc-biblioref">Harris
+<em>et al.</em> 2016</a>; <a href="#ref-Harris2018" role="doc-biblioref">Harris <em>et al.</em> 2018</a>)</span>, in which
+Bayesian hierarchical models were developed to estimate the
+probabilities of noise-related behavioural impacts to marine mammal
+species, whilst accounting for uncertainty, individual heterogeneity,
+and the effects of contextual covariates <span class="citation">(<a href="#ref-Miller2014" role="doc-biblioref">Miller <em>et al.</em>
+2014</a>; <a href="#ref-Antunes2014" role="doc-biblioref">Antunes <em>et
+al.</em> 2014</a>)</span>. <code>espresso</code> builds on this
+framework and provides functions to identify groups of species
+exhibiting similar patterns of responsiveness to sound, using a Bayesian
+model selection approach. The underlying method relies on a
+dimension-jumping reversible-jump Markov chain Monte Carlo algorithm
+<span class="citation">(rjMCMC, <a href="#ref-Green1995" role="doc-biblioref">Green 1995</a>; <a href="#ref-Hastie2012" role="doc-biblioref">Hastie and Green 2012</a>)</span>, which
+accommodates: (1) the selection of explanatory covariates (sonar
+frequency, previous history of exposure, feeding behaviour, and
+source-whale range), (2) the comparison of dose-response functional
+forms<sup><strong>[1]</strong></sup> (i.e., monophasic or biphasic), and
+(3) the appropriate treatment of both left-censored and right-censored
+observations (i.e., animals which display either an immediate response
+on first exposure, or no signs of response across the array of doses
+received, respectively).</p>
+<p><sup><strong>[1]</strong></sup><strong>Soon to be
+released.</strong></p>
+<p>Here, we showcase the main features of <code>espresso</code> using a
+simulated dataset available from within the package.</p>
 </div>
 <div id="installation" class="section level2">
 <h2 class="hasAnchor">
-<a href="#installation" class="anchor" aria-hidden="true"></a>Installation</h2>
-<p>The latest development version of <code>espresso</code> can be installed from GitHub (this requires either the <a href="https://cran.r-project.org/web/packages/remotes/index.html" class="external-link">remotes</a> or the <a href="https://cran.r-project.org/web/packages/devtools/index.html" class="external-link">devtools</a> package):</p>
+<a href="#installation" class="anchor"></a>Installation</h2>
+<p>The latest development version of <code>espresso</code> can be
+installed from GitHub (this requires either the <a href="https://cran.r-project.org/web/packages/remotes/index.html">remotes</a>
+or the <a href="https://cran.r-project.org/web/packages/devtools/index.html">devtools</a>
+package):</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># install.packages("remotes")</span>
-<span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"pjbouchet/espresso"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"pjbouchet/espresso"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
 <p>The code below loads the package and sets some general options.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">espresso</span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://magrittr.tidyverse.org" class="external-link">magrittr</a></span><span class="op">)</span>
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">espresso</span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org">tidyverse</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://magrittr.tidyverse.org">magrittr</a></span><span class="op">)</span>
 
 <span class="co">#'--------------------------------------------------------------------</span>
 <span class="co"># Set tibble options</span>
 <span class="co">#'--------------------------------------------------------------------</span>
-<span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>tibble.width <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span> <span class="co"># All tibble columns shown</span>
-<span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>pillar.neg <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># No colouring negative numbers</span>
-<span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>pillar.subtle <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>pillar.sigfig <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/options.html">options</a></span><span class="op">(</span>tibble.width <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span> <span class="co"># All tibble columns shown</span>
+<span class="fu"><a href="https://rdrr.io/r/base/options.html">options</a></span><span class="op">(</span>pillar.neg <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># No colouring negative numbers</span>
+<span class="fu"><a href="https://rdrr.io/r/base/options.html">options</a></span><span class="op">(</span>pillar.subtle <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/options.html">options</a></span><span class="op">(</span>pillar.sigfig <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>
 
-<span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>TZ <span class="op">=</span> <span class="st">"GMT"</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html">Sys.setenv</a></span><span class="op">(</span>TZ <span class="op">=</span> <span class="st">"GMT"</span><span class="op">)</span>
 
 <span class="co">#'--------------------------------------------------------------------</span>
 <span class="co"># Set knitr options</span>
 <span class="co">#'--------------------------------------------------------------------</span>
-<span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>echo <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>echo <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
 </div>
 <div id="overview" class="section level2">
 <h2 class="hasAnchor">
-<a href="#overview" class="anchor" aria-hidden="true"></a>Overview</h2>
-<p>This vignette covers all the steps required to set up, fit, assess, and compare Bayesian dose-response models using rjMCMC. This includes:</p>
+<a href="#overview" class="anchor"></a>Overview</h2>
+<p>This vignette covers all the steps required to set up, fit, assess,
+and compare Bayesian dose-response models using rjMCMC. This
+includes:</p>
 <ul>
 <li>Importing data using <code>read_data</code>.</li>
-<li>Grouping some species <em>a priori</em> using <code>create_groups</code>.</li>
-<li>Configuring the rjMCMC sampler using <code>configure_rjMCMC</code>.</li>
+<li>Grouping some species <em>a priori</em> using
+<code>create_groups</code>.</li>
+<li>Configuring the rjMCMC sampler using
+<code>configure_rjMCMC</code>.</li>
 <li>Fitting models using <code>run_rjMCMC</code>.</li>
 <li>Extracting posterior estimates using <code>trace_rjMCMC</code>.</li>
-<li>Generating model diagnostics using <code>summary</code> and <code>plot</code> methods.</li>
+<li>Generating model diagnostics using <code>summary</code> and
+<code>plot</code> methods.</li>
 <li>Drawing dose-response curves using <code>compile_rjMCMC</code>.</li>
 </ul>
-<p>A flowchart of a typical <code>espresso</code> workflow is shown below.</p>
+<p>A flowchart of a typical <code>espresso</code> workflow is shown
+below.</p>
 <div class="figure">
-<img src="https://raw.githubusercontent.com/pjbouchet/espresso/main/vignettes/espresso_workflow.jpg" alt="" width="700"><p class="caption">Figure 1. Schematic representation of a typical <code>espresso</code> workflow. Package functions and object classes are indicated in coloured font.</p>
+<img src="../../vignettes/espresso_workflow.jpg" alt=""><p class="caption"><b>Figure 1.</b> Schematic representation of a typical
+<code>espresso</code> workflow. Package functions and object classes are
+indicated in coloured font.</p>
 </div>
 </div>
 <div id="data" class="section level2">
 <h2 class="hasAnchor">
-<a href="#data" class="anchor" aria-hidden="true"></a>Data</h2>
-<p>For demonstration purposes, we rely on the <code>example_brs</code> dataset available from within <code>espresso</code>. This is a mock dataset manufactured based on real-world observations made during behavioural response studies (hereafter, BRS). This dataset should <strong>not</strong> be used for inference, however it provides a useful template for setting up input data files in a format readable by <code>espresso</code>. It is accompanied by another dataset, <code>species_brs</code>, which provides a list of cetacean species for which BRS data currently exist.</p>
+<a href="#data" class="anchor"></a>Data</h2>
+<p>For demonstration purposes, we rely on the <code>example_brs</code>
+dataset available from within <code>espresso</code>. This is a mock
+dataset manufactured based on real-world observations made during
+behavioural response studies (hereafter, BRSs). This dataset <u>should
+<strong>not</strong></u> be used for inference, however it provides a
+useful template for setting up input data files in a format that is
+readable by <code>espresso</code>. It is accompanied by another dataset,
+<code>species_brs</code>, which provides a list of cetacean species for
+which BRS data currently exist.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">example_brs</span><span class="op">)</span>, format <span class="op">=</span> <span class="st">"pandoc"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">example_brs</span><span class="op">)</span>, format <span class="op">=</span> <span class="st">"pandoc"</span><span class="op">)</span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">project</th>
@@ -292,13 +341,14 @@
 </tbody>
 </table>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">species_brs</span><span class="op">)</span>, format <span class="op">=</span> <span class="st">"pandoc"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">species_brs</span><span class="op">)</span>, format <span class="op">=</span> <span class="st">"pandoc"</span><span class="op">)</span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">Code</th>
-<th align="left">Scientific name</th>
-<th align="left">Common name</th>
+<th align="left">Scientific.name</th>
+<th align="left">Common.name</th>
 <th align="left">NewCode</th>
+<th align="right">Southall2019</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
@@ -306,44 +356,54 @@
 <td align="left">Berardius bairdii</td>
 <td align="left">Baird’s beaked whale</td>
 <td align="left">Bb</td>
+<td align="right">2</td>
 </tr>
 <tr class="even">
 <td align="left">Bkw</td>
 <td align="left">Beaked whale spp.</td>
 <td align="left">Beaked whale</td>
 <td align="left">Bkw</td>
+<td align="right">2</td>
 </tr>
 <tr class="odd">
 <td align="left">Md</td>
 <td align="left">Mesoplodon densirostris</td>
 <td align="left">Blainville’s beaked whale</td>
 <td align="left">Md</td>
+<td align="right">2</td>
 </tr>
 <tr class="even">
 <td align="left">Bw</td>
 <td align="left">Balaenoptera musculus</td>
 <td align="left">Blue whale</td>
 <td align="left">Bm</td>
+<td align="right">1</td>
 </tr>
 <tr class="odd">
 <td align="left">Tt</td>
 <td align="left">Tursiops truncatus</td>
 <td align="left">Bottlenose dolphin</td>
 <td align="left">Tt</td>
+<td align="right">2</td>
 </tr>
 <tr class="even">
 <td align="left">Zca</td>
 <td align="left">Zalophus californianus</td>
 <td align="left">California sea lion</td>
 <td align="left">Zca</td>
+<td align="right">5</td>
 </tr>
 </tbody>
 </table>
-<p>Here, <code>example_brs</code> contains 174 observations of 8 cetacean species (i.e., blue whale, killer whale, Cuvier’s beaked whale, long-finned pilot whale, sperm whale, northern bottlenose whale, Risso’s dolphin, bottlenose dolphin). Of the 20 columns in the data, only five are compulsory:</p>
+<p>Here, <code>example_brs</code> contains 174 observations of 7
+cetacean species (i.e., blue whale, killer whale, Cuvier’s beaked whale,
+long-finned pilot whale, sperm whale, northern bottlenose whale, and
+Risso’s dolphin). Of the 20 columns in the data, only five are
+compulsory:</p>
 <table class="table">
 <colgroup>
-<col width="8%">
-<col width="91%">
+<col width="22%">
+<col width="77%">
 </colgroup>
 <thead><tr class="header">
 <th>Header</th>
@@ -365,19 +425,22 @@
 </tr>
 <tr class="even">
 <td>max_spl</td>
-<td>Maximum sound pressure level reached during the exposure (in dB re 1μPa)</td>
+<td>Maximum sound pressure level reached during the exposure (in dB re
+1μPa)</td>
 </tr>
 <tr class="odd">
 <td>censored</td>
-<td>Integer variable indicating whether an observation is left-censored (-1), right-censored (1), or not censored (0)</td>
+<td>Integer variable indicating whether an observation is left-censored
+(-1), right-censored (1), or not censored (0)</td>
 </tr>
 </tbody>
 </table>
-<p>When contextual covariates are specified, additional fields must also be included, as relevant:</p>
+<p>When contextual covariates are specified, additional fields must also
+be included, as relevant:</p>
 <table class="table">
 <colgroup>
-<col width="25%">
-<col width="75%">
+<col width="27%">
+<col width="72%">
 </colgroup>
 <thead><tr class="header">
 <th>Header</th>
@@ -386,7 +449,7 @@
 <tbody>
 <tr class="odd">
 <td>exp_order</td>
-<td>History of exposure (1 = 1st exposure, 2 = 2nd exposure, etc.)</td>
+<td>History of exposure ( = 1st exposure, 2 = 2nd exposure, etc.)</td>
 </tr>
 <tr class="even">
 <td>exp_signal</td>
@@ -394,7 +457,7 @@
 </tr>
 <tr class="odd">
 <td>pre_feeding</td>
-<td>Behavioural mode (TRUE = feeding, FALSE = non-feeding)</td>
+<td>Behavioural mode (TRUE = feeding, FALSE = not feeding)</td>
 </tr>
 <tr class="even">
 <td>min_range</td>
@@ -416,266 +479,352 @@
 </table>
 <div id="import-file" class="section level3">
 <h3 class="hasAnchor">
-<a href="#import-file" class="anchor" aria-hidden="true"></a>Import file</h3>
-<p>The first step is to read in the BRS data. This is done using the <code><a href="../reference/read_data.html">read_data()</a></code> function, which takes a <code>.csv</code> file as input and returns an object of class <code>&lt;brsdata&gt;</code>.</p>
+<a href="#import-file" class="anchor"></a>Import file</h3>
+<p>The first step is to read in the BRS data. This is done using the
+<code><a href="../reference/read_data.html">read_data()</a></code> function, which takes a <code>.csv</code> file
+as input and returns an object of class
+<code>&lt;brsdata&gt;</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mydat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_data.html">read_data</a></span><span class="op">(</span>file <span class="op">=</span> <span class="st">"path/to/my/data.csv"</span><span class="op">)</span></code></pre></div>
-<p>The <code>example_brs</code> dataset can be loaded by setting <code>file</code> to <code>NULL</code> (the default):</p>
+<p>The <code>example_brs</code> dataset can be loaded by setting
+<code>file</code> to <code>NULL</code> (the default):</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mydat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_data.html">read_data</a></span><span class="op">(</span>file <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></code></pre></div>
-<p><code><a href="../reference/read_data.html">read_data()</a></code> provides several options for filtering data on import, including by species and by minimum sample size. For instance, the code below excludes Risso’s dolphins as well as any other species with less than 3 individuals:</p>
+<p><code><a href="../reference/read_data.html">read_data()</a></code> provides several options for filtering data
+on import, including by species and by minimum sample size. For
+instance, the code below excludes Risso’s dolphins as well as any other
+species with less than 3 individuals:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mydat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_data.html">read_data</a></span><span class="op">(</span>file <span class="op">=</span> <span class="cn">NULL</span>, exclude.species <span class="op">=</span> <span class="st">"Risso's dolphin"</span>, min.N <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></code></pre></div>
+<p>The <code>risk.functions</code> argument can also be used to simulate
+additional exposures from published dose-response curves for California
+sea lions, bottlenose dolphins, and Blainville’s beaked whales <span class="citation">(<a href="#ref-Houser2013a" role="doc-biblioref">Houser
+<em>et al.</em> 2013a</a>; <a href="#ref-Houser2013b" role="doc-biblioref">Houser <em>et al.</em> 2013b</a>; <a href="#ref-Moretti2014" role="doc-biblioref">Moretti <em>et al.</em>
+2014</a>; <a href="#ref-Jacobson2022" role="doc-biblioref">Jacobson
+<em>et al.</em> 2022</a>)</span>.</p>
 </div>
 <div id="print-summary" class="section level3">
 <h3 class="hasAnchor">
-<a href="#print-summary" class="anchor" aria-hidden="true"></a>Print summary</h3>
-<p>We can get a detailed summary of the dataset by using the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> command:</p>
+<a href="#print-summary" class="anchor"></a>Print summary</h3>
+<p>We can get a detailed summary of the dataset by using the
+<code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> command:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mydat</span><span class="op">)</span></code></pre></div>
-<pre><code>##
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">mydat</span><span class="op">)</span></code></pre></div>
+<pre><code>## 
 ## ======================================================
 ## DATA SUMMARY
 ## ======================================================
-##
+## 
 ## Simulation: FALSE
 ## Data file: example_brs
-##
+## 
 ## --------------------
 ## OBSERVATIONS
 ## --------------------
-## Left-censoring: 2
-## Right-censoring: 39
-## Total: 41
-##
+## Left-censoring: 2 
+## Right-censoring: 39 
+## Total: 41 
+## 
+## 
+## --------------------
+## RISK FUNCTIONS
+## --------------------
+## Moretti et al. 2014: FALSE (n = 0) 
+## Jacobson et al. 2019: FALSE (n = 0) 
+## Houser et al. 2013 (California sea lions): FALSE (n = 0) 
+## Houser et al. 2013 (bottlenose dolphins): FALSE (n = 0) 
+## 
 ## --------------------
 ## SPECIES
 ## --------------------
-## N = 5
-## Excluded (N = 2): Gg Ha
+## N = 5 
+## Excluded (N = 2): Gg Ha 
 ## Species groupings: FALSE
-##
+## 
 ## # A tibble: 3 × 3
-##   trials N_ind   `%`
+##   trials N_ind   `%`    
 ##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
-## 1 1      21      0.26
-## 2 2      29      0.36
-## 3 3      30      0.38
-##
-## # A tibble: 5 × 8
-##   species common_name             N_ind N_trials censored   mean    min   max
-##   &lt;chr&gt;   &lt;chr&gt;                   &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
-## 1 Bm      Blue whale                 32       64        0  95.55  60.72 152.6
-## 2 Zc      Cuvier's beaked whale       4       10        2 147.9  108.5  185.8
-## 3 Oo      Killer whale                7       16        0 129.7   92.01 165.9
-## 4 Gm      Long-finned pilot whale    22       45        9 136.0   66.22 184.9
-## 5 Pm      Sperm whale                15       34        0  89.53  60.84 163.8
-##
+## 1 1      21      0.26   
+## 2 2      29      0.36   
+## 3 3      30      0.38   
+## 
+## # A tibble: 5 × 9
+##   species common_name             N_ind N_trials censored.L censored.R   mean
+##   &lt;chr&gt;   &lt;chr&gt;                   &lt;int&gt;    &lt;int&gt;      &lt;int&gt;      &lt;int&gt;  &lt;dbl&gt;
+## 1 Bm      Blue whale                 32       64          2          0  95.55
+## 2 Zc      Cuvier's beaked whale       4       10          0          7 147.9 
+## 3 Oo      Killer whale                7       16          0          0 129.7 
+## 4 Gm      Long-finned pilot whale    22       45          0         32 136.0 
+## 5 Pm      Sperm whale                15       34          0          0  89.53
+##      min   max
+##    &lt;dbl&gt; &lt;dbl&gt;
+## 1  60.72 152.6
+## 2 108.5  185.8
+## 3  92.01 165.9
+## 4  66.22 184.9
+## 5  60.84 163.8
+## 
 ## --------------------
 ## COVARIATES
 ## --------------------
 ## No covariates</code></pre>
-<div id="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, August 20, 2021</p>
-</div>
 <blockquote>
-<p><strong>Note:</strong> Help files for S3 methods like <code>summary</code>, <code>plot</code> and <code>print</code> are accessed by combining the method name and the class of the R object to which they apply. For instance, the documentation for the data summary function can be viewed with: <code><a href="../reference/summary.brsdata.html">?summary.brsdata</a></code></p>
+<p><strong>Note:</strong> Help files for S3 methods like
+<code>summary</code>, <code>plot</code> and <code>print</code> are
+accessed by combining the method name and the class of the R object to
+which they apply. For instance, the documentation for the data summary
+function can be viewed with:<br><code><a href="../reference/summary.brsdata.html">?summary.brsdata</a></code></p>
 </blockquote>
 </div>
 <div id="covariates" class="section level3">
 <h3 class="hasAnchor">
-<a href="#covariates" class="anchor" aria-hidden="true"></a>Covariates</h3>
-<p>At present, four contextual covariates can be included in the hierarchical dose-response model:</p>
+<a href="#covariates" class="anchor"></a>Covariates</h3>
+<p>At present, four contextual covariates can be included in the
+hierarchical dose-response model:</p>
 <ol style="list-style-type: decimal">
 <li><p>Previous history of exposure (<code>exposed</code>);</p></li>
 <li><p>Sonar signal type (<code>sonar</code>);</p></li>
-<li><p>Behavioural mode, i.e., feeding vs. non-feeding (<code>behaviour</code>);</p></li>
+<li><p>Behavioural mode, i.e., feeding vs. non-feeding
+(<code>behaviour</code>);</p></li>
 <li><p>Source-whale range (<code>range</code>).</p></li>
 </ol>
 <p>These can be specified in the call to <code><a href="../reference/read_data.html">read_data()</a></code>:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">mydat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_data.html">read_data</a></span><span class="op">(</span>file <span class="op">=</span> <span class="cn">NULL</span>,
-                   exclude.species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Risso's dolphin"</span>, <span class="st">"Tursiops truncatus"</span><span class="op">)</span>,
+<code class="sourceCode R"><span class="va">mydat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_data.html">read_data</a></span><span class="op">(</span>file <span class="op">=</span> <span class="cn">NULL</span>, 
+                   exclude.species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"Risso's dolphin"</span>, <span class="st">"Tursiops truncatus"</span><span class="op">)</span>,
                    min.N <span class="op">=</span> <span class="fl">2</span>,
-                   covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"behaviour"</span>, <span class="st">"range"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+                   covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"exposed"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <blockquote>
-<p><strong>Note:</strong> Species names can be given using any combination of scientific name, common name, or unique identifier, as listed in <code>species_brs</code>.</p>
+<p><strong>Note:</strong> Species names can be given using any
+combination of scientific name, common name, or unique identifier, as
+listed in <code>species_brs</code>.</p>
 </blockquote>
-<p>The data summary now includes an overview of available covariates:</p>
+<p>The data summary now includes an overview of available
+covariates:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mydat</span><span class="op">)</span></code></pre></div>
-<pre><code>##
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">mydat</span><span class="op">)</span></code></pre></div>
+<pre><code>## 
 ## ======================================================
 ## DATA SUMMARY
 ## ======================================================
-##
+## 
 ## Simulation: FALSE
 ## Data file: example_brs
-##
+## 
 ## --------------------
 ## OBSERVATIONS
 ## --------------------
-## Left-censoring: 2
-## Right-censoring: 41
-## Total: 43
-##
+## Left-censoring: 2 
+## Right-censoring: 41 
+## Total: 43 
+## 
+## 
+## --------------------
+## RISK FUNCTIONS
+## --------------------
+## Moretti et al. 2014: FALSE (n = 0) 
+## Jacobson et al. 2019: FALSE (n = 0) 
+## Houser et al. 2013 (California sea lions): FALSE (n = 0) 
+## Houser et al. 2013 (bottlenose dolphins): FALSE (n = 0) 
+## 
 ## --------------------
 ## SPECIES
 ## --------------------
-## N = 6
-## Excluded (N = 2): Gg Tt
+## N = 6 
+## Excluded (N = 2): Gg Tt 
 ## Species groupings: FALSE
-##
+## 
 ## # A tibble: 3 × 3
-##   trials N_ind   `%`
+##   trials N_ind   `%`    
 ##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
-## 1 1      23      0.28
-## 2 2      29      0.35
-## 3 3      30      0.37
-##
-## # A tibble: 6 × 8
-##   species common_name               N_ind N_trials censored   mean    min    max
-##   &lt;chr&gt;   &lt;chr&gt;                     &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 Bm      Blue whale                   32       64        0  95.55  60.72  152.6
-## 2 Zc      Cuvier's beaked whale         4       10        2 147.9  108.5   185.8
-## 3 Oo      Killer whale                  7       16        0 129.7   92.01  165.9
-## 4 Gm      Long-finned pilot whale      22       45        9 136.0   66.22  184.9
-## 5 Ha      Northern bottlenose whale     2        2        2 NaN    Inf    -Inf
-## 6 Pm      Sperm whale                  15       34        0  89.53  60.84  163.8
-##
+## 1 1      23      0.28   
+## 2 2      29      0.35   
+## 3 3      30      0.37   
+## 
+## # A tibble: 6 × 9
+##   species common_name               N_ind N_trials censored.L censored.R   mean
+##   &lt;chr&gt;   &lt;chr&gt;                     &lt;int&gt;    &lt;int&gt;      &lt;int&gt;      &lt;int&gt;  &lt;dbl&gt;
+## 1 Bm      Blue whale                   32       64          2          0  95.55
+## 2 Zc      Cuvier's beaked whale         4       10          0          7 147.9 
+## 3 Oo      Killer whale                  7       16          0          0 129.7 
+## 4 Gm      Long-finned pilot whale      22       45          0         32 136.0 
+## 5 Ha      Northern bottlenose whale     2        2          0          2 NaN   
+## 6 Pm      Sperm whale                  15       34          0          0  89.53
+##      min    max
+##    &lt;dbl&gt;  &lt;dbl&gt;
+## 1  60.72  152.6
+## 2 108.5   185.8
+## 3  92.01  165.9
+## 4  66.22  184.9
+## 5 Inf    -Inf  
+## 6  60.84  163.8
+## 
 ## --------------------
 ## COVARIATES
 ## --------------------
-## --  behaviour  --
-## Levels: 2
-## [feeding]: n = 57
-## [non-feeding]: n = 114
-## [NA]: n = 0
-##
-## --  range  --
-## [min]: 0.102
-## [mean]: 4.66
-## [max]: 85.014
+## --  exposed  --
+## Levels: 2 
+## [0]: n = 89
+## [1]: n = 82
 ## [NA]: n = 0</code></pre>
 <blockquote>
-<p><strong>Note:</strong> The large number of sonar systems used in BRSs means that some signal types must be discarded and/or lumped together <em>a priori</em> to avoid singularities. By default, <code>read_data</code> will:</p>
+<p><strong>Note:</strong> The large number of sonar systems used in BRSs
+means that some signal types must be discarded and/or lumped together
+<em>a priori</em> to avoid singularities. By default,
+<code>read_data</code> will:</p>
 <ul>
-<li><p><strong>exclude</strong> <code>PRN</code>, <code>CAS</code>, <code>ALARM</code>, <code>HF ALARM</code>, <code>HFAS</code>, <code>HF ALARM CAS</code>, and <code>MFAS CAS</code></p></li>
-<li><p><strong>group</strong> <code>MFAS</code>, <code>MFA</code>, <code>REAL MFA</code>, <code>MFAS_DS</code>, <code>MFA HELO</code>, <code>REAL MFA HELO</code>, <code>SOCAL_d</code>, <code>REAL MFAS</code>, <code>MF ALARM</code> as <strong>MFAS</strong></p></li>
-<li><p><strong>group</strong> all other signals as <strong>LFAS</strong></p></li>
+<li><p><strong>exclude</strong> <code>PRN</code>, <code>CAS</code>,
+<code>ALARM</code>, <code>HF ALARM</code>, <code>HFAS</code>,
+<code>HF ALARM CAS</code>, and <code>MFAS CAS</code></p></li>
+<li><p><strong>group</strong> <code>MFAS</code>, <code>MFA</code>,
+<code>REAL MFA</code>, <code>MFAS_DS</code>, <code>MFA HELO</code>,
+<code>REAL MFA HELO</code>, <code>SOCAL_d</code>,
+<code>REAL MFAS</code>, <code>MF ALARM</code> as
+<strong>MFAS</strong></p></li>
+<li><p><strong>group</strong> all other signals as
+<strong>LFAS</strong></p></li>
 </ul>
-<p>This default behaviour can be overridden using the <code>sonar.groups</code> and <code>exclude.sonar</code> arguments. See the <code>espresso</code> package documentation for details.</p>
+<p>This default behaviour can be overridden using the
+<code>sonar.groups</code> and <code>exclude.sonar</code> arguments. See
+the <code>espresso</code> package documentation for details.</p>
 </blockquote>
 </div>
 <div id="species-groupings" class="section level3">
 <h3 class="hasAnchor">
-<a href="#species-groupings" class="anchor" aria-hidden="true"></a>Species groupings</h3>
-<p>The call to <code>summary</code> above indicated that sample sizes for the two beaked whales species (<code>Zc</code> and <code>Ha</code>) are still limited. As a rule, we do not believe that the model can yield useful inference with less than 5 individuals per species. We could go back and increase the value of the <code>min.N</code> argument in <code><a href="../reference/read_data.html">read_data()</a></code>, but this would result in further data loss. An alternative is to group species <em>a priori</em> using the <code><a href="../reference/create_groups.html">create_groups()</a></code> function.</p>
+<a href="#species-groupings" class="anchor"></a>Species groupings</h3>
+<p>The call to <code>summary</code> above indicated that sample sizes
+for the two beaked whales species (<code>Zc</code> and <code>Ha</code>)
+are still limited. As a rule, we do not believe that the model can yield
+useful inference with less than 5 individuals per species. We could go
+back and increase the value of the <code>min.N</code> argument in
+<code><a href="../reference/read_data.html">read_data()</a></code>, but this would result in further data loss. An
+alternative is to group species <em>a priori</em> using the
+<code><a href="../reference/create_groups.html">create_groups()</a></code> function.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mydat.grp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_groups.html">create_groups</a></span><span class="op">(</span>dat.obj <span class="op">=</span> <span class="va">mydat</span>, abbrev <span class="op">=</span> <span class="cn">TRUE</span>,
-            species.groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Beaked_whales <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ha"</span>, <span class="st">"Cuvier's beaked whale"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+            species.groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>Beaked_whales <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"Ha"</span>, <span class="st">"Cuvier's beaked whale"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <blockquote>
-<p>Note that the <code>abbrev</code> argument can be used to shorten group names, which is useful to avoid clutter in plots and data summaries. Here, <code>abbrev</code> is set to <code>TRUE</code> so the chosen group name, <code>Beaked_whales</code> will be abbreviated to <code>Bkd_w</code> (see below).</p>
+<p>Note that the <code>abbrev</code> argument can be used to shorten
+group names, which is useful to avoid clutter in subsequent plots and
+data summaries. Here, <code>abbrev</code> is set to <code>TRUE</code> so
+the chosen group name, <code>Beaked_whales</code> will be abbreviated to
+<code>Bkd_w</code> (as shown below).</p>
 </blockquote>
-<p>The resulting object now has an additional class of <code>&lt;brsdata.grp&gt;</code> and only four species, including the new group:</p>
+<p>The resulting object now has an additional class of
+<code>&lt;brsdata.grp&gt;</code> and only four species, including the
+new group:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">mydat.grp</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html">class</a></span><span class="op">(</span><span class="va">mydat.grp</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] "brsdata.grp" "brsdata"     "list"</code></pre>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mydat.grp</span><span class="op">)</span></code></pre></div>
-<pre><code>##
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">mydat.grp</span><span class="op">)</span></code></pre></div>
+<pre><code>## 
 ## ======================================================
 ## DATA SUMMARY
 ## ======================================================
-##
+## 
 ## Simulation: FALSE
 ## Data file: example_brs
-##
+## 
 ## --------------------
 ## OBSERVATIONS
 ## --------------------
-## Left-censoring: 2
-## Right-censoring: 41
-## Total: 43
-##
+## Left-censoring: 2 
+## Right-censoring: 41 
+## Total: 43 
+## 
+## 
+## --------------------
+## RISK FUNCTIONS
+## --------------------
+## Moretti et al. 2014: FALSE (n = 0) 
+## Jacobson et al. 2019: FALSE (n = 0) 
+## Houser et al. 2013 (California sea lions): FALSE (n = 0) 
+## Houser et al. 2013 (bottlenose dolphins): FALSE (n = 0) 
+## 
 ## --------------------
 ## SPECIES
 ## --------------------
-## N = 5
-## Excluded (N = 2): Gg Tt
+## N = 5 
+## Excluded (N = 2): Gg Tt 
 ## Species groupings:
-##
+## 
 ## # A tibble: 1 × 3
 ##   name          abbrev species
-##   &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;
-## 1 Beaked_whales Bkd_w  Ha,Zc
-##
+##   &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;  
+## 1 Beaked_whales Bkd_w  Ha,Zc  
+## 
 ## # A tibble: 3 × 3
-##   trials N_ind   `%`
+##   trials N_ind   `%`    
 ##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
-## 1 1      23      0.28
-## 2 2      29      0.35
-## 3 3      30      0.37
-##
-## # A tibble: 5 × 7
-##   species N_ind N_trials censored   mean    min   max
-##   &lt;chr&gt;   &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
-## 1 Bkd_w       6       12        4 147.9  108.5  185.8
-## 2 Bm         32       64        0  95.55  60.72 152.6
-## 3 Gm         22       45        9 136.0   66.22 184.9
-## 4 Oo          7       16        0 129.7   92.01 165.9
-## 5 Pm         15       34        0  89.53  60.84 163.8
-##
+## 1 1      23      0.28   
+## 2 2      29      0.35   
+## 3 3      30      0.37   
+## 
+## # A tibble: 5 × 8
+##   species N_ind N_trials censored.L censored.R   mean    min   max
+##   &lt;chr&gt;   &lt;int&gt;    &lt;int&gt;      &lt;int&gt;      &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
+## 1 Bkd_w       6       12          0          9 147.9  108.5  185.8
+## 2 Bm         32       64          2          0  95.55  60.72 152.6
+## 3 Gm         22       45          0         32 136.0   66.22 184.9
+## 4 Oo          7       16          0          0 129.7   92.01 165.9
+## 5 Pm         15       34          0          0  89.53  60.84 163.8
+## 
 ## --------------------
 ## COVARIATES
 ## --------------------
-## --  behaviour  --
-## Levels: 2
-## [feeding]: n = 57
-## [non-feeding]: n = 114
-## [NA]: n = 0
-##
-## --  range  --
-## [min]: 0.102
-## [mean]: 4.66
-## [max]: 85.014
+## --  exposed  --
+## Levels: 2 
+## [0]: n = 89
+## [1]: n = 82
 ## [NA]: n = 0</code></pre>
-<p>Predefined species groupings can be dissolved using the <code><a href="../reference/undo_groups.html">undo_groups()</a></code> function, which returns the original dataset.</p>
+<p>Predefined species groupings can be dissolved again using the
+<code><a href="../reference/undo_groups.html">undo_groups()</a></code> function, which returns the original
+dataset.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mydat.ungrp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/undo_groups.html">undo_groups</a></span><span class="op">(</span><span class="va">mydat.grp</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">mydat.ungrp</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="https://rdrr.io/r/base/class.html">class</a></span><span class="op">(</span><span class="va">mydat.ungrp</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] "brsdata" "list"</code></pre>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mydat.ungrp</span><span class="op">)</span></code></pre></div>
-<pre><code>##
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">mydat.ungrp</span><span class="op">)</span></code></pre></div>
+<pre><code>## 
 ## ======================================================
 ## DATA SUMMARY
 ## ======================================================
-##
+## 
 ## Simulation: FALSE
 ## Data file: example_brs
-##
+## 
 ## --------------------
 ## OBSERVATIONS
 ## --------------------
-## Left-censoring: 2
-## Right-censoring: 41
-## Total: 43
-##
+## Left-censoring: 2 
+## Right-censoring: 41 
+## Total: 43 
+## 
+## 
+## --------------------
+## RISK FUNCTIONS
+## --------------------
+## Moretti et al. 2014: FALSE (n = 0) 
+## Jacobson et al. 2019: FALSE (n = 0) 
+## Houser et al. 2013 (California sea lions): FALSE (n = 0) 
+## Houser et al. 2013 (bottlenose dolphins): FALSE (n = 0) 
+## 
 ## --------------------
 ## SPECIES
 ## --------------------
-## N = 6
-## Excluded (N = 2): Gg Tt
+## N = 6 
+## Excluded (N = 2): Gg Tt 
 ## Species groupings: FALSE
-##
+## 
 ## # A tibble: 3 × 3
-##   trials N_ind   `%`
+##   trials N_ind   `%`    
 ##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
-## 1 1      23      0.28
-## 2 2      29      0.35
-## 3 3      30      0.37
-##
+## 1 1      23      0.28   
+## 2 2      29      0.35   
+## 3 3      30      0.37   
+## 
 ## # A tibble: 6 × 8
 ##   species common_name               N_ind N_trials censored   mean    min    max
 ##   &lt;chr&gt;   &lt;chr&gt;                     &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
@@ -683,219 +832,330 @@
 ## 2 Zc      Cuvier's beaked whale         4       10        2 147.9  108.5   185.8
 ## 3 Oo      Killer whale                  7       16        0 129.7   92.01  165.9
 ## 4 Gm      Long-finned pilot whale      22       45        9 136.0   66.22  184.9
-## 5 Ha      Northern bottlenose whale     2        2        2 NaN    Inf    -Inf
+## 5 Ha      Northern bottlenose whale     2        2        2 NaN    Inf    -Inf  
 ## 6 Pm      Sperm whale                  15       34        0  89.53  60.84  163.8
-##
+## 
 ## --------------------
 ## COVARIATES
 ## --------------------
-## --  behaviour  --
-## Levels: 2
-## [feeding]: n = 57
-## [non-feeding]: n = 114
-## [NA]: n = 0
-##
-## --  range  --
-## [min]: 0.102
-## [mean]: 4.66
-## [max]: 85.014
+## --  exposed  --
+## Levels: 2 
+## [0]: n = 89
+## [1]: n = 82
 ## [NA]: n = 0</code></pre>
 </div>
 </div>
 <div id="rjmcmc" class="section level2">
 <h2 class="hasAnchor">
-<a href="#rjmcmc" class="anchor" aria-hidden="true"></a>rjMCMC</h2>
+<a href="#rjmcmc" class="anchor"></a>rjMCMC</h2>
 <div id="overview-1" class="section level3">
 <h3 class="hasAnchor">
-<a href="#overview-1" class="anchor" aria-hidden="true"></a>Overview</h3>
-<p>The (monophasic) Bayesian hierarchical dose-response model is fully described in <span class="citation"><a href="#ref-Miller2014" role="doc-biblioref">Miller <em>et al.</em></a> (<a href="#ref-Miller2014" role="doc-biblioref">2014</a>)</span> and <span class="citation"><a href="#ref-Antunes2014" role="doc-biblioref">Antunes <em>et al.</em></a> (<a href="#ref-Antunes2014" role="doc-biblioref">2014</a>)</span>, and is illustrated in Figure 2.</p>
+<a href="#overview-1" class="anchor"></a>Overview</h3>
+<p>The monophasic Bayesian hierarchical dose-response model is fully
+described in <span class="citation">Miller <em>et al.</em> (<a href="#ref-Miller2014" role="doc-biblioref">2014</a>)</span> and <span class="citation">Antunes <em>et al.</em> (<a href="#ref-Antunes2014" role="doc-biblioref">2014</a>)</span>, and is illustrated in Figure 2.
+The biphasic version of the same model is shown in Figure 3.</p>
 <div class="figure">
-<img src="https://raw.githubusercontent.com/pjbouchet/espresso/main/vignettes/rjmcmc_dag_monophasic.png" width="602" alt=""><p class="caption">Figure 2. <em>Directed acyclic graph of the monophasic dose-response function. Model variablesare denoted by circles and constants (i.e., known quantities) by squares. Shading denotes quantities for which prior distributions are required. Lines join quantities that are directly related to one another, with arrows showing the direction of inference.</em></p>
+<img src=".../../vignettes/rjmcmc_dag_monophasic.png" width="602" alt=""><p class="caption"><b>Figure 2.</b> Directed acyclic graph of the
+monophasic dose-response function. Model variables are denoted by
+circles and constants (i.e., known quantities) by squares. Shading
+denotes quantities for which prior distributions are required. Lines
+join quantities that are directly related to one another, with arrows
+showing the direction of inference.</p>
 </div>
-<p>To discriminate between competing models, we treat the model <strong>itself</strong> as a parameter and form the joint posterior distribution over both parameters and models <span class="citation">(<a href="#ref-Oedekoven2014" role="doc-biblioref">Oedekoven <em>et al.</em> 2014</a>)</span>. Every iteration of the rjMCMC algorithm therefore entails two sequential steps:</p>
+<div class="figure">
+<img src="../../vignettes/rjmcmc_dag_biphasic.png" alt=""><p class="caption"><b>Figure 3.</b> Directed acyclic graph of the biphasic
+dose-response function. Model variables are denoted by circles and
+constants (i.e., known quantities) by squares. Shading denotes
+quantities for which prior distributions are required. Lines join
+quantities that are directly related to one another, with arrows showing
+the direction of inference.</p>
+</div>
+<p>To discriminate between competing models, rjMCMC treats the
+<strong>model</strong> <strong>itself</strong> as a parameter and forms
+the joint posterior distribution over both parameters and models <span class="citation">(<a href="#ref-Oedekoven2014" role="doc-biblioref">Oedekoven <em>et al.</em> 2014</a>)</span>. Every
+iteration of the rjMCMC algorithm therefore entails two sequential
+steps:</p>
 <ol style="list-style-type: decimal">
-<li><p>A <strong>between-model</strong> move, whereby we update the model using the rjMCMC algorithm.</p></li>
-<li><p>A <strong>within-model</strong> move, whereby we update parameters given the current model using a Metropolis-Hastings algorithm.</p></li>
+<li><p>A <strong>between-model</strong> move, whereby the model is
+updated using the rjMCMC algorithm.</p></li>
+<li><p>A <strong>within-model</strong> move, whereby parameters are
+updated given the current model using a Metropolis-Hastings
+algorithm.</p></li>
 </ol>
-<p>In <code>espresso</code>, the main mechanism for exploring the model space is by merging or splitting groups of species (i.e., a <strong>split-merge</strong> approach) <span class="citation">(<a href="#ref-Huelsenbeck2004" role="doc-biblioref">Huelsenbeck <em>et al.</em> 2004</a>)</span>. A <strong>split</strong> move works by randomly picking a group (of at least two species) and creating two new groups from it (single split). For example, if the current model is <code>(Oo,Pm)+(Bm)+(Bkd_w)</code>, then the only possible split is to separate killer whales (<code>Oo</code>) and sperm whales (<code>Pm</code>) and assign them to their own groups. Similarly, a <strong>merge</strong> move works by randomly selecting two groups (of any size) and collapsing them into one.</p>
-<p>The probability of a <strong>split</strong> move, <span class="math inline">\(P_S\)</span>, is given by the product of: (1) the probability of proposing to perform a split <span class="math inline">\(P_S(prop)\)</span>, (2) the probability of choosing a group to split among all available groups, <span class="math inline">\(P_S(choose)\)</span>, and (3) the probability of performing a particular split, <span class="math inline">\(P_S(split)\)</span>, when multiple single splits are possible within the chosen group. Likewise, the probability of a <strong>merge</strong> move, <span class="math inline">\(P_M\)</span>, is given by the product of: (1) the probability of proposing to perform a merge <span class="math inline">\(P_M(prop)\)</span>, and (2) the probability of choosing two groups to combine, <span class="math inline">\(P_M(choose)\)</span>, out of all possible pairs of existing groups.</p>
+<p>In <code>espresso</code>, the main mechanism for exploring the model
+space is by merging or splitting groups of species (i.e.,
+<strong>split-merge</strong> moves) <span class="citation">(<a href="#ref-Huelsenbeck2004" role="doc-biblioref">Huelsenbeck <em>et
+al.</em> 2004</a>)</span>. A <strong>split</strong> move works by
+randomly picking a group (of at least two species) and creating two new
+groups from it (single split). For example, if the current model is
+<code>(Oo,Pm)+(Bm)+(Bkd_w)</code>, then the only possible split is to
+separate killer whales (<code>Oo</code>) and sperm whales
+(<code>Pm</code>) and assign them to their own groups. Similarly, a
+<strong>merge</strong> move works by randomly selecting two groups (of
+any size) and collapsing them into one.</p>
+<p>The probability of a <strong>split</strong> move, <span class="math inline">\(P_S\)</span>, is given by the product of: (1) the
+probability of proposing to perform a split <span class="math inline">\(P_S(prop)\)</span>, (2) the probability of
+choosing a group to split among all available groups, <span class="math inline">\(P_S(choose)\)</span>, and (3) the probability of
+performing a particular split, <span class="math inline">\(P_S(split)\)</span>, when multiple single splits
+are possible within the chosen group. Likewise, the probability of a
+<strong>merge</strong> move, <span class="math inline">\(P_M\)</span>,
+is given by the product of: (1) the probability of proposing to perform
+a merge <span class="math inline">\(P_M(prop)\)</span>, and (2) the
+probability of choosing two groups to combine, <span class="math inline">\(P_M(choose)\)</span>, out of all possible pairs of
+existing groups. By default, both <span class="math inline">\(P_M(prop)\)</span> and <span class="math inline">\(P_S(prop)\)</span> are set to <code>0.5</code>,
+however these values can be adjusted by the user (see help files for
+details).</p>
 <blockquote>
-<p><strong>Note:</strong> When the current model is the one where all species are in a single group, then <span class="math inline">\(P_M(prop)\)</span> is <code>0</code> and <span class="math inline">\(P_S(prop)\)</span> equals <code>1</code>. Conversely, when all species are assigned to their own groups in the current model, then <span class="math inline">\(P_M(prop)\)</span> is <code>1</code> and <span class="math inline">\(P_S(prop)\)</span> equals <code>0</code>.</p>
+<p><strong>Note:</strong> When the current model is the one where all
+species are in a single group, then <span class="math inline">\(P_M(prop)\)</span> is <code>0</code> and <span class="math inline">\(P_S(prop)\)</span> equals <code>1</code>.
+Conversely, when all species are assigned to their own groups in the
+current model, then <span class="math inline">\(P_M(prop)\)</span> is
+<code>1</code> and <span class="math inline">\(P_S(prop)\)</span> equals
+<code>0</code>.</p>
 </blockquote>
-<p>By default, both <span class="math inline">\(P_M(prop)\)</span> and <span class="math inline">\(P_S(prop)\)</span> are set to <code>0.5</code>, however these values can be adjusted by the user (see help files for details).</p>
-<p>To facilitate convergence and avoid getting stuck in local maxima, <code>espresso</code> also implements three additional types of between-model moves:</p>
-<ul>
-<li><p><strong>data-driven (Type I and Type II)</strong> moves, in which proposals are informed by the “cues” present in the original data. These moves are defined based on the results of a cluster analysis performed on both (1) species means and (2) raw observations, using a non-parametric bootstrap approach <span class="citation">(<a href="#ref-Hofmans2015" role="doc-biblioref">Hofmans <em>et al.</em> 2015</a>)</span>. Specifically, the clustering algorithm, implemented in the <code>mclust</code> package <span class="citation">(<a href="#ref-Scrucca2016" role="doc-biblioref">Scrucca <em>et al.</em> 2016</a>)</span>, provides estimates of the probability distributions of unique groupings (Type I), and numbers of groups (regardless of species identity, Type II), where the latter ranges from <code>n = 1</code> when all species belong to the same group, to <code>n = n.species</code> when each species is treated individually. Type I moves work by proposing a candidate model with a known non-zero probability, which is given by the proportion of Bootstrap replicates in which each model optimised the BIC during clustering (see <code>mclust</code> for details). In contrast, Type II moves are conducted by first proposing a number of groupings (again, with probability given <em>via</em> bootstrap clustering), and subsequently proposing an appropriate candidate model with the corresponding grouping structure.</p></li>
-<li><p><strong>random</strong> moves, in which proposed values are drawn from a <code>Uniform</code> distribution bounded by <code>range.dB</code>(see <code><a href="../reference/read_data.html">read_data()</a></code> or <code><a href="../reference/simulate_data.html">simulate_data()</a></code>), with no dependence on current values (i.e., an independent sampler).</p></li>
-</ul>
-<p>By default, data-driven and random moves are only proposed every 100<sup>th</sup> iteration, at a relative frequency of 3 (Type I) / 1 (Type II) / 1 (random), such that attempts to perform a Type I move are made at iterations 100, 200, and 300, followed by a Type II move at iteration 400, and a random move at iteration 500. Again, these default values can be modified by the user where needed.</p>
-<p>A similar strategy is in place when covariate selection is enabled. In this case, the reversible jump step also entails a proposal to either drop a covariate that is already included in the model, or add one that is not. This requires generating a value for the new covariate parameter from a predefined proposal distribution (if we propose to add a covariate) or setting it to zero (if we propose to delete it), and calculating the acceptance probability accordingly <span class="citation">(<a href="#ref-Oedekoven2014" role="doc-biblioref">Oedekoven <em>et al.</em> 2014</a>)</span>.</p>
-<p>Default values for many of those choices are already given in <code>espresso</code>, but can be modified by the user if necessary, as explained in the section below.</p>
+<p>A similar strategy is in place when covariate selection is enabled.
+In this case, the reversible jump step also entails a proposal to either
+drop a covariate that is already included in the model, or add one that
+is not. This requires generating a value for the new covariate parameter
+from a predefined proposal distribution (if we propose to add a
+covariate) or setting it to zero (if we propose to delete it), and
+calculating the acceptance probability accordingly <span class="citation">(<a href="#ref-Oedekoven2014" role="doc-biblioref">Oedekoven <em>et al.</em> 2014</a>)</span>.</p>
+<blockquote>
+<p><strong>Note:</strong> We are also exploring ways to select between
+dose-response functional forms. This functionality will be implemented
+in a future release of the package. In the interim, monophasic and
+biphasic models can be fitted separately.</p>
+</blockquote>
+<p>Default values for many of those choices are already given in
+<code>espresso</code>, but can be modified by the user if necessary, as
+explained in the section below.</p>
 </div>
 <div id="configuration" class="section level3">
 <h3 class="hasAnchor">
-<a href="#configuration" class="anchor" aria-hidden="true"></a>Configuration</h3>
-<p>Before running any models, we need to first set up the reversible jump sampler. The <code><a href="../reference/configure_rjMCMC.html">configure_rjMCMC()</a></code> function allows us to do so, by specifying whether to enable either/both model (<code>model.select</code>) and covariate (<code>covariate.select</code>) selection:</p>
+<a href="#configuration" class="anchor"></a>Configuration</h3>
+<p>Before running any model, we need to first set up the reversible jump
+sampler. The <code><a href="../reference/configure_rjMCMC.html">configure_rjMCMC()</a></code> function allows us to do
+so, by specifying whether to enable model (<code>model.select</code>),
+covariate (<code>covariate.select</code>), and/or functional form
+(<code>function.select</code>) selection:</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">mydat.config</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/configure_rjMCMC.html">configure_rjMCMC</a></span><span class="op">(</span>dat <span class="op">=</span> <span class="va">mydat.grp</span>,
                                  model.select <span class="op">=</span> <span class="cn">TRUE</span>,
                                  covariate.select <span class="op">=</span> <span class="cn">TRUE</span>,
-                                 n.rep <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></code></pre></div>
-<pre><code>## Generating Bootstrap resamples ...
-## Performing cluster analysis ...
-## Done!</code></pre>
+                                 function.select <span class="op">=</span> <span class="cn">FALSE</span>,
+                                 biphasic <span class="op">=</span> <span class="cn">FALSE</span>,
+                                 p.split <span class="op">=</span> <span class="fl">0.5</span>,
+                                 p.merge <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></code></pre></div>
 <blockquote>
-<p><strong>Note:</strong> When <code>model.select = FALSE</code>, the MCMC sampler will be constrained to the species groupings defined in the <code>brsdata</code> or <code>brsdata.grp</code> object, and will only estimate the parameters of the corresponding model, without allowing model selection. Likewise, <code>covariate.select = FALSE</code> will force the inclusion of all covariates defined using <code><a href="../reference/read_data.html">read_data()</a></code> or <code><a href="../reference/simulate_data.html">simulate_data()</a></code>.</p>
+<p><strong>Note:</strong> When <code>model.select = FALSE</code>, the
+MCMC sampler will be constrained to the species groupings defined in the
+<code>brsdata</code> or <code>brsdata.grp</code> object, and will only
+estimate the parameters of the corresponding model, without allowing
+model selection. Likewise, <code>covariate.select = FALSE</code> will
+force the inclusion of all covariates defined using
+<code><a href="../reference/read_data.html">read_data()</a></code> or <code><a href="../reference/simulate_data.html">simulate_data()</a></code>. Similarly, the
+<code>biphasic</code> argument can be used to impose a functional form.
+Set to <code>TRUE</code> for biphasic, and <code>FALSE</code> for
+monophasic. Note that this argument will be ignored when
+<code>function.select = TRUE</code>.</p>
 </blockquote>
-<div style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, August 20, 2021</p>
-</div>
-<p>Other (optional) arguments can be passed to <code>configure_rjMCMC</code>, for instance to change move types, default values for proposal standard deviations in the MCMC sampler etc. Please consult the help documentation for details.</p>
+<p>Other (optional) arguments can be passed to
+<code>configure_rjMCMC</code>, for instance to change default values for
+proposal standard deviations in the MCMC sampler. Please consult the
+help documentation (<code><a href="../reference/configure_rjMCMC.html">?configure_rjMCMC</a></code>) for details.</p>
 <p><code><a href="../reference/configure_rjMCMC.html">configure_rjMCMC()</a></code> performs three actions:</p>
 <ul>
-<li><p>It returns empirical estimates of the between-whale (φ) and within-whale between-exposure (σ) variation, which are needed to generate plausible starting values for the MCMC chains.</p></li>
-<li><p>It defines the means and standard deviations of relevant (1) proposal distributions and (2) priors. Default values for the widths of proposal distributions were chosen through careful pilot tuning of individual parameters, but can be adjusted using the <code>proposal.mh</code> and <code>proposal.rj</code> arguments, if necessary (see help files). The Bayesian hierarchical dose-response model assumes Uniform priors for μ, σ and φ (Figure 2), and Normal priors centred on <code>0</code> and with a standard deviation of <code>30</code> for all contextual covariates, <strong><em>β</em></strong>. These values can be modified using the <code>prior.covariates</code> argument.</p></li>
-<li><p>It conducts a model-based cluster analysis to parameterise between-model jumps using <code>n.rep</code> bootstrap replicates of the input data.</p></li>
+<li><p>It returns empirical estimates of the between-whale (φ) and
+within-whale between-exposure (σ) variation, which are needed to
+generate plausible starting values for the MCMC chains.</p></li>
+<li><p>It defines the means and standard deviations of relevant (1)
+proposal distributions and (2) priors. Default values for the widths of
+proposal distributions are chosen through careful pilot tuning of
+individual parameters, but can be adjusted using the
+<code>proposal.mh</code> and <code>proposal.rj</code> arguments, if
+necessary (see help files). The Bayesian hierarchical dose-response
+model assumes Uniform priors for μ, σ, and φ in the monophasic model
+(Figure 2), as well as for α, ν, τ and ω in the biphasic model (Figure
+3). Normal priors centred on <code>0</code> and with a standard
+deviation of <code>30</code> are used for all contextual covariates,
+<strong><em>β</em></strong>, by default. A Normal prior N(0,1) is placed
+ψ in the biphasic model. These values can be modified using the
+<code>priors</code> argument.</p></li>
+<li><p>It conducts a model-based cluster analysis to help parameterise
+between-model jumps and inform starting values, using <code>n.rep</code>
+non-parametric bootstrap replicates of the input data [@Hofmans2015], as
+implemented in the mclust package [@Scrucca2016].</p></li>
 </ul>
-<p>The output object is one of class <code>&lt;rjconfig&gt;</code>. It is identical to the input <code>brsdata</code> or <code>brsdata.grp</code> object but contains additional information needed for sampler execution, which is captured in the ‘MCMC’ section of the data summary.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">mydat.config</span><span class="op">)</span></code></pre></div>
+<p>The output object is one of class <code>&lt;rjconfig&gt;</code>. It
+is identical to the input <code>brsdata</code> or
+<code>brsdata.grp</code> object but contains additional information
+needed for sampler execution, which is captured in the ‘MCMC’ section of
+the data summary.</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html">class</a></span><span class="op">(</span><span class="va">mydat.config</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] "rjconfig"    "brsdata.grp" "brsdata"     "list"</code></pre>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mydat.config</span>, print.config <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<pre><code>##
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">mydat.config</span>, print.config <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<pre><code>## 
 ## ======================================================
 ## DATA SUMMARY
 ## ======================================================
-##
+## 
 ## Simulation: FALSE
 ## Data file: example_brs
-##
+## 
 ## --------------------
 ## OBSERVATIONS
 ## --------------------
-## Left-censoring: 2
-## Right-censoring: 41
-## Total: 43
-##
+## Left-censoring: 2 
+## Right-censoring: 41 
+## Total: 43 
+## 
+## 
+## --------------------
+## RISK FUNCTIONS
+## --------------------
+## Moretti et al. 2014: FALSE (n = 0) 
+## Jacobson et al. 2019: FALSE (n = 0) 
+## Houser et al. 2013 (California sea lions): FALSE (n = 0) 
+## Houser et al. 2013 (bottlenose dolphins): FALSE (n = 0) 
+## 
 ## --------------------
 ## SPECIES
 ## --------------------
-## N = 5
-## Excluded (N = 2): Gg Tt
+## N = 5 
+## Excluded (N = 2): Gg Tt 
 ## Species groupings:
-##
+## 
 ## # A tibble: 1 × 3
 ##   name          abbrev species
-##   &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;
-## 1 Beaked_whales Bkd_w  Ha,Zc
-##
+##   &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;  
+## 1 Beaked_whales Bkd_w  Ha,Zc  
+## 
 ## # A tibble: 3 × 3
-##   trials N_ind   `%`
+##   trials N_ind   `%`    
 ##   &lt;chr&gt;  &lt;table&gt; &lt;table&gt;
-## 1 1      23      0.28
-## 2 2      29      0.35
-## 3 3      30      0.37
-##
-## # A tibble: 5 × 7
-##   species N_ind N_trials censored   mean    min   max
-##   &lt;chr&gt;   &lt;int&gt;    &lt;int&gt;    &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
-## 1 Bkd_w       6       12        4 147.9  108.5  185.8
-## 2 Bm         32       64        0  95.55  60.72 152.6
-## 3 Gm         22       45        9 136.0   66.22 184.9
-## 4 Oo          7       16        0 129.7   92.01 165.9
-## 5 Pm         15       34        0  89.53  60.84 163.8
-##
+## 1 1      23      0.28   
+## 2 2      29      0.35   
+## 3 3      30      0.37   
+## 
+## # A tibble: 5 × 8
+##   species N_ind N_trials censored.L censored.R   mean    min   max
+##   &lt;chr&gt;   &lt;int&gt;    &lt;int&gt;      &lt;int&gt;      &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
+## 1 Bkd_w       6       12          0          9 147.9  108.5  185.8
+## 2 Bm         32       64          2          0  95.55  60.72 152.6
+## 3 Gm         22       45          0         32 136.0   66.22 184.9
+## 4 Oo          7       16          0          0 129.7   92.01 165.9
+## 5 Pm         15       34          0          0  89.53  60.84 163.8
+## 
 ## --------------------
 ## COVARIATES
 ## --------------------
-## --  behaviour  --
-## Levels: 2
-## [feeding]: n = 57
-## [non-feeding]: n = 114
+## --  exposed  --
+## Levels: 2 
+## [0]: n = 89
+## [1]: n = 82
 ## [NA]: n = 0
-##
-## --  range  --
-## [min]: 0.102
-## [mean]: 4.66
-## [max]: 85.014
-## [NA]: n = 0
-##
-##
-##
+## 
+## 
 ## --------------------
 ## MCMC
 ## --------------------
-##
-## Model selection: TRUE
-## Covariate selection: TRUE
-##
-## Variance estimates: 14.4 (sigma); 29.4 (phi)
-##
-## Proposal standard deviations:
-##
-## # A tibble: 8 × 3
-##   param          SD step
-##   &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;
-## 1 t.ij           10 MH
-## 2 mu.i           10 MH
-## 3 mu              7 MH
-## 4 phi            10 MH
-## 5 sigma          10 MH
-## 6 behaviour      10 MH
-## 7 range           3 MH
-## 8 data-driven     1 RJ
-##
-## Priors:
-##
-## μ: Uniform (60; 215)
-## φ: Uniform (0; 45)
-## σ: Uniform (0; 45)
-##
-## p(split): 0.5
-## p(merge): 0.5
-##
-##
-## Clustering:
-##
-## [[1]]
-## # A tibble: 2 × 3
-##   model                         p p_scale
-##   &lt;chr&gt;                     &lt;dbl&gt;   &lt;dbl&gt;
-## 1 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)  0.53    0.53
-## 2 (Bm,Pm)+(Gm,Bkd_w)+(Oo)    0.47    0.47
-##
-## [[2]]
-## # A tibble: 5 × 3
-##   cluster     p p_scale
-##     &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
-## 1       1  0    0.05660
-## 2       2  0.16 0.1509
-## 3       3  0.32 0.3019
-## 4       4  0.46 0.4340
-## 5       5  0.06 0.05660</code></pre>
+## 
+## Model selection: TRUE 
+## Covariate selection: TRUE 
+## Functional form selection: FALSE 
+## 
+## Functional form: Monophasic 
+## 
+## Variance estimates: 14.4 (sigma); 29.4 (phi) 
+## 
+## -- Proposals --
+## 
+## # A tibble: 15 × 3
+##    param          SD step 
+##    &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;
+##  1 t.ij         10   MH   
+##  2 mu.i          5   MH   
+##  3 mu            2   MH   
+##  4 phi           5   MH   
+##  5 sigma         5   MH   
+##  6 nu            5   MH   
+##  7 tau           5   MH   
+##  8 alpha         2   MH   
+##  9 mu.ij         5   MH   
+## 10 psi           1   MH   
+## 11 omega         2   MH   
+## 12 psi.i         2   MH   
+## 13 k.ij          0.5 MH   
+## 14 exposed      10   MH   
+## 15 split-merge   5   RJ   
+## 
+## p(split): 0.5 
+## p(merge): 0.5 
+## 
+## 
+## -- Priors --
+## 
+##         lower_or_mean upper_or_SD   prior
+## mu               60.0         215 Uniform
+## phi               1.0          45 Uniform
+## sigma             1.0          45 Uniform
+## alpha           110.0         160 Uniform
+## nu               60.0         215 Uniform
+## tau               1.0          45 Uniform
+## omega             0.5           5 Uniform
+## psi               0.0           1  Normal
+## exposed           0.0          30  Normal
+## 
+## -- Clustering --
+## 
+## # A tibble: 4 × 3
+##   model                       p p_scale
+##   &lt;chr&gt;                   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 (Bm,Bkd_w,Pm)+(Gm,Oo)    0.83    0.83
+## 2 (Bm,Bkd_w,Pm)+(Gm)+(Oo)  0.09    0.09
+## 3 (Gm,Oo)+(Bkd_w,Pm)+(Bm)  0.06    0.06
+## 4 (Bm,Bkd_w)+(Gm,Oo)+(Pm)  0.02    0.02</code></pre>
 </div>
 <div id="model-fitting" class="section level3">
 <h3 class="hasAnchor">
-<a href="#model-fitting" class="anchor" aria-hidden="true"></a>Model fitting</h3>
-<p>Now that initial setup is complete, we can proceed with model fitting. This step is designed to mirror a typical Bayesian modelling workflow in the <code>rjags</code> package <span class="citation">(<a href="#ref-Plummer2019" role="doc-biblioref">Plummer 2019</a>)</span>. The following call to <code><a href="../reference/run_rjMCMC.html">run_rjMCMC()</a></code> compiles the information given in <code>mydat.config</code>, creates the R data structures required to hold the MCMC samples, and runs the models:</p>
+<a href="#model-fitting" class="anchor"></a>Model fitting</h3>
+<p>Now that initial setup is complete, we can proceed with model
+fitting. This step is designed to mirror a typical Bayesian modelling
+workflow in the <code>rjags</code> package <span class="citation">(<a href="#ref-Plummer2019" role="doc-biblioref">Plummer 2019</a>)</span>.
+The following call to <code><a href="../reference/run_rjMCMC.html">run_rjMCMC()</a></code> compiles the information
+given in <code>mydat.config</code>, creates the R data structures
+required to hold the MCMC samples, generates starting values, and runs
+the models:</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">rj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_rjMCMC.html">run_rjMCMC</a></span><span class="op">(</span>dat <span class="op">=</span> <span class="va">mydat.config</span>, n.chains <span class="op">=</span> <span class="fl">2</span>, n.burn <span class="op">=</span> <span class="fl">50000</span>, n.iter <span class="op">=</span> <span class="fl">250000</span><span class="op">)</span></code></pre></div>
+<p>For illustration purposes (and speed), we use three MCMC chains of
+100,000 samples each, and a 25,000 step burn-in. These values are
+dependent on the context of each analysis – typically, the higher the
+number of species (and thus the number of candidate models, when
+<code>model.selection = TRUE</code>), the longer the chains will need to
+be to achieve convergence. To improve performance, the algorithm runs on
+multiple cores (one per MCMC chain). This run took just under 4 minutes
+on a recent iMac machine running OS X11.6.</p>
+<p>With five species in the dataset (namely, <code>Bm</code>,
+<code>Oo</code>, <code>Pm</code>, <code>Gm</code>, <code>Bkd_w</code>),
+the sampler will jump between 52 possible candidate models. Out of
+interest, these can be listed using the <code>listParts</code> function
+from the <code>partitions</code> package <span class="citation">(<a href="#ref-Hankin2006" role="doc-biblioref">Hankin 2006</a>)</span>.</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">rj</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_rjMCMC.html">run_rjMCMC</a></span><span class="op">(</span>dat <span class="op">=</span> <span class="va">mydat.config</span>, n.chains <span class="op">=</span> <span class="fl">3</span>, n.burn <span class="op">=</span> <span class="fl">25000</span>, n.iter <span class="op">=</span> <span class="fl">100000</span><span class="op">)</span></code></pre></div>
-<p>For illustration purposes (and speed!), we use three MCMC chains of 10,000 samples each, and a 1,000 step burn-in. These values are dependent on the context of each analysis, but should generally be much higher than this – typically, the higher the number of species (and thus the number of candidate models, when <code>model.selection = TRUE</code>), the longer the chains will need to be to achieve convergence.</p>
-<p>With five species in the dataset (namely, <code>Bm</code>, <code>Oo</code>, <code>Pm</code>, <code>Gm</code>, <code>Bkd_w</code>), the sampler will jump between 52 possible candidate models. Out of interest, these can be listed using the <code>listParts</code> function from the <code>partitions</code> package <span class="citation">(<a href="#ref-Hankin2006" role="doc-biblioref">Hankin 2006</a>)</span>.</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">multicool</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/multicool/man/Bell.html" class="external-link">Bell</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="co"># Number of candidate models</span></code></pre></div>
+<code class="sourceCode R"><span class="fu">numbers</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/numbers/man/bell.html">bell</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="co"># Number of candidate models</span></code></pre></div>
 <pre><code>## [1] 52</code></pre>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="co"># List of candidate models</span>
-<span class="fu">partitions</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/partitions/man/setparts.html" class="external-link">listParts</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
-  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map_if.html" class="external-link">map_depth</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, .depth <span class="op">=</span> <span class="fl">2</span>, .f <span class="op">=</span> <span class="op">~</span><span class="va">mydat.config</span><span class="op">$</span><span class="va">species</span><span class="op">$</span><span class="va">names</span><span class="op">[</span><span class="va">.x</span><span class="op">]</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
-  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>,
-             .f <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">.x</span>, FUN <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">x</span>, collapse <span class="op">=</span> <span class="st">","</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
-  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, .f <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"("</span>, <span class="va">.x</span>, <span class="st">")"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
-  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, .f <span class="op">=</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">.x</span>, collapse <span class="op">=</span> <span class="st">"+"</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
-  <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/enframe.html" class="external-link">enframe</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="op">-</span><span class="va">name</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
-  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="op">)</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># List of candidate models (in a nice format)</span>
+<span class="fu">partitions</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/partitions/man/setparts.html">listParts</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map_if.html">map_depth</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, .depth <span class="op">=</span> <span class="fl">2</span>, .f <span class="op">=</span> <span class="op">~</span><span class="va">mydat.config</span><span class="op">$</span><span class="va">species</span><span class="op">$</span><span class="va">names</span><span class="op">[</span><span class="va">.x</span><span class="op">]</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, 
+             .f <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html">lapply</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">.x</span>, FUN <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="va">x</span>, collapse <span class="op">=</span> <span class="st">","</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, .f <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste0</a></span><span class="op">(</span><span class="st">"("</span>, <span class="va">.x</span>, <span class="st">")"</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span>.x <span class="op">=</span> <span class="va">.</span>, .f <span class="op">=</span> <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste0</a></span><span class="op">(</span><span class="va">.x</span>, collapse <span class="op">=</span> <span class="st">"+"</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/enframe.html">enframe</a></span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html">select</a></span><span class="op">(</span><span class="op">-</span><span class="va">name</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html">rename</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">value</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span><span class="op">(</span><span class="op">)</span></code></pre></div>
 <pre><code>##                          model
 ## 1          (Bm,Gm,Bkd_w,Oo,Pm)
 ## 2        (Bm,Gm,Oo,Pm)+(Bkd_w)
@@ -950,409 +1210,562 @@
 ## 51   (Oo,Pm)+(Bm)+(Gm)+(Bkd_w)
 ## 52 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)</code></pre>
 <blockquote>
-<p><strong>Note:</strong> <code>listParts</code> is only shown for illustrative purposes and will grind down when the number of species increases, possibly causing memory issues. Its use is not recommended when n &gt; 10.</p>
+<p><strong>Note:</strong> <code>listParts</code> is only shown for
+illustrative purposes and will grind down when the number of species
+increases, possibly causing memory issues. Its use is not recommended
+when n &gt; 10.</p>
 </blockquote>
 </div>
 <div id="model-assessment" class="section level3">
 <h3 class="hasAnchor">
-<a href="#model-assessment" class="anchor" aria-hidden="true"></a>Model assessment</h3>
-<p>We need to make sure that the MCMC sampler produces a Markov chain that “converges” to the appropriate density (the posterior density) and that explores the parameter space (“mixes”) efficiently, i.e., that doesn’t reject or accept too many proposals. If too many proposals are rejected, we need many simulations to generate a sufficient number of parameter samples. If too many proposals are accepted, we don’t gain much information about the underlying distribution.</p>
-<div style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, 20 August, 2021</p>
-</div>
-<p>We start by extracting posterior samples from the <code>rjmcmc</code> object returned by <code><a href="../reference/run_rjMCMC.html">run_rjMCMC()</a></code>. This gives an object of class <code>&lt;rjtrace&gt;</code>.</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<a href="#model-assessment" class="anchor"></a>Model assessment</h3>
+<p>We need to make sure that the MCMC sampler produces a Markov chain
+that “converges” to the appropriate density (the posterior density) and
+that explores the parameter space (“mixes”) efficiently, i.e., that
+doesn’t reject or accept too many proposals. If too many proposals are
+rejected, we need many simulations to generate a sufficient number of
+parameter samples. If too many proposals are accepted, we don’t gain
+much information about the underlying distribution.</p>
+<p>We start by extracting posterior samples from the <code>rjmcmc</code>
+object returned by <code><a href="../reference/run_rjMCMC.html">run_rjMCMC()</a></code>. This gives an object of
+class <code>&lt;rjtrace&gt;</code>.</p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">rj.posterior</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/trace_rjMCMC.html">trace_rjMCMC</a></span><span class="op">(</span><span class="va">rj</span>, thin <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></code></pre></div>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/class.html">class</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] "rjtrace" "list"</code></pre>
-<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, 20 August, 2021</p>
-</div>
 <blockquote>
-<p><strong>Note:</strong> The <code>thin</code> argument is used to discard every k<sup>th</sup> value, where <code>thin = k</code>. This is mainly done to reduce autocorrelation in the MCMC chains and obtain a more representative sample of independent draws from the posterior. There is still some <a href="http://doingbayesiandataanalysis.blogspot.com/2011/11/thinning-to-reduce-autocorrelation.html" class="external-link">debate</a> around the merits of thinning chains in MCMC. However, it can be useful to deal with memory or time constraints in post-chain processing, i.e., for obtaining R objects of more manageable size after (very) long runs of the algorithm. The example above (<code>thin = 10</code>) is purely arbitrary. An appropriate value needs to be determined by inspection of the chain autocorrelation plots (see below), among other things.</p>
+<p><strong>Note:</strong> The <code>thin</code> argument is used to
+discard every <em>k</em><sup>th</sup> value, where
+<code>thin = k</code>. This is mainly done to reduce autocorrelation in
+the MCMC chains and obtain a more representative sample of independent
+draws from the posterior. There is still some <a href="http://doingbayesiandataanalysis.blogspot.com/2011/11/thinning-to-reduce-autocorrelation.html">debate</a>
+around the merits of thinning chains in MCMC. If nothing else, thinning
+can be useful to deal with memory limitations or time constraints in
+post-chain processing, i.e., for obtaining R objects of more manageable
+size after (potentially very) long runs of the algorithm. The example
+above (using <code>thin = 10</code>) is purely arbitrary. An appropriate
+value needs to be determined by inspection of chain autocorrelation
+plots (see below), among other things.</p>
 </blockquote>
-<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, 20 August, 2021</p>
-</div>
-<p>In rjMCMC, there is little point in checking individual model parameters if the algorithm hasn’t converged to a stationary distribution for the between-model jumps. The recommended approach to model assessment therefore involves two stages:</p>
+<p>In rjMCMC, there is little point in checking individual model
+parameters if the algorithm hasn’t converged to a stationary
+distribution for the between-model jumps. The recommended approach to
+model assessment therefore involves two stages:</p>
 <ol style="list-style-type: decimal">
-<li><p>First, assess the convergence of the rjMCMC sampler (between-model jumps). This is done by looking at <strong>(i)</strong> <strong>running means plots</strong> of the <code>model_ID</code> parameter (which should show chains plateau-ing around the same model (or set of models), <strong>(ii)</strong> <strong>tile plots</strong> of species groupings for top-ranked models (which should show similar grouping patterns and similar posterior probabilities across chains), and <strong>(iii)</strong> to some extent, <strong>density plots</strong> of model size.</p></li>
-<li><p>Second, assess the convergence of the Metropolis-Hastings sampler (within-model jumps). Here, convergence and mixing are commonly ascertained both (1) graphically, by inspecting e.g., trace plots of individual parameters and checking that chains are clearly stable and well-mixed, and that posterior density distributions are smooth, and (2) numerically, using diagnostics such as those available in package <code>coda</code> <span class="citation">(<a href="#ref-Plummer2006" role="doc-biblioref">Plummer <em>et al.</em> 2006</a>)</span>.</p></li>
+<li><p>First, assess the convergence of the rjMCMC sampler
+(between-model jumps). When <code>model.select = TRUE</code>, this is
+done by looking at <strong>(i)</strong> <strong>running means
+plots</strong> of the <code>model_ID</code> parameter (which should show
+chains plateau-ing around the same model (or set of models),
+<strong>(ii)</strong> <strong>tile plots</strong> of species groupings
+for top-ranked models (which should show comparable grouping patterns
+and similar posterior probabilities across chains), and
+<strong>(iii)</strong> to some extent, <strong>density plots</strong> of
+model size (i.e., number of species groupings). Similarly, when
+<code>function.select = TRUE</code>, the chain-specific posterior
+probabilities for each dose-response functional forms should be within
+Monte Carlo errors of each other.</p></li>
+<li><p>Second, assess the convergence of the Metropolis-Hastings sampler
+(within-model jumps). Here, convergence and mixing are commonly
+ascertained both (1) graphically, by inspecting e.g., trace plots of
+individual parameters and checking that chains are clearly stable and
+well-mixed, and that posterior density distributions are smooth, and (2)
+numerically, using diagnostics such as those available in package
+<code>coda</code> <span class="citation">(<a href="#ref-Plummer2006" role="doc-biblioref">Plummer <em>et al.</em> 2006</a>)</span>.</p></li>
 </ol>
-<p>The <code>summary</code> and <code>plot</code> methods provide all the information needed to perform the checks described above. Specifically, a run of <code>summary</code> returns:</p>
+<p>The <code>summary</code> and <code>plot</code> methods provide all
+the information needed to perform the checks described above.
+Specifically, a run of <code>summary</code> returns:</p>
 <ul>
-<li><p>An overview of model run parameters (e.g., number of chains, chain lengths, burn-in, priors, move probabilities, etc.)</p></li>
-<li><p>Acceptance rates and effective sample sizes for each parameter</p></li>
-<li><p>A numerical assessment of model convergence using the Gelman-Rubin statistic (also known as the potential scale reduction factor). <strong>Scores in the 1.00–1.1 range</strong> are generally considered to indicate good convergence. <code>espresso</code> gives a breakdown of the estimated scores for each parameter, as well as an overall (multivariate) score that summarises convergence across all parameters.</p></li>
-<li><p>A table of posterior inclusion probabilities (PIPs) for contextual covariates, when covariate selection is enabled (for both individual chains, and all chains combined). Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).</p></li>
-<li><p>A table of posterior model probabilities and rankings, when model selection is enabled for both individual chains, and all chains combined). Convergence is achieved when posterior probabilities from different chains are similar (within the range of Monte Carlo error).</p></li>
-<li><p>Tile plots of species groupings for top ranking models for both individual chains, and all chains combined).</p></li>
+<li><p>An overview of model run parameters (e.g., number of chains,
+chain lengths, burn-in, priors, move probabilities, etc.)</p></li>
+<li><p>Acceptance rates and effective sample sizes for each
+parameter</p></li>
+<li><p>A numerical assessment of model convergence using the
+Gelman-Rubin statistic (also known as the potential scale reduction
+factor). <strong>Scores in the 1.00–1.1 range</strong> are generally
+considered to indicate good convergence. <code>espresso</code> gives a
+breakdown of the estimated scores for each parameter, as well as an
+overall (multivariate) score that summarises convergence across all
+parameters.</p></li>
+<li><p>A table of posterior inclusion probabilities (PIPs) for
+contextual covariates, when covariate selection is enabled (for both
+individual chains, and all chains combined). Convergence is achieved
+when posterior probabilities from different chains are similar (within
+the range of Monte Carlo error).</p></li>
+<li><p>A table of posterior model probabilities and rankings, when model
+selection is enabled for both individual chains, and all chains
+combined). Convergence is achieved when posterior probabilities from
+different chains are similar (within the range of Monte Carlo
+error).</p></li>
+<li><p>Tile plots of species groupings for top ranking models for both
+individual chains, and all chains combined).</p></li>
 <li><p>A running means plot of the model_ID chains.</p></li>
 </ul>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span></code></pre></div>
-<pre><code>##
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span></code></pre></div>
+<pre><code>## 
 ## ======================================================
 ## SUMMARY
 ## ======================================================
-##
-## Iterations: 1001:11000
-## Thinning interval: 1
-## Burn-in: 1,000
-## Number of chains: 3
-## Sample size per chain: 10,000
-## Total sample size: 30,000
-##
+## 
+## Total iterations: 3e+05 
+## Burn-in: 50,000 
+## Thinning interval: 10 
+## Iterations: 50010:3e+05 
+## Number of chains: 2 
+## Sample size per chain: 25,000 
+## Total sample size: 50,000 
+## 
 ## Run times:
-## # A tibble: 3 × 2
-##   Chain   Time
+## # A tibble: 2 × 2
+##   Chain   Time  
 ##   &lt;chr&gt;   &lt;time&gt;
-## 1 Chain 1 28'11"
-## 2 Chain 2 27'25"
-## 3 Chain 3 27'19"
-##
+## 1 Chain 1 09'32"
+## 2 Chain 2 09'33"
+## 
 ## --------------------
 ## MCMC
 ## --------------------
 ## Priors:
-##
-## μ: Uniform [60-215]
-## φ: Uniform [0-45]
-## σ: Uniform [0-45]
-## behaviour: Normal (0, 30)
-## range: Normal (0, 30)
-##
-## p(split): 0.5
-## p(merge): 0.5
-##
-## # A tibble: 4 × 2
-##   move                  n
-##   &lt;chr&gt;                 &lt;table&gt;
-## 1 split-merge           9900
-## 2 data-driven (Type I)    60
-## 3 data-driven (Type II)   20
-## 4 random                  20
-##
+## 
+## mu: Uniform (60, 215)
+## phi: Uniform (1, 45)
+## sigma: Uniform (1, 45)
+## alpha: Uniform (110, 160)
+## nu: Uniform (60, 215)
+## tau: Uniform (1, 45)
+## omega: Uniform (0.5, 5)
+## psi: Normal (0, 1)
+## exposed: Normal (0, 30)
+## 
+## p(split): 0.5 
+## p(merge): 0.5 
+## 
+## NULL
+## 
 ## --------------------
 ## EFFECTIVE SAMPLE SIZES
 ## --------------------
-## # A tibble: 13 × 2
-##    parameter                ESS
-##    &lt;chr&gt;                  &lt;dbl&gt;
-##  1 mu.Bm                  242.8
-##  2 mu.Gm                  373.8
-##  3 mu.Bkd_w               443.2
-##  4 mu.Oo                  240.0
-##  5 mu.Pm                  176.9
-##  6 phi                    164.5
-##  7 sigma                  484.8
-##  8 behaviour_non-feeding  160.3
-##  9 range                  162.5
-## 10 model_ID               449.7
-## 11 model_size             488.9
-## 12 incl.behaviour         546.8
-## 13 incl.range            3326.
-##
+## -- mu -- 
+## 
+## # A tibble: 1 × 5
+##      Bm    Gm Bkd_w    Oo    Pm
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 1013. 1456. 1084. 1258. 524.6
+## 
+## -- phi -- 
+## 
+## # A tibble: 1 × 2
+##   parameter   ESS
+##   &lt;chr&gt;     &lt;dbl&gt;
+## 1 phi       701.3
+## 
+## -- sigma -- 
+## 
+## # A tibble: 1 × 2
+##   parameter   ESS
+##   &lt;chr&gt;     &lt;dbl&gt;
+## 1 sigma     1869.
+## 
+## -- exposed -- 
+## 
+## # A tibble: 2 × 2
+##   parameter        ESS
+##   &lt;chr&gt;          &lt;dbl&gt;
+## 1 exposed_1      550.4
+## 2 incl.exposed 14178. 
+## 
+## -- model -- 
+## 
+## # A tibble: 3 × 2
+##   parameter        ESS
+##   &lt;chr&gt;          &lt;dbl&gt;
+## 1 model_ID       298.1
+## 2 model_size     477.2
+## 3 accept.model 48281. 
+## 
+## 
 ## --------------------
 ## ACCEPTANCE RATES
 ## --------------------
-## # A tibble: 3 × 13
-##   chain   t.ij   mu.i    mu   phi sigma behaviour range split.merge datadriven.I
-##   &lt;int&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;       &lt;dbl&gt;        &lt;dbl&gt;
-## 1     1 0.3253 0.7210 0.148 0.187 0.177     0.188 0.003       0.033            0
-## 2     2 0.3238 0.7390 0.149 0.196 0.181     0.185 0.003       0.034            0
-## 3     3 0.3258 0.7316 0.153 0.189 0.174     0.189 0.005       0.035            0
-##   datadriven.II random cov.select
-##           &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;
-## 1             0      0      0.18
-## 2             0      0      0.2
-## 3             0      0      0.188
-##
+## # A tibble: 1 × 13
+##      `1`    `2`    `3`    `4`    `5`    `6`    `7`    `8`     `9`    `10`
+##    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 0.7964 0.7965 0.7965 0.7946 0.7964 0.9473 0.9720 0.1634 0.05056 0.06404
+##      `11`    `13`    `14`
+##     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 0.06356 0.01748 0.07844
+## 
 ## --------------------
 ## CONVERGENCE ASSESSMENT
 ## --------------------
 ## Convergence: TRUE
 ## Potential scale reduction factors:
-##
-##                       Point est. Upper C.I.
-## mu.Bm                       1.01       1.01
-## mu.Gm                       1.00       1.01
-## mu.Bkd_w                    1.00       1.01
-## mu.Oo                       1.00       1.01
-## mu.Pm                       1.00       1.01
-## phi                         1.00       1.01
-## sigma                       1.00       1.00
-## behaviour_non-feeding       1.01       1.02
-## range                       1.01       1.03
-## model_ID                    1.00       1.00
-## model_size                  1.00       1.01
-## incl.behaviour              1.00       1.00
-## incl.range                  1.00       1.01
-##
+## 
+##                   Point est. Upper C.I.
+## mu.1                    1.00       1.00
+## mu.2                    1.00       1.01
+## mu.3                    1.00       1.01
+## mu.4                    1.00       1.00
+## mu.5                    1.00       1.01
+## phi                     1.01       1.05
+## sigma                   1.01       1.02
+## exposed_1               1.01       1.02
+## incl.exposed            1.01       1.01
+## model_ID                1.01       1.04
+## model_size              1.01       1.03
+## accept.model            1.00       1.00
+## accept.covariates       1.01       1.01
+## 
 ## Multivariate psrf
-##
+## 
 ## 1.01</code></pre>
-<p><img src="espresso_files/figure-html/unnamed-chunk-19-1.png" width="700"></p>
-<pre><code>##
+<p><img src="espresso_files/figure-html/summarymcmc-1.png" width="700"></p>
+<pre><code>## 
 ## --------------------
 ## COVARIATES
 ## --------------------
-##
-## --- All chains (n = 3) ---
-## # A tibble: 5 × 5
-##   covariate                 p monte_carlo  lower  upper
-##   &lt;chr&gt;                 &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.6508     0.02039  0.6104 0.6911
-## 2 range (overall)     0.04267    0.003504 0.0357 0.0496
-## 3 behaviour (only)    0.6344     0.01956  0.5956 0.6731
-## 4 range (only)        0.02627    0.002913 0.0205 0.032
-## 5 behaviour + range   0.0164     0.001329 0.0138 0.019
-##
+## 
+## --- All chains (n = 2) --- 
+## # A tibble: 1 × 5
+##   covariate       p monte_carlo  lower  upper
+##   &lt;chr&gt;       &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 exposed   0.03144    0.001466 0.0285 0.0343
+## 
 ## --- Individual chains ---
 ## Chain  1 :
-## # A tibble: 5 × 5
-##   covariate                p monte_carlo  lower  upper
-##   &lt;chr&gt;                &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.6585    0.03418  0.5908 0.7262
-## 2 range (overall)     0.0357    0.004681 0.0264 0.045
-## 3 behaviour (only)    0.6425    0.03052  0.5821 0.7029
-## 4 range (only)        0.0197    0.002980 0.0138 0.0256
-## 5 behaviour + range   0.016     0.002581 0.0109 0.0211
-##
+## # A tibble: 1 × 5
+##   covariate       p monte_carlo  lower  upper
+##   &lt;chr&gt;       &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 exposed   0.02792    0.002101 0.0238 0.0321
+## 
 ## Chain  2 :
-## # A tibble: 5 × 5
-##   covariate                p monte_carlo  lower  upper
-##   &lt;chr&gt;                &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.6471    0.02423  0.5991 0.6951
-## 2 range (overall)     0.0492    0.007267 0.0348 0.0636
-## 3 behaviour (only)    0.6284    0.02489  0.5791 0.6777
-## 4 range (only)        0.0305    0.006008 0.0186 0.0424
-## 5 behaviour + range   0.0187    0.002469 0.0138 0.0236
-##
-## Chain  3 :
-## # A tibble: 5 × 5
-##   covariate                p monte_carlo  lower  upper
-##   &lt;chr&gt;                &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 behaviour (overall) 0.6467    0.03325  0.5809 0.7125
-## 2 range (overall)     0.0431    0.006319 0.0306 0.0556
-## 3 behaviour (only)    0.6322    0.03295  0.567  0.6974
-## 4 range (only)        0.0286    0.005110 0.0185 0.0387
-## 5 behaviour + range   0.0145    0.001957 0.0106 0.0184
-##
-##
+## # A tibble: 1 × 5
+##   covariate       p monte_carlo  lower  upper
+##   &lt;chr&gt;       &lt;dbl&gt;       &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 exposed   0.03496    0.001814 0.0314 0.0386
+## 
+## 
 ## --------------------
 ## MODEL RANKINGS
 ## --------------------
-##
-## --- All chains (n = 3) ---
-##
+## 
+## --- All chains (n = 2) ----------------------- 
+## 
 ## Top 10 models:
-## # A tibble: 6 × 6
-##      ID         p model                       monte_carlo  lower  upper
-##   &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1     7 0.5564    (Bm,Pm)+(Gm,Bkd_w)+(Oo)       0.02170   0.5134 0.5994
-## 2    12 0.2361    (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)     0.02222   0.1921 0.2801
-## 3     8 0.1830    (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)     0.01778   0.1478 0.2182
-## 4     9 0.0236    (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)   0.003664  0.0163 0.0309
-## 5     5 0.0006333 (Bm,Oo)+(Gm,Bkd_w)+(Pm)       0.0005424 0      0.0017
-## 6     6 0.0002333 (Bm,Oo)+(Gm)+(Bkd_w)+(Pm)     0.0002026 0      0.0006
-##
-## --- Individual chains ---
-##
-## Top 6 models (chain 1):
-## # A tibble: 6 × 6
-##      ID      p model                       monte_carlo  lower  upper
-##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1     7 0.5818 (Bm,Pm)+(Gm,Bkd_w)+(Oo)       0.03718   0.5082 0.6554
-## 2    12 0.2386 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)     0.03800   0.1634 0.3138
-## 3     8 0.1587 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)     0.02164   0.1159 0.2015
-## 4     9 0.0196 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)   0.007885  0.004  0.0352
-## 5     6 0.0007 (Bm,Oo)+(Gm)+(Bkd_w)+(Pm)     0.0007415 0      0.0022
-## 6     5 0.0006 (Bm,Oo)+(Gm,Bkd_w)+(Pm)       0.0005999 0      0.0018
-##
-##
-## Top 5 models (chain 2):
-## # A tibble: 5 × 6
-##      ID      p model                       monte_carlo  lower  upper
-##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1     7 0.5566 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.03715  0.483  0.6302
-## 2    12 0.2424 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.03073  0.1816 0.3032
-## 3     8 0.1779 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.02601  0.1264 0.2294
-## 4     9 0.0218 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.005559 0.0108 0.0328
-## 5     5 0.0013 (Bm,Oo)+(Gm,Bkd_w)+(Pm)        0.001346 0      0.004
-##
-##
-## Top 4 models (chain 3):
 ## # A tibble: 4 × 6
 ##      ID      p model                       monte_carlo  lower  upper
 ##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1     7 0.5308 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.03663  0.4583 0.6033
-## 2    12 0.2273 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.03594  0.1561 0.2985
-## 3     8 0.2125 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.03369  0.1458 0.2792
-## 4     9 0.0294 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.008087 0.0134 0.0454</code></pre>
-<p><img src="espresso_files/figure-html/unnamed-chunk-19-2.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-19-3.png" width="700"></p>
+## 1     7 0.6608 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.02134  0.6186 0.703 
+## 2    10 0.2049 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.02484  0.1557 0.2541
+## 3     8 0.1162 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.007037 0.1023 0.1301
+## 4    13 0.0181 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.002423 0.0133 0.0229
+## 
+## Models common to all chains:
+## # A tibble: 4 × 3
+##      ID model                       rank 
+##   &lt;dbl&gt; &lt;chr&gt;                       &lt;chr&gt;
+## 1     7 (Bm,Pm)+(Gm,Bkd_w)+(Oo)     1, 1 
+## 2    10 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)   2, 2 
+## 3     8 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)   3, 3 
+## 4    13 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm) 4, 4 
+## 
+## Models shared by at least 2 chains:
+## # A tibble: 4 × 3
+##      ID model                       rank 
+##   &lt;dbl&gt; &lt;chr&gt;                       &lt;chr&gt;
+## 1     7 (Bm,Pm)+(Gm,Bkd_w)+(Oo)     1, 1 
+## 2    10 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)   2, 2 
+## 3     8 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)   3, 3 
+## 4    13 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm) 4, 4 
+## 
+## --- Individual chains -----------------------
+## 
+## Top 4 models (chain 1):
+## # A tibble: 4 × 6
+##      ID      p model                       monte_carlo  lower  upper
+##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     7 0.6902 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.02629  0.6381 0.7423
+## 2    10 0.1768 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.02924  0.1189 0.2346
+## 3     8 0.1160 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.01017  0.0959 0.1362
+## 4    13 0.017  (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.003389 0.0103 0.0237
+## 
+## 
+## Top 4 models (chain 2):
+## # A tibble: 4 × 6
+##      ID      p model                       monte_carlo  lower  upper
+##   &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;                             &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     7 0.6314 (Bm,Pm)+(Gm,Bkd_w)+(Oo)        0.02973  0.5725 0.6903
+## 2    10 0.2330 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)      0.03550  0.1628 0.3033
+## 3     8 0.1164 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)      0.009604 0.0973 0.1354
+## 4    13 0.0192 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)    0.003488 0.0123 0.0261</code></pre>
+<p><img src="espresso_files/figure-html/summarymcmc-2.png" width="700"><img src="espresso_files/figure-html/summarymcmc-3.png" width="700"></p>
+<p><strong>Note:</strong> The <code>summary</code> method presents all
+outputs for individual chains and all chains combined in the same run. A
+more compact version of the output summary can be obtained by hiding
+sections that are not of interest. This is done by setting the relevant
+argument to <code>FALSE</code> (see help files at
+<code><a href="../reference/summary.rjtrace.html">?summary.rjtrace</a></code> for details). For example,
+<code>accept.rate = FALSE</code> will hide summary of acceptance rates.
+<code>n.top</code> sets the number of top-ranking models to display in
+the output. Values (substantially) greater than 10 (the default) may
+result in memory errors or long run times.</p>
+<p>Trace and density plots can be obtained using the <code>plot</code>
+method. Convergence is evidenced by chains that level off to a stable,
+stationary state. Good mixing is apparent in plots that show random
+scatter around a mean value, somewhat resembling a hairy <a href="http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg">caterpillar</a>.
+Running mean plots are also useful in identifying whether the means of
+the different chains converge to a similar value. Plots for specific
+parameters of interest can be generated using the
+<code>param.name</code> argument. If <code>individual = TRUE</code>
+separate density lines will be plotted for each chain.</p>
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, individual <span class="op">=</span> <span class="cn">TRUE</span>, phase <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/plotmcmc-1.png" width="700"><img src="espresso_files/figure-html/plotmcmc-2.png" width="700"><img src="espresso_files/figure-html/plotmcmc-3.png" width="700"><img src="espresso_files/figure-html/plotmcmc-4.png" width="700"></p>
+<p>Another way to check for convergence is to look at the serial
+autocorrelation between MCMC samples. The lag-<span class="math inline">\(k\)</span> autocorrelation is the correlation
+between every sample and the sample <span class="math inline">\(k\)</span> steps before it. This autocorrelation
+should become smaller as <span class="math inline">\(k\)</span>
+increases, i.e., samples can be considered as independent. If, on the
+other hand, autocorrelation remains high for higher values of <span class="math inline">\(k\)</span>, this indicates a high degree of
+correlation between our samples and slow mixing.</p>
 <blockquote>
-<p><strong>Note:</strong> A more compact version of the output summary can be obtained by hiding sections that are not of interest. This is done by setting the relevant argument to <code>FALSE</code> (see help files for details). For example, <code>accept.rate = FALSE</code> will hide summary of acceptance rates.</p>
+<p><strong>Note:</strong> Autocorrelation plots can be obtained with
+<code>autocorr = TRUE</code> (the default).</p>
 </blockquote>
-<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, 20 August, 2021</p>
-</div>
-<blockquote>
-<p><strong>Note:</strong> <code>n.top</code> sets the number of top-ranking models to display in the output. Values substantially greater than 10 (the default) may result in memory errors or long run times.</p>
-</blockquote>
-<blockquote>
-<p><strong>Note:</strong> The <code>combine.chains</code> argument is now deprecated. Instead, the <code>summary</code> method presents all outputs for individual chains and all chains combined in the same run.</p>
-</blockquote>
-<p>Trace and density plots can be obtained using the <code>plot</code> method. Convergence is evidenced by chains that level off to a stable, stationary state. Good mixing is apparent in plots that show random scatter around a mean value, somewhat resembling a hairy <a href="http://sbfnk.github.io/mfiidd/external_ref/hairy_caterpillar.jpg" class="external-link">caterpillar</a>. Running mean plots are also useful in identifying whether the means of the different chains converge to a similar value.</p>
 <div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, individual <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-20-1.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-2.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-3.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-4.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-5.png" width="700"><img src="espresso_files/figure-html/unnamed-chunk-20-6.png" width="700"></p>
-<blockquote>
-<p><strong>Note:</strong> Plots for specific parameters of interest can be generated using the <code>param.name</code> argument. If <code>individual = TRUE</code> separate density lines will be plotted for each chain.</p>
-</blockquote>
-<p>Another way to check for convergence is to look at the serial autocorrelation between MCMC samples. The lag-<span class="math inline">\(k\)</span> autocorrelation is the correlation between every sample and the sample <span class="math inline">\(k\)</span> steps before it. This autocorrelation should become smaller as <span class="math inline">\(k\)</span> increases, i.e., samples can be considered as independent. If, on the other hand, autocorrelation remains high for higher values of <span class="math inline">\(k\)</span>, this indicates a high degree of correlation between our samples and slow mixing.</p>
-<blockquote>
-<p><strong>Note:</strong> Autocorrelation plots can be obtained with <code>autocorr = TRUE</code> (this is now the default)</p>
-</blockquote>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># Plot for the range covariate only</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, param.name <span class="op">=</span> <span class="st">"range"</span>, autocorr <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-21-1.png" width="700"></p>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">rj.posterior</span>, param.name <span class="op">=</span> <span class="st">"exposed"</span>, autocorr <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/plotmcmcex-1.png" width="700"></p>
 </div>
 <div id="model-updates" class="section level3">
 <h3 class="hasAnchor">
-<a href="#model-updates" class="anchor" aria-hidden="true"></a>Model updates</h3>
-<p>Updates to the Markov chain may be required if the model has failed to converge. The <code><a href="../reference/update_rjMCMC.html">update_rjMCMC()</a></code> function can be used to extend a previous model run; it “picks up where the sampler left off” by extracting the last MCMC samples for each parameter and using those as new starting values. The same model checking procedures apply to this new run, and the update process can be repeated until convergence is achieved.</p>
+<a href="#model-updates" class="anchor"></a>Model updates</h3>
+<p>Updates to the Markov chain may be required if the model has failed
+to converge. The <code><a href="../reference/update_rjMCMC.html">update_rjMCMC()</a></code> function can be used to
+extend a previous model run; it “picks up where the sampler left off” by
+extracting the last MCMC samples for each parameter and using those as
+new starting values. The same model checking procedures apply to this
+new run, and the update process can be repeated until convergence is
+achieved.</p>
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># Extend the previous run by 10,000 iterations.</span>
+<span class="va">rj.posterior2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/update_rjMCMC.html">update_rjMCMC</a></span><span class="op">(</span>rjdat <span class="op">=</span> <span class="va">rj</span>, n.iter <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></code></pre></div>
 </div>
 </div>
 <div id="dose-response" class="section level2">
 <h2 class="hasAnchor">
-<a href="#dose-response" class="anchor" aria-hidden="true"></a>Dose-response</h2>
+<a href="#dose-response" class="anchor"></a>Dose-response</h2>
 <div id="by-species" class="section level3">
 <h3 class="hasAnchor">
-<a href="#by-species" class="anchor" aria-hidden="true"></a>By species</h3>
-<p>The <code><a href="../reference/compile_rjMCMC.html">compile_rjMCMC()</a></code> function computes posterior dose-response curves for each species (or <em>a priori</em> species grouping) from the parameter estimates of a fitted rjMCMC model. The output is an object of class <code>&lt;dose_response&gt;</code>, which can be passed to <code>plot</code> directly:</p>
+<a href="#by-species" class="anchor"></a>By species</h3>
+<p>The <code><a href="../reference/compile_rjMCMC.html">compile_rjMCMC()</a></code> function computes posterior
+dose-response curves for each species (or <em>a priori</em> species
+grouping) from the parameter estimates of a fitted rjMCMC model. The
+output is an object of class <code>&lt;dose_response&gt;</code>, which
+can be passed to <code>plot</code> directly:</p>
 <div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">doseR</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">doseR</span><span class="op">)</span></code></pre></div>
-<pre><code>## [1] "dose_response" "list"</code></pre>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-22-1.png" width="700"></p>
+<code class="sourceCode R"><span class="va">doseR</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, phase <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/class.html">class</a></span><span class="op">(</span><span class="va">doseR</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR</span><span class="op">)</span></code></pre></div>
 <blockquote>
-<p><strong>Note:</strong> By default, <code><a href="../reference/compile_rjMCMC.html">compile_rjMCMC()</a></code> calculates a range of posterior credible intervals, from 5% to 95%, in 5% increments. These default values can be overridden using the <code>credible.intervals</code> argument.</p>
+<p><strong>Note:</strong> By default, <code><a href="../reference/compile_rjMCMC.html">compile_rjMCMC()</a></code>
+calculates 5%, 50%, and 95% posterior credible intervals. These default
+values can be overridden using the <code>credible.intervals</code>
+argument. When <code>function.select = TRUE</code>, the
+<code>phase</code> argument can be used to specify whether to get curves
+from parameter estimates associated with the <strong>monophasic
+(</strong><code>phase = 1</code><strong>)</strong> or <strong>biphasic
+(</strong><code>phase = 2</code><strong>)</strong> dose-response
+model.</p>
 </blockquote>
-<p>Curves for covariates of interest can also be obtained by conditioning on a given species/species group. For example:</p>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">doseR.beh</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, covariate <span class="op">=</span> <span class="st">"behaviour"</span>, species <span class="op">=</span> <span class="st">"Oo"</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR.beh</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-23-1.png" width="700"></p>
-<p>For continuous covariates, such as whale-source range, curves can be generated for any</p>
-<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">doseR.rge</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>,
-                            covariate <span class="op">=</span> <span class="st">"range"</span>,
-                            covariate.values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">10</span><span class="op">)</span>,
+<p>Curves for covariates of interest can also be obtained by
+conditioning on a given species/species group. For example:</p>
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">doseR.ex</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, covariate <span class="op">=</span> <span class="st">"exposed"</span>, species <span class="op">=</span> <span class="st">"Oo"</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR.ex</span><span class="op">)</span></code></pre></div>
+<p>For continuous covariates, such as whale-source range, curves can be
+generated for any</p>
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">doseR.rge</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, 
+                            covariate <span class="op">=</span> <span class="st">"range"</span>, 
+                            covariate.values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">10</span><span class="op">)</span>,
                             species <span class="op">=</span> <span class="st">"Oo"</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR.rge</span>, scientific.name <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-24-1.png" width="700"></p>
-<p>Numerous additional options are available to refine plot aesthetics, including shading/colours, plot ordering, faceting layouts, and species labels. Some example visualisations are given below.</p>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR.rge</span>, scientific.name <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p>Numerous additional options are available to refine plot aesthetics,
+including shading/colours, plot ordering, faceting layouts, and species
+labels. Some example visualisations are given below. See
+<code><a href="../reference/plot.dose_response.html">?plot.dose_response</a></code> for full details.</p>
 <p><u>Example 1</u>: Black and white colour scheme.</p>
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour <span class="op">=</span> <span class="st">"gray20"</span>, colour.median <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/doseresp1-1.png" width="700"></p>
+<p><u>Example 2</u>: Curves coloured by species/species groups and
+ordered from most to least sensitive.</p>
+<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour.by <span class="op">=</span> <span class="st">"species"</span>, order.by <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/doseresp2-1.png" width="700"></p>
+<p><u>Example 3</u>: Scientific names in plot labels, posterior medians
+hidden, outer credible intervals outlined.</p>
 <div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour <span class="op">=</span> <span class="st">"gray20"</span>, colour.median <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-25-1.png" width="700"></p>
-<p><u>Example 2</u>: Curves coloured by species/species groups and ordered from most to least sensitive.</p>
-<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour.by <span class="op">=</span> <span class="st">"species"</span>, order.by <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-26-1.png" width="700"></p>
-<p><u>Example 3</u>: Scientific names in plot labels, posterior medians hidden, outer credible intervals outlined.</p>
-<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, scientific.name <span class="op">=</span> <span class="cn">TRUE</span>, show.p0_5 <span class="op">=</span> <span class="cn">FALSE</span>, outline.outer <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-27-1.png" width="700"></p>
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR</span>, scientific.name <span class="op">=</span> <span class="cn">TRUE</span>, show.pmed <span class="op">=</span> <span class="cn">FALSE</span>, outline.outer <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/doseresp3-1.png" width="700"></p>
 <p><u>Example 4</u>: Plot overlay.</p>
-<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour.by <span class="op">=</span> <span class="st">"species"</span>, overlay <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-28-1.png" width="700"></p>
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR</span>, colour.by <span class="op">=</span> <span class="st">"species"</span>, overlay <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/doseresp4-1.png" width="700"></p>
+<div>
+<p>Individual plots for each species can be created using
+<code>do.facet = FALSE</code>. All outputs can be saved to disk by
+specifying <code>do.save = TRUE</code> and indicating the desired file
+format such as <code>file.format = "pdf"</code> (or “png”, “tiff”,
+“jpeg”). Additional arguments to <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html">ggplot2::ggsave</a></code> can be
+passed directly to plot to change plot dimensions, resolution, output
+directory etc.</p>
+</div>
 </div>
 <div id="by-model" class="section level3">
 <h3 class="hasAnchor">
-<a href="#by-model" class="anchor" aria-hidden="true"></a>By model</h3>
-<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, 20 August, 2021</p>
-</div>
-<p>When <code>model.select = TRUE</code>, dose-response curves are derived irrespective of model IDs (by default), and therefore reflect model uncertainty (see above). If dose-response functions are needed for a specific model of interest (e.g., the top-ranking model), then the <code>by.model</code> argument should be set to <code>TRUE</code>. This ensures that posterior estimates are extracted for each model separately.</p>
+<a href="#by-model" class="anchor"></a>By model</h3>
+<p>When <code>model.select = TRUE</code>, dose-response curves are
+derived irrespective of model IDs (by default), and therefore reflect
+model uncertainty (see above). If dose-response functions are needed for
+a specific model of interest (e.g., the top-ranking model), then the
+<code>by.model</code> argument should be set to <code>TRUE</code>. This
+ensures that posterior estimates are extracted for each model
+separately.</p>
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">doseR.bymodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, by.model <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<p>Calls to <code>plot</code> then require an additional argument
+specifying the rank of the model to be plotted. By default, this is the
+model with highest posterior probability:</p>
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">doseR.bymodel</span>, model.rank <span class="op">=</span> <span class="fl">1</span>, order.by <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></code></pre></div>
+<p><img src="espresso_files/figure-html/doserespbymodel-1.png" width="700"></p>
+<p>A reminder of model rankings can be obtained simply by printing the
+<code>&lt;dose_response&gt;</code>object to the console.</p>
 <div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">doseR</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_rjMCMC.html">compile_rjMCMC</a></span><span class="op">(</span><span class="va">rj.posterior</span>, by.model <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
-<p>Calls to <code>plot</code> then require an additional argument specifying the rank of the model to be plotted. By default, this is the model with highest posterior probability:</p>
-<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">doseR</span>, model.rank <span class="op">=</span> <span class="fl">1</span>, order.by <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></code></pre></div>
-<p><img src="espresso_files/figure-html/unnamed-chunk-30-1.png" width="700"></p>
-<p>A reminder of model rankings can be obtained simply by printing the <code>&lt;dose_response&gt;</code>object to the console.</p>
-<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">doseR</span></code></pre></div>
-<pre><code>## # A tibble: 6 × 2
+<pre><code>## # A tibble: 4 × 2
 ##   model                        rank
 ##   &lt;chr&gt;                       &lt;int&gt;
 ## 1 (Bm,Pm)+(Gm,Bkd_w)+(Oo)         1
 ## 2 (Gm,Bkd_w)+(Bm)+(Oo)+(Pm)       2
 ## 3 (Bm,Pm)+(Gm)+(Bkd_w)+(Oo)       3
-## 4 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)     4
-## 5 (Bm,Oo)+(Gm,Bkd_w)+(Pm)         5
-## 6 (Bm,Oo)+(Gm)+(Bkd_w)+(Pm)       6</code></pre>
+## 4 (Bm)+(Gm)+(Bkd_w)+(Oo)+(Pm)     4</code></pre>
 </div>
 </div>
 <div id="sharing-results" class="section level2">
 <h2 class="hasAnchor">
-<a href="#sharing-results" class="anchor" aria-hidden="true"></a>Sharing results</h2>
-<div class="update" style="font-size: 14.5px;   color:#333;  padding: 10px 20px;     margin: 0 0 20px; border-left: 5px solid #1eb503;     background-color: #e8f7e1 !important;">
-<p>Update: Fri, 20 Aug, 2021</p>
-</div>
-<p>The <code>create_report</code> function generates a self-contained <code>html</code> document that summarises the results of an analysis conducted with <code>espresso</code>. This is done by writing and rendering an RMarkdown (<code>.Rmd</code>) file behind the scenes, and makes it easy to share outputs with other users. <code>create_report</code> searches for objects of class <code>brsdata</code>, <code>rjtrace</code>, and <code>dose_response</code> and returns relevant plots and summaries as detailed in the previous sections of this vignette. The two main arguments are the output directory, <code>outdir</code>, and the output file name, <code>filename</code>. If these are not specified, the function will save the file as <code>espresso_report.html</code> in the current working directory. The argument <code>model.ranks</code> can be used to generate dose-response plots for several top ranking models - this only works when <code>by.model</code> was set to <code>TRUE</code> in <code>compile_rjMCMC</code>.</p>
-<div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
+<a href="#sharing-results" class="anchor"></a>Sharing results</h2>
+<p>The <code>create_report</code> function generates a self-contained
+<code>html</code> document that summarises the results of an analysis
+conducted with <code>espresso</code>. This is done by writing and
+rendering an RMarkdown (<code>.Rmd</code>) file behind the scenes, and
+makes it easy to share outputs with other users.
+<code>create_report</code> searches for objects of class
+<code>brsdata</code>, <code>rjtrace</code>, and
+<code>dose_response</code> and returns relevant plots and summaries as
+detailed in the previous sections of this vignette. The two main
+arguments are the output directory, <code>outdir</code>, and the output
+file name, <code>filename</code>. If these are not specified, the
+function will save the file as <code>espresso_report.html</code> in the
+current working directory. The argument <code>model.ranks</code> can be
+used to generate dose-response plots for several top ranking models -
+this only works when <code>by.model</code> was set to <code>TRUE</code>
+in <code>compile_rjMCMC</code>.</p>
+<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../reference/create_report.html">create_report</a></span><span class="op">(</span>outdir <span class="op">=</span> <span class="st">"path/to/directory"</span>, filename <span class="op">=</span> <span class="st">"file.name"</span><span class="op">)</span></code></pre></div>
 </div>
 <div id="references" class="section level2 unnumbered">
 <h2 class="hasAnchor">
-<a href="#references" class="anchor" aria-hidden="true"></a>References</h2>
+<a href="#references" class="anchor"></a>References</h2>
 <div id="refs" class="references csl-bib-body hanging-indent">
 <div id="ref-Antunes2014" class="csl-entry">
-Antunes R, Kvadsheim PH, Lam FPA, Tyack PL, Thomas L, Wensveen PJ, Miller PJO (2014). <span class="nocase">High thresholds for avoidance of sonar by free-ranging long-finned pilot whales (Globicephala melas)</span>. <em>Mar. Pollut. Bull.</em> <strong>83</strong>, 165–180. DOI: <a href="https://doi.org/10.1016/j.marpolbul.2014.03.056" class="external-link">10.1016/j.marpolbul.2014.03.056</a>
+Antunes R, Kvadsheim PH, Lam FPA, Tyack PL, Thomas L, Wensveen PJ,
+Miller PJO (2014). <span class="nocase">High thresholds for avoidance of
+sonar by free-ranging long-finned pilot whales (Globicephala
+melas)</span>. <em>Mar. Pollut. Bull.</em> <strong>83</strong>, 165–180.
+DOI: <a href="https://doi.org/10.1016/j.marpolbul.2014.03.056">10.1016/j.marpolbul.2014.03.056</a>
 </div>
 <div id="ref-Green1995" class="csl-entry">
-Green PJ (1995). <span class="nocase">Reversible jump Markov chain Monte Carlo computation and Bayesian model determination</span>. <em>Biometrika</em> <strong>82</strong>, 711–732. DOI: <a href="https://doi.org/10.1093/biomet/82.4.711" class="external-link">10.1093/biomet/82.4.711</a>
+Green PJ (1995). <span class="nocase">Reversible jump Markov chain Monte
+Carlo computation and Bayesian model determination</span>.
+<em>Biometrika</em> <strong>82</strong>, 711–732. DOI: <a href="https://doi.org/10.1093/biomet/82.4.711">10.1093/biomet/82.4.711</a>
 </div>
 <div id="ref-Hankin2006" class="csl-entry">
-Hankin RKS (2006). Additive integer partitions in r. <em>J. Stat. Soft.</em> <strong>16</strong>.
+Hankin RKS (2006). Additive integer partitions in r. <em>J. Stat.
+Soft.</em> <strong>16</strong>.
 </div>
 <div id="ref-Harris2018" class="csl-entry">
-Harris CM, Thomas L, Falcone EA, Hildebrand J, Houser D, Kvadsheim PH, Lam F-PA, Miller PJO, Moretti DJ, Read AJ, Slabbekoorn H, Southall BL, Tyack PL, Wartzok D, Janik VM (2018). <span class="nocase">Marine mammals and sonar: Dose-response studies, the risk-disturbance hypothesis and the role of exposure context</span>. <em>J. Appl. Ecol.</em> <strong>55</strong>, 396–404. DOI: <a href="https://doi.org/10.1111/1365-2664.12955" class="external-link">10.1111/1365-2664.12955</a>
+Harris CM, Thomas L, Falcone EA, Hildebrand J, Houser D, Kvadsheim PH,
+Lam F-PA, Miller PJO, Moretti DJ, Read AJ, Slabbekoorn H, Southall BL,
+Tyack PL, Wartzok D, Janik VM (2018). <span class="nocase">Marine
+mammals and sonar: Dose-response studies, the risk-disturbance
+hypothesis and the role of exposure context</span>. <em>J. Appl.
+Ecol.</em> <strong>55</strong>, 396–404. DOI: <a href="https://doi.org/10.1111/1365-2664.12955">10.1111/1365-2664.12955</a>
 </div>
 <div id="ref-Harris2016" class="csl-entry">
-Harris CM, Thomas L, Sadykova D, DeRuiter SL, Tyack PL, Southall BL, Read AJ, Miller PJO (2016). <span class="nocase">The Challenges of Analyzing Behavioral Response Study Data: An Overview of the MOCHA (Multi-study OCean Acoustics Human Effects Analysis) Project</span>. <em>Adv. Exp. Med. Biol.</em> <strong>875</strong>, 399–407. DOI: <a href="https://doi.org/10.1007/978-1-4939-2981-8_47" class="external-link">10.1007/978-1-4939-2981-8_47</a>
+Harris CM, Thomas L, Sadykova D, DeRuiter SL, Tyack PL, Southall BL,
+Read AJ, Miller PJO (2016). <span class="nocase">The Challenges of
+Analyzing Behavioral Response Study Data: An Overview of the MOCHA
+(Multi-study OCean Acoustics Human Effects Analysis) Project</span>.
+<em>Adv. Exp. Med. Biol.</em> <strong>875</strong>, 399–407. DOI: <a href="https://doi.org/10.1007/978-1-4939-2981-8_47">10.1007/978-1-4939-2981-8_47</a>
 </div>
 <div id="ref-Hastie2012" class="csl-entry">
-Hastie DI, Green PJ (2012). <span class="nocase">Model choice using reversible jump Markov chain Monte Carlo</span>. <em>Stat. Neerl.</em> <strong>66</strong>, 309–338. DOI: <a href="https://doi.org/10.1111/j.1467-9574.2012.00516.x" class="external-link">10.1111/j.1467-9574.2012.00516.x</a>
+Hastie DI, Green PJ (2012). <span class="nocase">Model choice using
+reversible jump Markov chain Monte Carlo</span>. <em>Stat. Neerl.</em>
+<strong>66</strong>, 309–338. DOI: <a href="https://doi.org/10.1111/j.1467-9574.2012.00516.x">10.1111/j.1467-9574.2012.00516.x</a>
 </div>
-<div id="ref-Hofmans2015" class="csl-entry">
-Hofmans J, Ceulemans E, Steinley D, Van Mechelen I (2015). On the added value of bootstrap analysis for k-means clustering. <em>Journal of classification</em> <strong>32</strong>, 268–284.
+<div id="ref-Houser2013a" class="csl-entry">
+Houser DS, Martin SW, Finneran JJ (2013a). <span class="nocase">Behavioral responses of California sea lions to
+mid-frequency (3250–3450 Hz) sonar signals</span>. <em>Mar. Environ.
+Res.</em> <strong>92</strong>, 268–278. DOI: <a href="https://doi.org/10.1016/j.marenvres.2013.10.007">10.1016/j.marenvres.2013.10.007</a>
+</div>
+<div id="ref-Houser2013b" class="csl-entry">
+Houser DS, Martin SW, Finneran JJ (2013b). <span class="nocase">Exposure
+amplitude and repetition affect bottlenose dolphin behavioral responses
+to simulated mid-frequency sonar signals</span>. <em>J. Exp. Mar. Biol.
+Ecol.</em> <strong>443</strong>, 123–133. DOI: <a href="https://doi.org/10.1016/j.jembe.2013.02.043">10.1016/j.jembe.2013.02.043</a>
 </div>
 <div id="ref-Huelsenbeck2004" class="csl-entry">
-Huelsenbeck JP, Larget B, Alfaro ME (2004). Bayesian phylogenetic model selection using reversible jump markov chain monte carlo. <em>Mol. Biol. Evol.</em> <strong>21</strong>, 1123–1133.
+Huelsenbeck JP, Larget B, Alfaro ME (2004). Bayesian phylogenetic model
+selection using reversible jump markov chain monte carlo. <em>Mol. Biol.
+Evol.</em> <strong>21</strong>, 1123–1133.
+</div>
+<div id="ref-Jacobson2022" class="csl-entry">
+Jacobson EK, Henderson EE, Miller DL, Oedekoven CS, Moretti DJ, Thomas L
+(2022). <span class="nocase">Quantifying the response of Blainville’s
+beaked whales to U.S. naval sonar exercises in Hawaii</span>. <em>Marine
+Mammal Science</em> <strong>n/a</strong>. DOI: <a href="https://doi.org/10.1111/mms.12944">10.1111/mms.12944</a>
 </div>
 <div id="ref-Miller2014" class="csl-entry">
-Miller PJO, Antunes RN, Wensveen PJ, Samarra FIP, Alves AC, Tyack PL, Kvadsheim PH, Kleivane L, Lam F-PA, Ainslie MA, Thomas L (2014). <span class="nocase">Dose-response relationships for the onset of avoidance of sonar by free-ranging killer whales</span>. <em>J. Acoust. Soc. Am.</em> <strong>135</strong>, 975. DOI: <a href="https://doi.org/10.1121/1.4861346" class="external-link">10.1121/1.4861346</a>
+Miller PJO, Antunes RN, Wensveen PJ, Samarra FIP, Alves AC, Tyack PL,
+Kvadsheim PH, Kleivane L, Lam F-PA, Ainslie MA, Thomas L (2014). <span class="nocase">Dose-response relationships for the onset of avoidance of
+sonar by free-ranging killer whales</span>. <em>J. Acoust. Soc. Am.</em>
+<strong>135</strong>, 975. DOI: <a href="https://doi.org/10.1121/1.4861346">10.1121/1.4861346</a>
+</div>
+<div id="ref-Moretti2014" class="csl-entry">
+Moretti D, Thomas L, Marques T, Harwood J, Dilley A, Neales B, Shaffer
+J, McCarthy E, New L, Jarvis S, Morrissey R (2014). <span class="nocase">A risk function for behavioral disruption of
+Blainville<span>’</span>s beaked whales (Mesoplodon densirostris) from
+mid-frequency active sonar</span>. <em>PLoS One</em> <strong>9</strong>,
+e85064. DOI: <a href="https://doi.org/10.1371/journal.pone.0085064">10.1371/journal.pone.0085064</a>
 </div>
 <div id="ref-Oedekoven2014" class="csl-entry">
-Oedekoven CS, Buckland ST, Mackenzie ML, King R, Evans KO, Burger LW (2014). Bayesian methods for hierarchical distance sampling models. <em>J. Agric. Biol. Environ. Stat.</em> <strong>19</strong>, 219–239.
+Oedekoven CS, Buckland ST, Mackenzie ML, King R, Evans KO, Burger LW
+(2014). Bayesian methods for hierarchical distance sampling models.
+<em>J. Agric. Biol. Environ. Stat.</em> <strong>19</strong>, 219–239.
 </div>
 <div id="ref-Plummer2019" class="csl-entry">
-Plummer M (2019). <span>‘Rjags: Bayesian graphical models using MCMC’</span>. Available at: <a href="https://CRAN.R-project.org/package=rjags" class="external-link">https://CRAN.R-project.org/package=rjags</a>
+Plummer M (2019). <span>‘Rjags: Bayesian graphical models using
+MCMC’</span>. Available at: <a href="https://CRAN.R-project.org/package=rjags">https://CRAN.R-project.org/package=rjags</a>
 </div>
 <div id="ref-Plummer2006" class="csl-entry">
-Plummer M, Best N, Cowles K, Vines K (2006). CODA: Convergence diagnosis and output analysis for MCMC. <em>R News</em> <strong>6</strong>, 7–11.
-</div>
-<div id="ref-Scrucca2016" class="csl-entry">
-Scrucca L, Fop M, Murphy TB, Raftery AE (2016). <span class="nocase">mclust</span> 5: Clustering, classification and density estimation using <span>G</span>aussian finite mixture models. <em>The <span>R</span> Journal</em> <strong>8</strong>, 289–317. Available at: <a href="https://doi.org/10.32614/RJ-2016-021" class="external-link">https://doi.org/10.32614/RJ-2016-021</a>
+Plummer M, Best N, Cowles K, Vines K (2006). CODA: Convergence diagnosis
+and output analysis for MCMC. <em>R News</em> <strong>6</strong>, 7–11.
 </div>
 </div>
 </div>
@@ -1369,21 +1782,17 @@ Scrucca L, Fop M, Murphy TB, Raftery AE (2016). <span class="nocase">mclust</spa
 
 
       <footer><div class="copyright">
-  <p></p>
-<p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p>
+  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link external-link">pkgdown</a> 1.6.1.9001.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
 </div>
 
-
-
-
+  
 
 
   </body>

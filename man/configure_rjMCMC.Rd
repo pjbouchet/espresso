@@ -18,7 +18,7 @@ configure_rjMCMC(
   p.split = 0.5,
   p.merge = 0.5,
   bootstrap = TRUE,
-  n.rep = 1000
+  n.rep = 100
 )
 }
 \arguments{

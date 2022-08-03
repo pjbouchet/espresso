@@ -149,7 +149,7 @@ gibbs <- function(dat,
   if(random.effects) n.comb.run.species <- floor(N.species / 2)
   
   #' ---------------------------------------------
-  # Index martrices for species
+  # Index matrices for species
   #' ---------------------------------------------
   
   # The next code section ﬁnds a complete set of competing models for the given dataset
@@ -247,7 +247,8 @@ gibbs <- function(dat,
   # MCMC chain, yet only some of these parameters are used to describe the data, depending on the 
   # value of the index. The remaining parameters thus float 'unconstrained' by the data and are 
   # sampled randomly from their priors. The resulting proposed values might be far away from posterior
-  # credible values, such that the chain rarely jumps to them, instead lingering on the current model/variable. Pseudopriors afford a solution to this problem, by ensuring that draws are made within a zone of 
+  # credible values, such that the chain rarely jumps to them, instead lingering on the current model/variable.
+  # Pseudopriors afford a solution to this problem, by ensuring that draws are made within a zone of 
   # posterior credibility. In essence, pseudopriors are used to mimic the posterior when the parameter 
   # is not being used to describe the data. In this sense, a pseudoprior is not really a prior, but only 
   # a conveniently chosen linking density, required to completely define the joint model specification. 

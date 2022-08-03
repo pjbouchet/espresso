@@ -47,8 +47,6 @@
 
 
 
-
-
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -60,15 +58,9 @@
 
 
 
-  
-
-  
-
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    
-
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -82,13 +74,19 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.6.3</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
+  <a href="../index.html">
+    <span class="fas fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
@@ -119,21 +117,24 @@
     <p>Read in and format data from behavioural response studies (BRSs). The function provides options for filtering the data based on species and/or sample sizes. See Details for formatting requirements.</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>read_data</span><span class='op'>(</span>
+    <pre class="usage"><span class='fu'>read_data</span><span class='op'>(</span>
   file <span class='op'>=</span> <span class='cn'>NULL</span>,
+  risk.functions <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='cn'>FALSE</span>, <span class='cn'>FALSE</span>, <span class='cn'>FALSE</span>, <span class='cn'>FALSE</span><span class='op'>)</span>,
+  n.risk <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>10</span>, <span class='fl'>10</span>, <span class='fl'>10</span>, <span class='fl'>10</span><span class='op'>)</span>,
   include.species <span class='op'>=</span> <span class='cn'>NULL</span>,
   exclude.species <span class='op'>=</span> <span class='cn'>NULL</span>,
   min.N <span class='op'>=</span> <span class='cn'>NULL</span>,
   covariates <span class='op'>=</span> <span class='cn'>NULL</span>,
   sonar.groups <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>MFAS <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"MFAS"</span>, <span class='st'>"MFA"</span>, <span class='st'>"REAL MFA"</span>, <span class='st'>"MFAS_DS"</span>, <span class='st'>"MFA HELO"</span>,
-    <span class='st'>"REAL MFA HELO"</span>, <span class='st'>"SOCAL_d"</span>, <span class='st'>"REAL MFAS"</span>, <span class='st'>"MF ALARM"</span><span class='op'>)</span>, LFAS <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span>,
-  exclude.sonar <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"PRN"</span>, <span class='st'>"CAS"</span>, <span class='st'>"ALARM"</span>, <span class='st'>"HF ALARM"</span>, <span class='st'>"HFAS"</span>, <span class='st'>"HF ALARM CAS"</span>,
-    <span class='st'>"MFAS CAS"</span><span class='op'>)</span>,
-  range.dB <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>215</span><span class='op'>)</span>,
-  range.var <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>45</span><span class='op'>)</span>,
+    <span class='st'>"REAL MFA HELO"</span>, <span class='st'>"SOCAL_d"</span>, <span class='st'>"REAL MFAS"</span>, <span class='st'>"REAL MFA (USS Dewey)"</span><span class='op'>)</span>, LFAS <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"LFAS"</span>,
+    <span class='st'>"LFA"</span>, <span class='st'>"LFAS_DS"</span>, <span class='st'>"LFAS_LO"</span>, <span class='st'>"LFAS_122"</span>, <span class='st'>"LFAS_185"</span>, <span class='st'>"HPAS-C"</span>, <span class='st'>"HPAC-C"</span>, <span class='st'>"HPAS-D"</span>,
+    <span class='st'>"HPASF-C"</span>, <span class='st'>"MPAS-C"</span>, <span class='st'>"MPAS-D"</span>, <span class='st'>"HPAC-C"</span>, <span class='st'>"XHPAS-D"</span>, <span class='st'>"XHPAS-C"</span><span class='op'>)</span><span class='op'>)</span>,
+  min.spl <span class='op'>=</span> <span class='cn'>NULL</span>,
+  max.spl <span class='op'>=</span> <span class='cn'>NULL</span>,
+  dose.range <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>215</span><span class='op'>)</span>,
   obs.sd <span class='op'>=</span> <span class='fl'>2.5</span>,
   verbose <span class='op'>=</span> <span class='cn'>TRUE</span>
-<span class='op'>)</span></code></pre></div>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -141,6 +142,18 @@
     <tr>
       <th>file</th>
       <td><p>Path to the input CSV file. If set to <code>NULL</code>, imports the <code><a href='example_brs.html'>example_brs</a></code> data.</p></td>
+    </tr>
+    <tr>
+      <th>risk.functions</th>
+      <td><p>Logical vector of length 4. If <code>TRUE</code>, indicates whether to include the risk functions derived in Moretti et al. (2014)
+, Jacobson et al. (2022)
+, Houser et al. (2013)
+a or Houser et al. (2013)
+b.</p></td>
+    </tr>
+    <tr>
+      <th>n.risk</th>
+      <td><p>Vector of length 4. Number of samples to draw for simulating exposures from the dose-response curves selected using <code>risk.functions</code>. Defaults to <code><a href='https://rdrr.io/r/base/c.html'>c(10, 10, 10, 10)</a></code>.</p></td>
     </tr>
     <tr>
       <th>include.species</th>
@@ -163,16 +176,16 @@
       <td><p>Named list detailing which sonar signals should be grouped a priori.</p></td>
     </tr>
     <tr>
-      <th>exclude.sonar</th>
-      <td><p>Character vector specifying which sonar signals should be excluded.</p></td>
+      <th>min.spl</th>
+      <td><p>Minimum SPL value to be considered. Data below this value will be discarded.</p></td>
     </tr>
     <tr>
-      <th>range.dB</th>
+      <th>max.spl</th>
+      <td><p>Maximum SPL value to be considered. Data above this value will be discarded.</p></td>
+    </tr>
+    <tr>
+      <th>dose.range</th>
       <td><p>Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.</p></td>
-    </tr>
-    <tr>
-      <th>range.var</th>
-      <td><p>Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2.</p></td>
     </tr>
     <tr>
       <th>obs.sd</th>
@@ -222,6 +235,28 @@
 
 
 <p>An example data file is included in the package. See <code><a href='example_brs.html'>example_brs</a></code> for details.</p>
+    <h2 class="hasAnchor" id="note"><a class="anchor" href="#note"></a>Note</h2>
+
+    <p>Data simulated using <code>risk.functions</code> are assumed to represent measured responses and do not include left or right-censored observations. Note also that <code>include.species</code> and <code>exclude.species</code> override <code>risk.functions</code>, such that simulated data cannot be produced if the associated species is excluded.</p>
+    <h2 class="hasAnchor" id="references"><a class="anchor" href="#references"></a>References</h2>
+
+    <p>Houser DS, Martin SW, Finneran JJ (2013).
+&#8220;Behavioral responses of California sea lions to mid-frequency (3250–3450 Hz) sonar signals.&#8221;
+<em>Mar. Environ. Res.</em>, <b>92</b>, 268--278.
+doi: <a href='https://doi.org/10.1016/j.marenvres.2013.10.007'>10.1016/j.marenvres.2013.10.007</a>
+.<br /><br /> Houser DS, Martin SW, Finneran JJ (2013).
+&#8220;Exposure amplitude and repetition affect bottlenose dolphin behavioral responses to simulated mid-frequency sonar signals.&#8221;
+<em>J. Exp. Mar. Biol. Ecol.</em>, <b>443</b>, 123--133.
+doi: <a href='https://doi.org/10.1016/j.jembe.2013.02.043'>10.1016/j.jembe.2013.02.043</a>
+.<br /><br /> Jacobson EK, Henderson EE, Miller DL, Oedekoven CS, Moretti DJ, Thomas L (2022).
+&#8220;Quantifying the response of Blainville's beaked whales to U.S. naval sonar exercises in Hawaii.&#8221;
+<em>Marine Mammal Science</em>, <b>n/a</b>(n/a).
+doi: <a href='https://doi.org/10.1111/mms.12944'>10.1111/mms.12944</a>
+.<br /><br /> Moretti D, Thomas L, Marques T, Harwood J, Dilley A, Neales B, Shaffer J, McCarthy E, New L, Jarvis S, Morrissey R (2014).
+&#8220;A risk function for behavioral disruption of Blainville's beaked whales (Mesoplodon densirostris) from mid-frequency active sonar.&#8221;
+<em>PLoS One</em>, <b>9</b>(1), e85064.
+doi: <a href='https://doi.org/10.1371/journal.pone.0085064'>10.1371/journal.pone.0085064</a>
+.</p>
     <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
 
     <div class='dont-index'><p><code><a href='simulate_data.html'>simulate_data</a></code> <code><a href='example_brs.html'>example_brs</a></code> <code><a href='summary.brsdata.html'>summary.brsdata</a></code></p></div>
@@ -230,20 +265,21 @@
     <p>Phil J. Bouchet</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span></span>
-<span class='r-in'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span></span>
-<span class='r-in'></span>
-<span class='r-in'><span class='co'># Import the example data</span></span>
-<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>read_data</span><span class='op'>(</span>file <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span> </span>
-<span class='r-in'></span>
-<span class='r-in'><span class='co'># Import a real dataset with the sonar and range covariates, </span></span>
-<span class='r-in'><span class='co'># whilst excluding sperm whales and any other species with a sample size</span></span>
-<span class='r-in'><span class='co'># smaller than two observations.</span></span>
-<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>read_data</span><span class='op'>(</span>file <span class='op'>=</span> <span class='st'>"path/to/my/data.csv"</span>, </span>
-<span class='r-in'>                  exclude.species <span class='op'>=</span> <span class='st'>"Sperm whale"</span>,</span>
-<span class='r-in'>                  min.N <span class='op'>=</span> <span class='fl'>2</span><span class='op'>)</span></span>
-<span class='r-in'><span class='op'>}</span></span>
-</code></pre></div>
+    <pre class="examples"><div class='input'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span>
+
+<span class='co'># Import the example data</span>
+<span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>read_data</span><span class='op'>(</span>file <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span> 
+
+<span class='co'># Import a real dataset with the sonar and range covariates, </span>
+<span class='co'># whilst excluding sperm whales and any other species with a sample size</span>
+<span class='co'># smaller than two observations.</span>
+<span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>read_data</span><span class='op'>(</span>file <span class='op'>=</span> <span class='st'>"path/to/my/data.csv"</span>, 
+                  risk.functions <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='cn'>FALSE</span>, <span class='cn'>FALSE</span>, <span class='cn'>FALSE</span>, <span class='cn'>FALSE</span><span class='op'>)</span>,
+                  exclude.species <span class='op'>=</span> <span class='st'>"Sperm whale"</span>,
+                  min.N <span class='op'>=</span> <span class='fl'>2</span><span class='op'>)</span>
+<span class='op'>}</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -255,11 +291,11 @@
 
       <footer>
       <div class="copyright">
-  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
+  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p>
 </div>
 
 <div class="pkgdown">
-  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
@@ -267,8 +303,6 @@
 
   
 
-
-  
 
   </body>
 </html>

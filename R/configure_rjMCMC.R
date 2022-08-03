@@ -76,7 +76,7 @@ configure_rjMCMC <- function(dat,
                              p.split = 0.5,
                              p.merge = 0.5,
                              bootstrap = TRUE,
-                             n.rep = 1000){
+                             n.rep = 100){
   
   #' -----------------------------------------------
   # Perform function checks
@@ -227,7 +227,7 @@ configure_rjMCMC <- function(dat,
     # Contrary to the bootstraps function from the <rsamples> package (original implementation),
     # this approach ensures that all species are included in all resamples.
     
-    cat("Generating Bootstrap resamples ...\n")
+    # cat("Generating Bootstrap resamples ...\n")
     
     boot.tbl <- purrr::map(.x = seq_len(n.rep),
                            .f = ~{
@@ -244,7 +244,7 @@ configure_rjMCMC <- function(dat,
                              dplyr::select(-c(data, Ns)) %>% 
                              tidyr::unnest(sample)}) 
     
-    cat("Performing cluster analysis ...\n")
+    # cat("Performing cluster analysis ...\n")
     
     # Model-based clustering (equal variance)
     datClust <- purrr::map(.x = boot.tbl,
@@ -375,7 +375,7 @@ configure_rjMCMC <- function(dat,
   dat$config$priors <- priors.df
   dat$config$psi.gibbs <- c((1 / priors.df["psi", 2] ^ 2), (priors.df["psi", 1] / priors.df["psi", 2] ^ 2))
   
-  cat("Done!")
+  # cat("Done!")
   class(dat) <- c("rjconfig", class(dat))
   return(dat)
   

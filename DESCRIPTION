@@ -20,6 +20,7 @@ Depends:
     stats
 Imports:
     Rdpack,
+    Rcpp,
     tidyverse,
     magrittr,
     rjags,

@@ -1,7 +1,7 @@
-pandoc: 2.11.4
-pkgdown: 1.6.1.9001
-pkgdown_sha: 51268b0d9cb0588d7a6404a2b8ef4ee19c435e89
+pandoc: 2.17.1.1
+pkgdown: 1.6.1
+pkgdown_sha: ~
 articles:
   espresso: espresso.html
-last_built: 2021-08-21T14:07Z
+last_built: 2022-08-03T09:53Z
 

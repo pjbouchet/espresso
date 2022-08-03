@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 [![status](https://img.shields.io/badge/repo%20status-active-green.svg?style=flat-square)](https://www.repostatus.org/#active)
 <!-- badges: end -->
 
-`espresso` stands for **ES**timating **P**atterns of **RES**ponsiveness to Navy **SO**nar, and was designed as a toolkit for fitting and selecting among behavioural dose-response functions in cetaceans exposed to anthropogenic sound.
+`espresso` stands for **E**stimating **S**hared **P**atterns of **RES**ponsiveness to Navy **SO**nar, and was designed as a toolkit for fitting and selecting among behavioural dose-response functions in cetaceans exposed to anthropogenic sound.
 
 ## Rationale
 
@@ -43,6 +43,7 @@ remotes::install_github("pjbouchet/espresso") # OR
 devtools::install_github("pjbouchet/espresso")
 ```
 
-The package relies on compiled code (C++) and functionalities provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The Rtools software may be needed on Windows machines. Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
+The package relies on compiled code (C++) and functionalities provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The Rtools software may be needed on Windows machines. 
+Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
 
 ## References

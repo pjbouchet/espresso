@@ -9,7 +9,7 @@
 [![status](https://img.shields.io/badge/repo%20status-active-green.svg?style=flat-square)](https://www.repostatus.org/#active)
 <!-- badges: end -->
 
-`espresso` stands for **ES**timating **P**atterns of **RES**ponsiveness
+`espresso` stands for **E**stimating **S**hared **P**atterns of **RES**ponsiveness
 to Navy **SO**nar, and was designed as a toolkit for fitting and
 selecting among behavioural dose-response functions in cetaceans exposed
 to anthropogenic sound.
@@ -106,8 +106,9 @@ Harris, Catriona M., Len Thomas, Dina Sadykova, Stacy L. DeRuiter, Peter
 L. Tyack, Brandon L. Southall, Andrew J. Read, and Patrick J. O. Miller.
 2016. “<span class="nocase">The Challenges of Analyzing Behavioral
 Response Study Data: An Overview of the MOCHA (Multi-study OCean
-Acoustics Human Effects Analysis) Project</span>.” *Adv. Exp. Med.
-Biol.* 875: 399–407. <https://doi.org/10.1007/978-1-4939-2981-8_47>.
+Acoustics Human Effects Analysis) Project</span>.” In *<span
+class="nocase">The Effects of Noise on Aquatic Life II</span>*, 399–407.
+New York, USA. <https://doi.org/10.1007/978-1-4939-2981-8_47>.
 
 </div>
 

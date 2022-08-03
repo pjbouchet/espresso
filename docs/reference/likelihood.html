@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Likelihood — likelihood • espresso</title>
+<title>The Truncated Normal Distribution — likelihood • espresso</title>
 
 
 <!-- jquery -->
@@ -41,10 +41,8 @@
   <link href="../extra.css" rel="stylesheet">
   
 
-<meta property="og:title" content="Likelihood — likelihood" />
-<meta property="og:description" content="Calculate log-likelihoods required by the rjMCMC sampler." />
-
-
+<meta property="og:title" content="The Truncated Normal Distribution — likelihood" />
+<meta property="og:description" content="Probability density for a truncated Normal distribution with mean equal to location and standard deviation equal to scale." />
 
 
 
@@ -60,15 +58,9 @@
 
 
 
-  
-
-  
-
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    
-
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -82,13 +74,19 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.6.3</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
+  <a href="../index.html">
+    <span class="fas fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
@@ -110,47 +108,46 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Likelihood</h1>
+    <h1>The Truncated Normal Distribution</h1>
     
     <div class="hidden name"><code>likelihood.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Calculate log-likelihoods required by the rjMCMC sampler.</p>
+    <p>Probability density for a truncated Normal distribution with mean equal to <code>location</code> and standard deviation equal to <code>scale</code>.</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>likelihood</span><span class='op'>(</span>
-  <span class='va'>rj.obj</span>,
-  <span class='va'>iter</span>,
-  <span class='va'>model</span>,
-  values <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span><span class='op'>)</span>,
-  include.cov <span class='op'>=</span> <span class='cn'>NULL</span>,
+    <pre class="usage"><span class='fu'>likelihood</span><span class='op'>(</span>
+  biphasic <span class='op'>=</span> <span class='cn'>FALSE</span>,
   param.name <span class='op'>=</span> <span class='cn'>NULL</span>,
+  <span class='va'>rj.obj</span>,
+  values <span class='op'>=</span> <span class='cn'>NULL</span>,
+  included.cov <span class='op'>=</span> <span class='cn'>NULL</span>,
   RJ <span class='op'>=</span> <span class='cn'>FALSE</span>,
   lprod <span class='op'>=</span> <span class='cn'>TRUE</span>
-<span class='op'>)</span></code></pre></div>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
+      <th>biphasic</th>
+      <td><p>Logical. Indicates the type of model for which likelihoods should be calculated.</p></td>
+    </tr>
+    <tr>
+      <th>param.name</th>
+      <td><p>Paramter name. Ignored if <code>values</code> is specified.</p></td>
+    </tr>
+    <tr>
       <th>rj.obj</th>
       <td><p>rjMCMC object.</p></td>
-    </tr>
-    <tr>
-      <th>iter</th>
-      <td><p>Current iteration.</p></td>
-    </tr>
-    <tr>
-      <th>model</th>
-      <td><p>Model ID number.</p></td>
     </tr>
     <tr>
       <th>values</th>
       <td><p>List of proposed values, if available.</p></td>
     </tr>
     <tr>
-      <th>include.cov</th>
+      <th>included.cov</th>
       <td><p>Boolean vector indicating which contextual covariates are included in the current iteration of the rjMCMC sampler.</p></td>
     </tr>
     <tr>
@@ -162,8 +159,53 @@
       <td><p>If <code>TRUE</code>, returns the product of individual likelihoods.</p></td>
     </tr>
     <tr>
-      <th>param</th>
-      <td><p>Paramter name. Ignored if <code>values</code> is specified.</p></td>
+      <th>x</th>
+      <td><p>Vector of quantiles.</p></td>
+    </tr>
+    <tr>
+      <th>location</th>
+      <td><p>Vector of means.</p></td>
+    </tr>
+    <tr>
+      <th>scale</th>
+      <td><p>Vector of standard deviations.</p></td>
+    </tr>
+    <tr>
+      <th>log</th>
+      <td><p>Logical. If <code>TRUE</code>, probabilities <code>p</code> are given as <code><a href='https://rdrr.io/r/base/Log.html'>log(p)</a></code>.</p></td>
+    </tr>
+    <tr>
+      <th>L</th>
+      <td><p>Lower limit of the distribution.</p></td>
+    </tr>
+    <tr>
+      <th>U</th>
+      <td><p>Upper limit of the distribution.
+dtnorm &lt;- function(x, location = 0, scale = 1, log = FALSE, L = -Inf, U = Inf) d &lt;- dnorm(x, location, scale, log = TRUE)
+denom &lt;- log(pnorm(U, location, scale) - pnorm(L, location, scale))
+d &lt;- d - denom
+d(x &lt; L) | (x &gt; U) &lt;- -100000 # When input quantile is outside bounds
+dis.infinite(d) &lt;- -100000 # When input location is outside bounds
+if(!log) d &lt;- exp(d)
+return(d)</p>
+<p>#' The Truncated Normal Distribution
+#'
+#' Generate random deviates from a truncated normal distribution with mean equal to <code>location</code> and standard deviation equal to <code>scale</code>.
+#'
+#' @param n Number of observations.
+#' @param location Vector of means.
+#' @param scale Vector of standard deviations.
+#' @param L Lower limit of the distribution.
+#' @param U Upper limit of the distribution.</p>
+<p>rtnorm &lt;- function(n, location, scale, L, U)
+location + scale * qnorm(pnorm(L, location, scale) + runif(n)*(pnorm(U, location, scale) - pnorm(L, location, scale)))</p>
+<p>d_binom &lt;- function(x, size, prob, log)
+d &lt;- dbinom(x = x, size = size, prob = prob, log = log)
+dis.infinite(d) &lt;- -100000 # To avoid Inf that cause numerical issues
+return(d)
+
+Likelihood</p>
+<p>Calculate the log-likelihood of a monophasic dose-response model, as required by the rjMCMC sampler.</p></td>
     </tr>
     </table>
 
@@ -179,11 +221,11 @@
 
       <footer>
       <div class="copyright">
-  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
+  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p>
 </div>
 
 <div class="pkgdown">
-  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
@@ -191,8 +233,6 @@
 
   
 
-
-  
 
   </body>
 </html>

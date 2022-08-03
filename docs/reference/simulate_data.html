@@ -47,8 +47,6 @@
 
 
 
-
-
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -60,15 +58,9 @@
 
 
 
-  
-
-  
-
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    
-
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -82,13 +74,19 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.6.3</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
+  <a href="../index.html">
+    <span class="fas fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
@@ -119,26 +117,37 @@
     <p>Simulate cetacean responses to Navy sonar exposure, as in behavioural response studies (BRSs).</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>simulate_data</span><span class='op'>(</span>
+    <pre class="usage"><span class='fu'>simulate_data</span><span class='op'>(</span>
+  biphasic <span class='op'>=</span> <span class='cn'>FALSE</span>,
   n.species <span class='op'>=</span> <span class='fl'>2</span>,
   n.whales <span class='op'>=</span> <span class='fl'>20</span>,
+  min.trials <span class='op'>=</span> <span class='fl'>1</span>,
   max.trials <span class='op'>=</span> <span class='fl'>3</span>,
   covariates <span class='op'>=</span> <span class='cn'>NULL</span>,
   mu <span class='op'>=</span> <span class='cn'>NULL</span>,
   phi <span class='op'>=</span> <span class='cn'>NULL</span>,
   sigma <span class='op'>=</span> <span class='cn'>NULL</span>,
-  range.dB <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>215</span><span class='op'>)</span>,
-  range.var <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>45</span><span class='op'>)</span>,
+  nu <span class='op'>=</span> <span class='cn'>NULL</span>,
+  tau <span class='op'>=</span> <span class='cn'>NULL</span>,
+  psi <span class='op'>=</span> <span class='fl'>0.5</span>,
+  omega <span class='op'>=</span> <span class='fl'>1</span>,
+  alpha <span class='op'>=</span> <span class='cn'>NULL</span>,
+  Npriors <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>30</span><span class='op'>)</span>,
+  dose.range <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>215</span><span class='op'>)</span>,
   Lc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>65</span>, <span class='fl'>75</span><span class='op'>)</span>,
   Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>190</span>, <span class='fl'>195</span><span class='op'>)</span>,
   obs.sd <span class='op'>=</span> <span class='fl'>2.5</span>,
   verbose <span class='op'>=</span> <span class='cn'>TRUE</span>,
   seed <span class='op'>=</span> <span class='cn'>NULL</span>
-<span class='op'>)</span></code></pre></div>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>biphasic</th>
+      <td><p>Logical. If TRUE, will simulate data from a biphasic dose-response functional form.</p></td>
+    </tr>
     <tr>
       <th>n.species</th>
       <td><p>Number of species.</p></td>
@@ -148,8 +157,12 @@
       <td><p>Number of individuals. Can be specified as a vector of length <code>n.species</code>, allowing for uneven samples sizes across species, or as an integer multiple of <code>n.species</code> for equal sample sizes across species.</p></td>
     </tr>
     <tr>
+      <th>min.trials</th>
+      <td><p>Minimum number of exposures per individual. Each animal is exposed <code>x</code> times, with <code>x</code> taken as a random draw from a discrete Uniform distribution bounded by <code>min.trials</code> and <code>max.trials</code>.</p></td>
+    </tr>
+    <tr>
       <th>max.trials</th>
-      <td><p>Maximum number of exposures per individual. Each animal is exposed <code>x</code> times, with <code>x</code> taken as a random draw from a Uniform distribution between 1 and <code>max.trials</code>.</p></td>
+      <td><p>Maximum number of exposures per individual.</p></td>
     </tr>
     <tr>
       <th>covariates</th>
@@ -168,12 +181,32 @@
       <td><p>Within-whale between-exposure variance in response thresholds.</p></td>
     </tr>
     <tr>
-      <th>range.dB</th>
-      <td><p>Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.</p></td>
+      <th>nu</th>
+      <td><p>Mean response thresholds from the context-dependent and dose-dependent mixtures in a biphasic model. Must be a list of length <code>n.species</code>, where each element is a vector of length two.</p></td>
     </tr>
     <tr>
-      <th>range.var</th>
-      <td><p>Permissible range for the variance term(s) phi (between-whale variance) and sigma (between-exposure variance). Must be a vector of length 2.</p></td>
+      <th>tau</th>
+      <td><p>Scale parameters associated with <code>nu</code>. Must be a vector of length two.</p></td>
+    </tr>
+    <tr>
+      <th>psi</th>
+      <td><p>Probability of exhibiting a context-dependent response, expressed on a probit scale.</p></td>
+    </tr>
+    <tr>
+      <th>omega</th>
+      <td><p>Variance in <code>psi</code>.</p></td>
+    </tr>
+    <tr>
+      <th>alpha</th>
+      <td><p>Upper bound on the context-dependent response threshold, which corresponds to the lower bound of the dose-dependent threshold. Must be a vector of length <code>n.species</code>.</p></td>
+    </tr>
+    <tr>
+      <th>Npriors</th>
+      <td><p>Vector of length two, giving the mean and SD of the Normal priors placed on covariates.</p></td>
+    </tr>
+    <tr>
+      <th>dose.range</th>
+      <td><p>Bounds for the dose-response function. Must be a vector of length 2. Defaults to: (1) a lower bound of 60 dB re 1μPa, taken as a conservative lower limit of detectability given hearing sensitivity and the lowest average sea noise conditions; and (2) an upper bound of 215 dB re 1μPa at/above which all animals are expected to respond. This upper bound is consistent with the maximum source levels employed in behavioural response studies (BRSs) to date.</p></td>
     </tr>
     <tr>
       <th>Lc</th>
@@ -219,22 +252,40 @@
     <p>Phil J. Bouchet</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span></span>
-<span class='r-in'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span></span>
-<span class='r-in'></span>
-<span class='r-in'><span class='co'># Simulate data for two species (no censoring)</span></span>
-<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>simulate_data</span><span class='op'>(</span>n.species <span class='op'>=</span> <span class='fl'>2</span>,</span>
-<span class='r-in'>                       n.whales <span class='op'>=</span> <span class='fl'>16</span>,</span>
-<span class='r-in'>                       max.trials <span class='op'>=</span> <span class='fl'>3</span>,</span>
-<span class='r-in'>                       covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>exposed <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>5</span><span class='op'>)</span>, range <span class='op'>=</span> <span class='fl'>0.5</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       mu <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>125</span>, <span class='fl'>142</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       phi <span class='op'>=</span> <span class='fl'>20</span>,</span>
-<span class='r-in'>                       sigma <span class='op'>=</span> <span class='fl'>20</span>,</span>
-<span class='r-in'>                       Lc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>65</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>214</span>, <span class='fl'>215</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       seed <span class='op'>=</span> <span class='fl'>58697</span><span class='op'>)</span></span>
-<span class='r-in'><span class='op'>}</span></span>
-</code></pre></div>
+    <pre class="examples"><div class='input'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span>
+
+<span class='co'># Simulate data for two species </span>
+<span class='co'># (no censoring, monophasic functional form)</span>
+<span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>simulate_data</span><span class='op'>(</span>biphasic <span class='op'>=</span> <span class='cn'>FALSE</span>,
+                       n.species <span class='op'>=</span> <span class='fl'>2</span>,
+                       n.whales <span class='op'>=</span> <span class='fl'>16</span>,
+                       max.trials <span class='op'>=</span> <span class='fl'>3</span>,
+                       covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>exposed <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>5</span><span class='op'>)</span>, range <span class='op'>=</span> <span class='fl'>0.5</span><span class='op'>)</span>,
+                       mu <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>125</span>, <span class='fl'>142</span><span class='op'>)</span>,
+                       phi <span class='op'>=</span> <span class='fl'>20</span>,
+                       sigma <span class='op'>=</span> <span class='fl'>20</span>,
+                       Lc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>65</span><span class='op'>)</span>,
+                       Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>214</span>, <span class='fl'>215</span><span class='op'>)</span>,
+                       seed <span class='op'>=</span> <span class='fl'>58697</span><span class='op'>)</span>
+                       
+<span class='co'># Simulate data for three species </span>
+<span class='co'># (right- and left-censoring, biphasic functional form)</span>
+<span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'>simulate_data</span><span class='op'>(</span>biphasic <span class='op'>=</span> <span class='cn'>TRUE</span>,
+                       n.species <span class='op'>=</span> <span class='fl'>3</span>,
+                       n.whales <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>10</span>, <span class='fl'>5</span>, <span class='fl'>8</span><span class='op'>)</span>,
+                       max.trials <span class='op'>=</span> <span class='fl'>3</span>,
+                       alpha <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>125</span>, <span class='fl'>140</span>, <span class='fl'>139</span><span class='op'>)</span>,
+                       nu <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>98</span>, <span class='fl'>149</span><span class='op'>)</span>, <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>110</span>, <span class='fl'>165</span><span class='op'>)</span>, <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>105</span>,<span class='fl'>152</span><span class='op'>)</span><span class='op'>)</span>,
+                       tau <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>20</span>, <span class='fl'>20</span><span class='op'>)</span>,
+                       psi <span class='op'>=</span> <span class='fl'>0.5</span>,
+                       omega <span class='op'>=</span> <span class='fl'>1</span>,
+                       Lc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>70</span><span class='op'>)</span>,
+                       Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>165</span>, <span class='fl'>195</span><span class='op'>)</span>,
+                       seed <span class='op'>=</span> <span class='fl'>58697</span><span class='op'>)</span>
+                       
+<span class='op'>}</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -246,11 +297,11 @@
 
       <footer>
       <div class="copyright">
-  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
+  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p>
 </div>
 
 <div class="pkgdown">
-  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
@@ -258,8 +309,6 @@
 
   
 
-
-  
 
   </body>
 </html>

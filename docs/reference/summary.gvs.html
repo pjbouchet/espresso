@@ -47,8 +47,6 @@
 
 
 
-
-
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -60,15 +58,9 @@
 
 
 
-  
-
-  
-
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    
-
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -82,13 +74,19 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">espresso</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.6.3</span>
       </span>
     </div>
 
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
+  <a href="../index.html">
+    <span class="fas fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="../articles/espresso.html">Get started</a>
 </li>
 <li>
@@ -119,7 +117,7 @@
     <p>Summary method for objects of class <code>gvs</code>, as returned by <code><a href='gibbs.html'>gibbs</a></code>. Produces a text-based summary of: (1) effective sample sizes, (2) acceptance rates, (3) model convergence, and (4) posterior model probabilities. Note that <code><a href='gibbs.html'>gibbs</a></code> does not implement covariate selection. As a result, posterior inclusion probabilities (PIPs) are not returned here, contrary to <code><a href='summary.rjtrace.html'>summary.rjtrace</a></code>.</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='co'># S3 method for gvs</span>
+    <pre class="usage"><span class='co'># S3 method for gvs</span>
 <span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span>
   <span class='va'>gvs.obj</span>,
   eff.n <span class='op'>=</span> <span class='cn'>TRUE</span>,
@@ -128,7 +126,7 @@
   gelman.rubin <span class='op'>=</span> <span class='fl'>1.1</span>,
   model.ranks <span class='op'>=</span> <span class='cn'>TRUE</span>,
   n.top <span class='op'>=</span> <span class='cn'>NULL</span>
-<span class='op'>)</span></code></pre></div>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -159,7 +157,7 @@
     </tr>
     <tr>
       <th>n.top</th>
-      <td><p>Number of top-ranking models to display when <code>model.ranks = TRUE</code>. Defaults to <code>NULL</code>, which lists all models.</p></td>
+      <td><p>Number of top-ranking models to display when <code>model.ranks = TRUE</code>.</p></td>
     </tr>
     </table>
 
@@ -174,31 +172,33 @@
     <p>Phil J. Bouchet</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span></span>
-<span class='r-in'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span></span>
-<span class='r-in'></span>
-<span class='r-in'><span class='co'># Simulate data for two species</span></span>
-<span class='r-in'><span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='simulate_data.html'>simulate_data</a></span><span class='op'>(</span>n.species <span class='op'>=</span> <span class='fl'>2</span>,</span>
-<span class='r-in'>                       n.whales <span class='op'>=</span> <span class='fl'>16</span>,</span>
-<span class='r-in'>                       max.trials <span class='op'>=</span> <span class='fl'>3</span>,</span>
-<span class='r-in'>                       covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>exposed <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>5</span><span class='op'>)</span>, range <span class='op'>=</span> <span class='fl'>0.5</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       mu <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>101</span>, <span class='fl'>158</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       phi <span class='op'>=</span> <span class='fl'>20</span>,</span>
-<span class='r-in'>                       sigma <span class='op'>=</span> <span class='fl'>20</span>,</span>
-<span class='r-in'>                       Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>210</span>, <span class='fl'>211</span><span class='op'>)</span>,</span>
-<span class='r-in'>                       seed <span class='op'>=</span> <span class='fl'>58697</span><span class='op'>)</span></span>
-<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat</span><span class='op'>)</span></span>
-<span class='r-in'></span>
-<span class='r-in'><span class='co'># Model selection by GVS</span></span>
-<span class='r-in'><span class='va'>gvs.model</span> <span class='op'>&lt;-</span> <span class='fu'><a href='gibbs.html'>gibbs</a></span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat</span>,</span>
-<span class='r-in'>             random.effects <span class='op'>=</span> <span class='cn'>FALSE</span>,</span>
-<span class='r-in'>             include.covariates <span class='op'>=</span> <span class='cn'>FALSE</span>,</span>
-<span class='r-in'>             mcmc.n <span class='op'>=</span> <span class='fl'>1000</span>,</span>
-<span class='r-in'>             burnin <span class='op'>=</span> <span class='fl'>500</span><span class='op'>)</span></span>
-<span class='r-in'></span>
-<span class='r-in'><span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>gvs.model</span><span class='op'>)</span></span>
-<span class='r-in'><span class='op'>}</span></span>
-</code></pre></div>
+    <pre class="examples"><div class='input'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'>espresso</span><span class='op'>)</span>
+
+<span class='co'># Simulate data for two species</span>
+<span class='va'>mydat</span> <span class='op'>&lt;-</span> <span class='fu'><a href='simulate_data.html'>simulate_data</a></span><span class='op'>(</span>n.species <span class='op'>=</span> <span class='fl'>2</span>,
+                       n.whales <span class='op'>=</span> <span class='fl'>16</span>,
+                       min.trials <span class='op'>=</span> <span class='fl'>1</span>,
+                       max.trials <span class='op'>=</span> <span class='fl'>3</span>,
+                       covariates <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>exposed <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>0</span>, <span class='fl'>5</span><span class='op'>)</span>, range <span class='op'>=</span> <span class='fl'>0.5</span><span class='op'>)</span>,
+                       mu <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>101</span>, <span class='fl'>158</span><span class='op'>)</span>,
+                       phi <span class='op'>=</span> <span class='fl'>20</span>,
+                       sigma <span class='op'>=</span> <span class='fl'>20</span>,
+                       Lc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>60</span>, <span class='fl'>65</span><span class='op'>)</span>,
+                       Rc <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>210</span>, <span class='fl'>211</span><span class='op'>)</span>,
+                       seed <span class='op'>=</span> <span class='fl'>58697</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>mydat</span><span class='op'>)</span>
+
+<span class='co'># Model selection by GVS</span>
+<span class='va'>gvs.model</span> <span class='op'>&lt;-</span> <span class='fu'><a href='gibbs.html'>gibbs</a></span><span class='op'>(</span>dat <span class='op'>=</span> <span class='va'>mydat</span>,
+             random.effects <span class='op'>=</span> <span class='cn'>FALSE</span>,
+             include.covariates <span class='op'>=</span> <span class='cn'>FALSE</span>,
+             mcmc.n <span class='op'>=</span> <span class='fl'>1000</span>,
+             burnin <span class='op'>=</span> <span class='fl'>500</span><span class='op'>)</span>
+
+<span class='fu'><a href='https://rdrr.io/r/base/summary.html'>summary</a></span><span class='op'>(</span><span class='va'>gvs.model</span><span class='op'>)</span>
+<span class='op'>}</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -210,11 +210,11 @@
 
       <footer>
       <div class="copyright">
-  <p><p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p></p>
+  <p>Developed by Phil Bouchet, Len Thomas, Catriona Harris, Elizabeth Henderson, Dina Sadykova.</p>
 </div>
 
 <div class="pkgdown">
-  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
@@ -222,8 +222,6 @@
 
   
 
-
-  
 
   </body>
 </html>
