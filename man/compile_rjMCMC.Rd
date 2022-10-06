@@ -12,7 +12,7 @@ compile_rjMCMC(
   covariate = NULL,
   covariate.values = NULL,
   species = NULL,
-  credible.intervals = c(95, 50, 5),
+  credible.intervals = 95,
   npts = 20
 )
 }

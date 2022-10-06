@@ -13,8 +13,8 @@ configure_rjMCMC(
   proposal.mh = list(t.ij = 10, mu.i = 5, mu = 2, phi = 5, sigma = 5, nu = 5, tau = 5,
     alpha = 2, mu.ij = 5, psi = 1, omega = 2, psi.i = 2, k.ij = 0.5),
   proposal.rj = list(rj = 5, dd = 10, cov = 3),
-  priors = list(covariates = c(0, 30), alpha = c(110, 160), sigma = c(1, 45), phi =
-    c(1, 45), omega = c(0.5, 5), tau = c(1, 45), psi = c(0, 1)),
+  priors = list(covariates = c(0, 30), alpha = c(110, 160), sigma = c(1, 45), phi = c(1,
+    45), omega = c(0.5, 5), tau = c(1, 45), psi = c(0, 1)),
   p.split = 0.5,
   p.merge = 0.5,
   bootstrap = TRUE,

@@ -197,7 +197,7 @@ setup_rjMCMC <- function(rj.input,
     }
     
     # Model parameters 
-    # -- MONOPHASIC ----
+    # -- MONOPHASIC ---
     
     if(!rj.input$config$biphasic | rj.input$config$function.select){
       
@@ -281,10 +281,12 @@ setup_rjMCMC <- function(rj.input,
                                            which(current.groups == .x)]
                                Rc.obs <- rj.input$obs$Rc[rj.input$species$trials %in% 
                                            which(current.groups == .x)]
+                               
                                y.obs[is.na(y.obs) & censored == 1] <- 
                                  runif(n = sum(is.na(y.obs) & censored == 1),
                                        min = Rc.obs[is.na(y.obs) & censored == 1],
                                        max = rj.input$param$dose.range[2])
+                               
                                y.obs[is.na(y.obs) & censored == -1] <- 
                                  runif(n = sum(is.na(y.obs) & censored == -1),
                                        min = rj.input$param$dose.range[1],
@@ -293,13 +295,22 @@ setup_rjMCMC <- function(rj.input,
                                sort(y.obs)})
 
       rj$alpha[1, ] <- sapply(X = inits.bi, FUN = function(x){
-        rt_norm(n = 1, location = min(x) + (max(x)-min(x))/2, scale = 1, 
-                         L = rj.input$param$dose.range[1],
-                         U = rj.input$param$dose.range[2])})[current.groups]
+        
+        # xx <- x[x<=rj.input$config$priors["alpha", 2]]
+        
+        max.x <- min(c(rj.input$config$priors["alpha", 2], max(x)))
+        min.x <- max(c(rj.input$config$priors["alpha", 1], min(x)))
+        
+        rt_norm(n = 1, 
+                location = min.x + (max.x-min.x)/2,
+                scale = 2, 
+                L = rj.input$param$dose.range[1],
+                U = rj.input$param$dose.range[2])})[current.groups]
       
       # Add one random deviate from a Uniform distribution here to avoid numerical
       # issues with NAs when one of the list elements of inits.bi is of
       # length 1 and doesn't meet the constraint with respect to alpha
+      
       rj$nu[1, ,1] <-
         sapply(X = seq_len(dplyr::n_distinct(current.groups)), 
                FUN = function(x){

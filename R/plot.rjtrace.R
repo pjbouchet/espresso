@@ -59,6 +59,7 @@ plot.rjtrace <- function(rj.obj,
   if(rj.obj$dat$covariates$n == 0) covariates.incl <- FALSE
   if(!is.null(param.name)) { if(any(param.name %in% c("phi", "sigma", "mu"))) phase <- 1 }
   if(!is.null(param.name)) { if(any(param.name %in% c("alpha", "tau", "psi", "omega", "nu"))) phase <- 2 }
+
   
   #' ---------------------------------------------
   # Extract the trace and rename columns

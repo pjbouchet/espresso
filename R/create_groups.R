@@ -37,8 +37,10 @@ create_groups <- function(dat.obj,
   # Perform function checks
   #' ---------------------------------------------
   
+  if(dat.obj$param$sim) abbrev <- FALSE
   if(!"brsdata" %in% class(dat.obj)) stop("Input must be of class <brsdata>")
   if(!is.null(species.groups) & !is.list(species.groups)) stop("species.groups must be a list")
+  if(!dat.obj$param$sim){
   if(!all(unname(unlist(species.groups)) %in% c(unique(dat.obj$ddf$species), 
                                                 tolower(sort(unique(dat.obj$ddf$common_name))),
                                                 unique(dat.obj$ddf$scientific_name),
@@ -50,6 +52,7 @@ create_groups <- function(dat.obj,
                          sort(unique(dat.obj$ddf$common_name)),
                          tolower(sort(unique(dat.obj$ddf$common_name)))), collapse = ", ")))
   }
+  }
   
   #' ---------------------------------------------
   # Retrieve species codes
@@ -59,6 +62,7 @@ create_groups <- function(dat.obj,
     janitor::clean_names(.) %>% 
     dplyr::select(scientific_name, common_name, new_code)
   
+  if(!dat.obj$param$sim){
   sp.groups <- lapply(X = 1:length(species.groups), FUN = function(j) {
     sapply(X = species.groups[[j]], FUN = function(n) {
       index <- which(purrr::map_lgl(
@@ -71,6 +75,9 @@ create_groups <- function(dat.obj,
       species.list$new_code[which(species.list[, index] == n | tolower(unlist(species.list[, index])) == n)]
     }) %>% unname()
   })
+  } else {
+    sp.groups <- species.groups
+  }
   
   if(is.null(names(species.groups))) {
     names(sp.groups) <- unlist(purrr::map(.x = sp.groups, .f = ~paste0(.x, collapse = ",")))
@@ -94,8 +101,10 @@ create_groups <- function(dat.obj,
   #' ---------------------------------------------
   
   if(!is.null(species.groups)){
+    
     group.df <- sp.groups %>% tibble::enframe(.) %>% tidyr::unnest(., cols = c(value)) %>% 
       dplyr::rename(species = value, group_name = name)
+    
     brsdat <- dplyr::left_join(x = dat.obj$ddf, y = group.df, by = "species")
     
     # If species.groups contains a subset of all available species
@@ -104,6 +113,7 @@ create_groups <- function(dat.obj,
       dplyr::mutate(group_name = ifelse(is.na(group_name), species, group_name)) %>% 
       dplyr::mutate(species = group_name) %>% 
       dplyr::select(-group_name)
+    
   } else {
     brsdat <- dat.obj$ddf
   }

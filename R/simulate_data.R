@@ -359,7 +359,7 @@ simulate_data <- function(biphasic = FALSE,
   is.lcensored <- ifelse(y_ij < min.dose, -1, 0)
   is.rcensored <- ifelse(y_ij > max.dose, 1, 0)
   is.censored <- is.lcensored + is.rcensored
-  
+
   y_ij[!is.censored == 0] <- NA
   
   min.dose[is.censored == 0] <- dose.range[2]
@@ -374,25 +374,36 @@ simulate_data <- function(biphasic = FALSE,
   
   brsdat <- data.frame(cbind(species.trials, y_ij))
   names(brsdat) <- c("species", "spl")
+  brsdat$censored <- is.censored
   
   suppressWarnings(species.summary <- brsdat %>% 
                      dplyr::group_by(species) %>% 
                      dplyr::summarise(N_trials = dplyr::n(), 
-                                      censored = sum(is.na(spl)), 
+                                      censored.L = sum(censored == -1), 
+                                      censored.R = sum(censored == 1), 
                                       mean = mean(spl, na.rm = TRUE),
                                       min = min(spl, na.rm = TRUE),
                                       max = max(spl, na.rm = TRUE), .groups = "keep") %>% 
                      dplyr::ungroup())
   
   species.summary$N_ind <- n.per.species[species.summary$species] 
-  species.summary <- species.summary %>% dplyr::select(species, N_ind, N_trials, mean, min, max)
+  species.summary <- species.summary %>% dplyr::select(species, N_ind, N_trials, censored.L, censored.R, mean, min, max)
   
   
   #' ---------------------------------------------
   # Store results in list
   #' ---------------------------------------------
   
+  ddf <- tibble::tibble(species = sp.names[species.trials],
+                        tag_id = whale.id,
+                        spl = y_ij,
+                        Lc = min.dose,
+                        Rc = max.dose,
+                        censored = is.censored)
+  
   res <- list(
+    
+    ddf = ddf,
     
     biphasic = biphasic,
     

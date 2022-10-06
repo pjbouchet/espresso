@@ -35,16 +35,16 @@ plot_phase <- function(rjdat = NULL,
     
     rjtrace <- do.call(rbind, rjdat$trace)
     
-    mu <- mean(rjtrace[, "mu.1"])
-    phi <- mean(rjtrace[, "phi"])
-    sigma <- mean(rjtrace[, "sigma"])
-    psi <- mean(rjtrace[, "psi"])
-    omega <- mean(rjtrace[, "omega"])
-    nu1 <- mean(rjtrace[, "nu.lower.1"])
-    nu2 <- mean(rjtrace[, "nu.upper.1"])
-    alpha <- mean(rjtrace[, "alpha.1"])
-    tau1 <- mean(rjtrace[, "tau.lower"])
-    tau2 <- mean(rjtrace[, "tau.upper"])
+    if("mu.1" %in% colnames(rjtrace)) mu <- mean(rjtrace[, "mu.1"])
+    if("phi" %in% colnames(rjtrace)) phi <- mean(rjtrace[, "phi"])
+    if("sigma" %in% colnames(rjtrace)) sigma <- mean(rjtrace[, "sigma"])
+    if("psi" %in% colnames(rjtrace)) psi <- mean(rjtrace[, "psi"])
+    if("omega" %in% colnames(rjtrace)) omega <- mean(rjtrace[, "omega"])
+    if("nu.lower.1" %in% colnames(rjtrace)) nu1 <- mean(rjtrace[, "nu.lower.1"])
+    if("nu.upper.1" %in% colnames(rjtrace)) nu2 <- mean(rjtrace[, "nu.upper.1"])
+    if("alpha.1" %in% colnames(rjtrace)) alpha <- mean(rjtrace[, "alpha.1"])
+    if("tau.lower" %in% colnames(rjtrace)) tau1 <- mean(rjtrace[, "tau.lower"])
+    if("tau.upper" %in% colnames(rjtrace)) tau2 <- mean(rjtrace[, "tau.upper"])
     
   }
   
@@ -52,7 +52,7 @@ plot_phase <- function(rjdat = NULL,
     
     B <- 1E5
     
-    #Alpha uniform between nu1 and nu2
+    # Alpha uniform between nu1 and nu2
     alpha <- runif(B, nu1, nu2)
     
     psi_i <- rnorm(B, psi, omega)
@@ -118,7 +118,7 @@ plot_phase <- function(rjdat = NULL,
     
     plot(dose.range, seq(0, 1, length.out = length(dose.range)), type ='n', xlab = x.lab, ylab = y.lab)
     lines(dose.range, bp(lower, upper, nu1, tau1, nu2, tau2, psi, omega, by = 0.5), col = linecol[1], lwd = 1.5)
-    lines(dose.range, p.response, col = linecol[1])
+    lines(dose.range, p.response, col = "grey")
   }
 
   # MONOPHASIC

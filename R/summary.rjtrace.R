@@ -178,6 +178,7 @@ summary.rjtrace <- function(rj.obj,
     cat("--------------------\n")
     
     AR <- rj.obj$accept %>% 
+      # as.vector() %>%
       tibble::enframe() %>%
       dplyr::filter(value > 0 | name %in% c("accept.model", "accept.covariates", "accept.phase")) %>%
       dplyr::filter(!name %in% c("incl.exposed", "incl.sonar", "incl.behaviour", "incl.range")) %>%

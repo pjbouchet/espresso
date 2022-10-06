@@ -57,7 +57,7 @@ compile_rjMCMC <- function(rj.object,
                            covariate = NULL,
                            covariate.values = NULL,
                            species = NULL,
-                           credible.intervals = c(95, 50, 5),
+                           credible.intervals = 95,
                            # seq(95, 5, by = -5)
                            npts = 20){
   
@@ -304,18 +304,21 @@ compile_rjMCMC <- function(rj.object,
           p.response.individ.lower.mat <-
             matrix(data = p.response.individ.lower,
                    nrow = npts, ncol = length(dose.range), byrow = TRUE)
+          
           p.response.individ.lower.mat <-
             sweep(p.response.individ.lower.mat, MARGIN = 1, pi.individ, `*`)
           
           p.response.individ.upper.mat <-
             matrix(data = p.response.individ.upper,
                    nrow = npts, ncol = length(dose.range), byrow = TRUE)
+          
           p.response.individ.upper.mat <-
             sweep(p.response.individ.upper.mat, MARGIN = 1, STATS = 1 - pi.individ, FUN = `*`)
           
           p.response.individ <- p.response.individ.lower.mat + p.response.individ.upper.mat
           
           p.response[i, ] <- Rfast::colmeans(p.response.individ)
+          # p.response[i, ] <- Rfast::colMedians(p.response.individ)
           
         } # End for i loop
         p.response

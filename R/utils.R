@@ -2721,8 +2721,10 @@ MCMC_trace <- function (object, params = "all", adjust = 2, excl = NULL, ISB = T
     if (length(gvals) == 1 & length(np) > 1) {
       warning("Only one generating value specified for > 1 parameter. Using a single generating value for all parameters.")
     }
+    if(!is.list(gvals)){
     if (length(gvals) > 1 & length(gvals) != length(np)) {
       stop("Number of generating values does not equal number of specified parameters.")
+    }
     }
   }
   if (PPO_out == TRUE) {
@@ -3079,6 +3081,13 @@ MCMC_trace <- function (object, params = "all", adjust = 2, excl = NULL, ISB = T
           }
         }
         if (!is.null(gvals)) {
+          if(is.list(gvals)){
+            
+            gv <- gvals[[j]]
+            for(k in 1:length(gv)) graphics::abline(v = gv[k], lty = 2, lwd = 1, col = ref_col)
+            
+            
+          } else {
           if (length(gvals) == 1) {
             gv <- gvals
           }
@@ -3086,6 +3095,7 @@ MCMC_trace <- function (object, params = "all", adjust = 2, excl = NULL, ISB = T
             gv <- gvals[j]
           }
           graphics::abline(v = gv, lty = 2, lwd = 1, col = ref_col)
+          }
         }
       }
     }
