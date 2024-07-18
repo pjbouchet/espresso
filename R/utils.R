@@ -3386,14 +3386,14 @@ relabel <- function(vec){
 }
 
 vec_to_model <- function(input.vector, sp.names){
-  partitions::vec_to_eq(vec = input.vector) %>% 
+    partitions::vec_to_eq(vec = input.vector) %>% 
     list() %>% 
-    purrr::map_depth(.x = ., .depth = 2, .f = ~sp.names[.x]) %>%
+    purrr::map_depth(.x = ., .depth = 2, .f = ~sp.names[.x], .ragged = TRUE) %>%
     purrr::map(.x = ., .f = ~ lapply(X = .x, FUN = function(x) paste(x, collapse = ","))) %>%
     purrr::map(.x = ., .f = ~ paste0("(", .x, ")")) %>% 
     purrr::map(.x = ., .f = ~paste0(.x, collapse = "+")) %>% do.call(c, .)
 }
-# 
+
 # l_groups <- function(vec){
 #   purrr::map_dbl(.x = unique(sort(vec)), .f = ~length(vec[vec == .x]))}
 
@@ -3438,7 +3438,7 @@ split_count <- function(speciesFrom){
   dd <- duplicated(res.char)
   res.char <- res.char[dd]
   res.num <- purrr::map(.x = res, .f = ~stringr::str_split(.x, ",")) %>% 
-    purrr::map_depth(.x = ., .depth = 2, .f = ~as.numeric(.x))
+    purrr::map_depth(.x = ., .depth = 2, .f = ~as.numeric(.x), .ragged = TRUE)
   res.num <- res.num[dd]
   
   return(res.num)

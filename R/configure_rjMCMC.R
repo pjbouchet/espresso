@@ -49,10 +49,10 @@
 #' 
 #' # Configure the rjMCMC sampler
 #' mydat.config <- configure_rjMCMC(dat = mydat,
-#'                                  model.select = TRUE,
-#'                                  covariate.select = FALSE,
-#'                                  function.select = FALSE,
-#'                                  n.rep = 100)
+#'                                 model.select = TRUE,
+#'                                 covariate.select = FALSE,
+#'                                 function.select = FALSE,
+#'                                 n.rep = 100)
 #' summary(mydat.config)
 #' }
 #' @keywords brs rjmcmc dose-response
@@ -97,13 +97,16 @@ configure_rjMCMC <- function(dat,
      priors$omega[2] < priors$omega[1] | priors$tau[2] < priors$tau[1]) 
     stop("Prior misspecified.")
   
-  if(!bootstrap & !"rjconfig" %in% class(dat)) stop("<rjconfig> object required when bootstrap = FALSE.")
+  # if(!bootstrap & !"rjconfig" %in% class(dat)) stop("<rjconfig> object required when bootstrap = FALSE.")
   
   if(!sum(p.split, p.merge) == 1) stop("Move probabilities do not sum to 1.")
   if(sum(c(p.split, p.merge) < 0) > 0) stop("Move probabilities cannot be negative.")
   
   if(dat$covariates$n == 0) covariate.select <- FALSE
-  if(dat$species$n == 1) model.select <- FALSE
+  if(dat$species$n == 1){
+    model.select <- FALSE
+    bootstrap <- FALSE
+  }
   
   if(function.select) biphasic <- TRUE
   
@@ -112,34 +115,34 @@ configure_rjMCMC <- function(dat,
   #' -----------------------------------------------
   
   if(function.select| !biphasic){
-  
-  # Estimate the between-whale SD (phi) and the within-whale between-exposure SD (sigma) 
-  # from the data. This is useful for generating appropriate starting values for
-  # the MCMC sampler (see below).
-  # In some cases, all observations are censored. In this case, use the value at the 
-  # mid-point of the prior range.
-  
-  dat.sigma <- mean(unique(sapply(X = dat$whales$id, FUN = function(n) 
-    sd(dat$obs$y_ij[dat$whales$id == n], na.rm = TRUE))), na.rm = TRUE)
-  
-  dat.phi <- unique(sapply(X = dat$whales$id, FUN = function(n) 
-    mean(dat$obs$y_ij[dat$whales$id == n], na.rm = TRUE)))
-  
-  dat.phi <- mean(sapply(X = dat$species$id, FUN = function(n) 
-    sd(dat.phi[dat$species$id == n], na.rm = TRUE)), na.rm = TRUE)
-  
-  if(is.na(dat.sigma)) dat.sigma <- mean(priors[["sigma"]])
-  if(is.na(dat.phi)) dat.phi <- mean(priors[["phi"]])
-  
+    
+    # Estimate the between-whale SD (phi) and the within-whale between-exposure SD (sigma) 
+    # from the data. This is useful for generating appropriate starting values for
+    # the MCMC sampler (see below).
+    # In some cases, all observations are censored. In this case, use the value at the 
+    # mid-point of the prior range.
+    
+    dat.sigma <- mean(unique(sapply(X = dat$whales$id, FUN = function(n) 
+      sd(dat$obs$y_ij[dat$whales$id == n], na.rm = TRUE))), na.rm = TRUE)
+    
+    dat.phi <- unique(sapply(X = dat$whales$id, FUN = function(n) 
+      mean(dat$obs$y_ij[dat$whales$id == n], na.rm = TRUE)))
+    
+    dat.phi <- mean(sapply(X = dat$species$id, FUN = function(n) 
+      sd(dat.phi[dat$species$id == n], na.rm = TRUE)), na.rm = TRUE)
+    
+    if(is.na(dat.sigma)) dat.sigma <- mean(priors[["sigma"]])
+    if(is.na(dat.phi)) dat.phi <- mean(priors[["phi"]])
+    
   } else {
     
-  dat.by.species <- purrr::map(.x = seq_len(dat$species$n),
-               .f = ~sort(dat$obs$y_ij[dat$species$trials == .x]))
+    dat.by.species <- purrr::map(.x = seq_len(dat$species$n),
+                                 .f = ~sort(dat$obs$y_ij[dat$species$trials == .x]))
     
-  dat.tau <- mean(rbind(sapply(X = dat.by.species, FUN = function(x){sd(x[x < median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = dat.by.species, FUN = function(x){sd(x[x > median(x, na.rm = TRUE)], na.rm = TRUE)})))
-  
-  if(is.na(dat.tau)) dat.tau <- mean(priors[["tau"]])
-  
+    dat.tau <- mean(rbind(sapply(X = dat.by.species, FUN = function(x){sd(x[x < median(x, na.rm = TRUE)], na.rm = TRUE)}), sapply(X = dat.by.species, FUN = function(x){sd(x[x > median(x, na.rm = TRUE)], na.rm = TRUE)})))
+    
+    if(is.na(dat.tau)) dat.tau <- mean(priors[["tau"]])
+    
   }
   
   #' -----------------------------------------------
@@ -151,21 +154,21 @@ configure_rjMCMC <- function(dat,
   priors.df <- 
     tibble::tibble(param = c(pars.mono, pars.bi),
                    lower_or_mean = c(dat$param$dose.range[1], 
-                             priors$phi[1], 
-                             priors$sigma[1],
-                             priors$alpha[1],
-                             dat$param$dose.range[1],
-                             priors$tau[1],
-                             priors$omega[1],
-                             priors$psi[1]),
+                                     priors$phi[1], 
+                                     priors$sigma[1],
+                                     priors$alpha[1],
+                                     dat$param$dose.range[1],
+                                     priors$tau[1],
+                                     priors$omega[1],
+                                     priors$psi[1]),
                    upper_or_SD = c(dat$param$dose.range[2], 
-                             priors$phi[2], 
-                             priors$sigma[2],
-                             priors$alpha[2],
-                             dat$param$dose.range[2], 
-                             priors$tau[2],
-                             priors$omega[2],
-                             priors$psi[2]),
+                                   priors$phi[2], 
+                                   priors$sigma[2],
+                                   priors$alpha[2],
+                                   dat$param$dose.range[2], 
+                                   priors$tau[2],
+                                   priors$omega[2],
+                                   priors$psi[2]),
                    prior = c(rep("Uniform", 7), "Normal"))
   
   # if(!function.select){
@@ -182,10 +185,10 @@ configure_rjMCMC <- function(dat,
       # proposal.mh[[j]] <- ifelse(j == "range", 0.1, 2)
       proposal.mh[[j]] <- ifelse(j == "range", 3, 10)
       priors.df <- dplyr::bind_rows(priors.df, 
-                                       tibble::tibble(param = j,
-                                                      lower_or_mean = priors$covariates[1],
-                                                      upper_or_SD = priors$covariates[2],
-                                                      prior = "Normal"))
+                                    tibble::tibble(param = j,
+                                                   lower_or_mean = priors$covariates[1],
+                                                   upper_or_SD = priors$covariates[2],
+                                                   prior = "Normal"))
     }}
   
   priors.df <- tibble::column_to_rownames(priors.df, "param")
@@ -202,134 +205,133 @@ configure_rjMCMC <- function(dat,
   
   if(bootstrap){
     
-  if(model.select){
-    
-    # NA values cause numerical issues so need to be dealt with,
-    # Cannot simply be removed as that would be problematic for species that only have censored data
-    
-    boot.dat <- tibble::tibble(y = dat$obs$y_ij, 
-                               species = dat$species$trials, 
-                               censored = dat$obs$censored,
-                               Lc = dat$obs$Lc,
-                               Rc = dat$obs$Rc) 
-
-    boot.dat <- boot.dat %>% 
-      dplyr::rowwise() %>% 
-      dplyr::mutate(y = ifelse(is.na(y), 
-                               ifelse(censored == -1,
-                                      runif(n = 1, min = dat$param$dose.range[1], max = Lc),
-                                      runif(n = 1, min = Rc, max = dat$param$dose.range[2])), y)) %>% 
-      dplyr::ungroup() %>% 
-      dplyr::select(-Rc, -Lc, -censored)
-
-    # Bootstrap the data by species
-    # Taken from https://humanitarian-user-group.github.io/post/tidysampling/
-    # Contrary to the bootstraps function from the <rsamples> package (original implementation),
-    # this approach ensures that all species are included in all resamples.
-    
-    # cat("Generating Bootstrap resamples ...\n")
-    
-    boot.tbl <- purrr::map(.x = seq_len(n.rep),
-                           .f = ~{
-                             boot.dat %>% 
-                             # Partition the data into strata (by species)
-                             dplyr::group_nest(species) %>% 
-                            # For each stratum
-                             dplyr::rowwise() %>%
-                             dplyr::mutate(
-                               # calculate the required sample size
-                               Ns = nrow(data),
-                               # then draw the sample
-                               sample = list(dplyr::sample_n(data, size = Ns, replace = TRUE))) %>% 
-                             dplyr::select(-c(data, Ns)) %>% 
-                             tidyr::unnest(sample)}) 
-    
-    # cat("Performing cluster analysis ...\n")
-    
-    # Model-based clustering (equal variance)
-    datClust <- purrr::map(.x = boot.tbl,
-                           .f = ~mclust::Mclust(data = as.numeric(na.omit(.x$y)), 
-                                                G = seq_len(dat$species$n), 
-                                                modelNames = c("E"), verbose = FALSE))
-    
-    datGroups <- purrr::map(.x = 1:length(datClust), 
-                       .f = ~{
-     
-                         # Use a Multinomial distribution to classify species into groups 
-                         # based on the assignment probabilities returned by the clustering algorithm
-                         if(!is.null(datClust[[.x]])){
-                           
-                           clustClassif <- 
-                             sapply(X = 1:nrow(datClust[[.x]]$z), 
-                                   FUN = function(x) stats::rmultinom(n = 1, size = 1, 
-                                                     prob = datClust[[.x]]$z[x,]))
-                           
-                           if("matrix" %in% class(clustClassif)){
-                             
-                             clustClassif <- 
-                               apply(X = clustClassif, MARGIN = 2, FUN = function(x) which(x == 1))
-                           
-                           class.list <- list()
-                           for(u in unique(clustClassif)) class.list[[u]] <- which(clustClassif == u)
-                           class.list <- purrr::compact(class.list)
-                           
-                           class.list <- format_group(input.list = class.list)$group
-                           
-                           } else {class.list <- clustClassif}
-                           
-                           res.out <- 
-                             
-                             purrr::map(.x = seq_len(dat$species$n),
-                                        .f = ~table(class.list[dat$species$trials == .x])) %>% 
-                             purrr::map_dbl(.x = ., .f = ~as.numeric(names(.x)[which.max(.x)])) %>% 
-                             relabel()
-                           
-                           if(length(res.out) == 1) res.out <- rep(res.out, length = dat$species$n)
-                           
-                         } else {
-                           res.out <- 1 
-                         }
-                         res.out})
-
-    names(datGroups) <- purrr::map(.x = datGroups, 
-          .f = ~ vec_to_model(input.vector = .x, sp.names = dat$species$names)) %>%
-      do.call(c, .)
-    
-    p.ClustModels <- table(names(datGroups)) / n.rep
-    p.ClustModels <- as.data.frame(p.ClustModels) %>% 
-      tibble::as_tibble() %>% 
-      dplyr::rename(model = Var1, p = Freq) %>% 
-      dplyr::mutate(model = as.character(model)) %>% 
-      dplyr::arrange(-p) %>% 
-      dplyr::mutate(p_scale = rescale_p(p))
-    
-    n.Clust <- purrr::map_dbl(.x = datClust, .f = ~which.max(.x$BIC[seq_len(dat$species$n)]))
-    p.Clust <- sapply(X = seq_len(dat$species$n), 
-                      FUN = function(x) {tmp <- sum(n.Clust == x, na.rm = TRUE) / n.rep
-                      names(tmp) <- x; tmp})
-    p.Clust <- tibble::tibble(cluster = as.numeric(names(p.Clust)), p = p.Clust) %>% 
-      dplyr::mutate(p_scale = rescale_p(p))
-    
-    mlist <- unique(datGroups)
-    names(mlist) <- purrr::map(.x = mlist, 
-                               .f = ~ vec_to_model(input.vector = .x, sp.names = dat$species$names)) %>%
-      do.call(c, .)
-    
-  } else {
-    
-    p.ClustModels <- tibble::tibble(model = NA, p = 1)
-    p.Clust <- tibble::tibble(cluster = NA, p = 1)
-    if(dat$species$n == 1) mlist <- datGroups <- list(rep(1, dat$species$n)) else 
-      mlist <- datGroups <- list(seq_len(dat$species$n)) 
-    names(mlist) <- names(datGroups) <- vec_to_model(input.vector = unlist(mlist), sp.names = dat$species$names)
-    p.ClustModels$model <- names(mlist)
-    p.Clust$cluster <- ifelse(is.null(dat$species$groups), dat$species$n, length(dat$species$groups))
-    
-  }
+    if(model.select){
+      
+      # NA values cause numerical issues so need to be dealt with,
+      # Cannot simply be removed as that would be problematic for species that only have censored data
+      
+      boot.dat <- tibble::tibble(y = dat$obs$y_ij, 
+                                 species = dat$species$trials, 
+                                 censored = dat$obs$censored,
+                                 Lc = dat$obs$Lc,
+                                 Rc = dat$obs$Rc) 
+      
+      boot.dat <- boot.dat %>% 
+        dplyr::rowwise() %>% 
+        dplyr::mutate(y = ifelse(is.na(y), 
+                                 ifelse(censored == -1,
+                                        runif(n = 1, min = dat$param$dose.range[1], max = Lc),
+                                        runif(n = 1, min = Rc, max = dat$param$dose.range[2])), y)) %>% 
+        dplyr::ungroup() %>% 
+        dplyr::select(-Rc, -Lc, -censored)
+      
+      # Bootstrap the data by species
+      # Taken from https://humanitarian-user-group.github.io/post/tidysampling/
+      # Contrary to the bootstraps function from the <rsamples> package (original implementation),
+      # this approach ensures that all species are included in all resamples.
+      
+      # cat("Generating Bootstrap resamples ...\n")
+      
+      boot.tbl <- purrr::map(.x = seq_len(n.rep),
+                             .f = ~{
+                               boot.dat %>% 
+                                 # Partition the data into strata (by species)
+                                 dplyr::group_nest(species) %>% 
+                                 # For each stratum
+                                 dplyr::rowwise() %>%
+                                 dplyr::mutate(
+                                   # calculate the required sample size
+                                   Ns = nrow(data),
+                                   # then draw the sample
+                                   sample = list(dplyr::sample_n(data, size = Ns, replace = TRUE))) %>% 
+                                 dplyr::select(-c(data, Ns)) %>% 
+                                 tidyr::unnest(sample)}) 
+      
+      # cat("Performing cluster analysis ...\n")
+      
+      # Model-based clustering (equal variance)
+      datClust <- purrr::map(.x = boot.tbl,
+                             .f = ~mclust::Mclust(data = as.numeric(na.omit(.x$y)), 
+                                                  G = seq_len(dat$species$n), 
+                                                  modelNames = c("E"), verbose = FALSE))
+      
+      datGroups <- purrr::map(.x = 1:length(datClust), 
+                              .f = ~{
+                                
+                                # Use a Multinomial distribution to classify species into groups 
+                                # based on the assignment probabilities returned by the clustering algorithm
+                                if(!is.null(datClust[[.x]])){
+                                  
+                                  clustClassif <- 
+                                    sapply(X = 1:nrow(datClust[[.x]]$z), 
+                                           FUN = function(x) stats::rmultinom(n = 1, size = 1, 
+                                                                              prob = datClust[[.x]]$z[x,]))
+                                  
+                                  if("matrix" %in% class(clustClassif)){
+                                    
+                                    clustClassif <- 
+                                      apply(X = clustClassif, MARGIN = 2, FUN = function(x) which(x == 1))
+                                    
+                                    class.list <- list()
+                                    for(u in unique(clustClassif)) class.list[[u]] <- which(clustClassif == u)
+                                    class.list <- purrr::compact(class.list)
+                                    
+                                    class.list <- format_group(input.list = class.list)$group
+                                    
+                                  } else {class.list <- clustClassif}
+                                  
+                                  res.out <- 
+                                    
+                                    purrr::map(.x = seq_len(dat$species$n),
+                                               .f = ~table(class.list[dat$species$trials == .x])) %>% 
+                                    purrr::map_dbl(.x = ., .f = ~as.numeric(names(.x)[which.max(.x)])) %>% 
+                                    relabel()
+                                  
+                                  if(length(res.out) == 1) res.out <- rep(res.out, length = dat$species$n)
+                                  
+                                } else {
+                                  res.out <- 1 
+                                }
+                                res.out})
+      
+      names(datGroups) <- purrr::map(.x = datGroups, 
+                                     .f = ~ vec_to_model(input.vector = .x, sp.names = dat$species$names)) %>%
+        do.call(c, .)
+      
+      p.ClustModels <- table(names(datGroups)) / n.rep
+      p.ClustModels <- as.data.frame(p.ClustModels) %>% 
+        tibble::as_tibble() %>% 
+        dplyr::rename(model = Var1, p = Freq) %>% 
+        dplyr::mutate(model = as.character(model)) %>% 
+        dplyr::arrange(-p) %>% 
+        dplyr::mutate(p_scale = rescale_p(p))
+      
+      n.Clust <- purrr::map_dbl(.x = datClust, .f = ~which.max(.x$BIC[seq_len(dat$species$n)]))
+      p.Clust <- sapply(X = seq_len(dat$species$n), 
+                        FUN = function(x) {tmp <- sum(n.Clust == x, na.rm = TRUE) / n.rep
+                        names(tmp) <- x; tmp})
+      p.Clust <- tibble::tibble(cluster = as.numeric(names(p.Clust)), p = p.Clust) %>% 
+        dplyr::mutate(p_scale = rescale_p(p))
+      
+      mlist <- unique(datGroups)
+      names(mlist) <- purrr::map(.x = mlist, 
+                                 .f = ~ vec_to_model(input.vector = .x, sp.names = dat$species$names)) %>%
+        do.call(c, .)
+      
+    } else {
+      
+      p.ClustModels <- tibble::tibble(model = NA, p = 1)
+      p.Clust <- tibble::tibble(cluster = NA, p = 1)
+      if(dat$species$n == 1) mlist <- datGroups <- list(rep(1, dat$species$n)) else 
+        mlist <- datGroups <- list(seq_len(dat$species$n)) 
+      names(mlist) <- names(datGroups) <- vec_to_model(input.vector = unlist(mlist), sp.names = dat$species$names)
+      p.ClustModels$model <- names(mlist)
+      p.Clust$cluster <- ifelse(is.null(dat$species$groups), dat$species$n, length(dat$species$groups))
+      
+    }
     nglist <- purrr::map(.x = mlist, .f = ~dplyr::n_distinct(.x))
   }
   
-
   if(bootstrap){
     
     dat$config$var <- NULL
@@ -341,17 +343,17 @@ configure_rjMCMC <- function(dat,
     }
     
     dat$config <- append(dat$config, list(
-                       prop = list(rj = proposal.rj$rj, dd = proposal.rj$dd, mh = proposal.mh),
-                       move = list(prob = setNames(c(p.split, p.merge), c("split", "merge"))),
-                       model.select = model.select,
-                       function.select = function.select,
-                       biphasic = biphasic,
-                       boot = datGroups,
-                       mlist = mlist,
-                       nglist = nglist,
-                       clust = list(p.ClustModels, p.Clust),
-                       covariate.select = covariate.select))
-
+      prop = list(rj = proposal.rj$rj, dd = proposal.rj$dd, mh = proposal.mh),
+      move = list(prob = setNames(c(p.split, p.merge), c("split", "merge"))),
+      model.select = model.select,
+      function.select = function.select,
+      biphasic = biphasic,
+      boot = datGroups,
+      mlist = mlist,
+      nglist = nglist,
+      clust = list(p.ClustModels, p.Clust),
+      covariate.select = covariate.select))
+    
   } else {
     
     dat$config$var <- NULL
@@ -361,11 +363,14 @@ configure_rjMCMC <- function(dat,
     } else {
       dat$config$var <-  c(dat$config$var, setNames(dat.tau, "tau"))  
     }
-    
-    dat$config$prop <- list(dd = proposal.rj$dd, mh = proposal.mh)
+  
+    dat$config$prop <- list(rj = proposal.rj$rj, dd = proposal.rj$dd, mh = proposal.mh)
     dat$config$move <- list(prob = setNames(c(p.split, p.merge), c("split", "merge")))
     dat$config$model.select <-  model.select
+    dat$config$function.select <- function.select
     dat$config$covariate.select <- covariate.select
+    dat$config$biphasic <- biphasic
+    
   } 
   
   if(dat$covariates$n > 0){
