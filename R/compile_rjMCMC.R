@@ -418,7 +418,7 @@ compile_rjMCMC <- function(rj.object,
   
   if(!is.null(covariate)) output$fL <- rj.object$dat$covariates$fL[[covariate]] else output$fL <- rj.object$dat$covariates$fL
   
-  cat("\nDone!")
+  cat("Done!")
   class(output) <- c("dose_response", class(output))
   return(output)
   

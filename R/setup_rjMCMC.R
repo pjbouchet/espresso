@@ -176,7 +176,12 @@ setup_rjMCMC <- function(rj.input,
                prob = rj.input$config$clust[[1]]$p_scale)
     } else {
       # Because the model list only has length 1
-      rj$current.model <- rj$model[1:tot.iter] <- names(rj.input$config$mlist) 
+      if(config.all$species$n == 1) {
+        rj$current.model <- rj$model[1:tot.iter] <- vec_to_model(1, config.all$species$names)
+      } else {
+             rj$current.model <- rj$model[1:tot.iter] <- names(rj.input$config$mlist) 
+      }
+ 
     }
 
     current.groups <- rj$mlist[[rj$current.model]]

@@ -103,10 +103,10 @@ configure_rjMCMC <- function(dat,
   if(sum(c(p.split, p.merge) < 0) > 0) stop("Move probabilities cannot be negative.")
   
   if(dat$covariates$n == 0) covariate.select <- FALSE
-  if(dat$species$n == 1){
-    model.select <- FALSE
-    bootstrap <- FALSE
-  }
+  # if(dat$species$n == 1){
+  #   model.select <- FALSE
+  #   bootstrap <- FALSE
+  # }
   
   if(function.select) biphasic <- TRUE
   
@@ -204,7 +204,7 @@ configure_rjMCMC <- function(dat,
   # This is useful for parameterising alternative types of model jumps.
   
   if(bootstrap){
-    
+
     if(model.select){
       
       # NA values cause numerical issues so need to be dealt with,
@@ -319,7 +319,7 @@ configure_rjMCMC <- function(dat,
         do.call(c, .)
       
     } else {
-      
+
       p.ClustModels <- tibble::tibble(model = NA, p = 1)
       p.Clust <- tibble::tibble(cluster = NA, p = 1)
       if(dat$species$n == 1) mlist <- datGroups <- list(rep(1, dat$species$n)) else 
@@ -327,7 +327,6 @@ configure_rjMCMC <- function(dat,
       names(mlist) <- names(datGroups) <- vec_to_model(input.vector = unlist(mlist), sp.names = dat$species$names)
       p.ClustModels$model <- names(mlist)
       p.Clust$cluster <- ifelse(is.null(dat$species$groups), dat$species$n, length(dat$species$groups))
-      
     }
     nglist <- purrr::map(.x = mlist, .f = ~dplyr::n_distinct(.x))
   }
@@ -370,6 +369,7 @@ configure_rjMCMC <- function(dat,
     dat$config$function.select <- function.select
     dat$config$covariate.select <- covariate.select
     dat$config$biphasic <- biphasic
+    dat$config$mlist <- mlist # Added July 2024
     
   } 
   
